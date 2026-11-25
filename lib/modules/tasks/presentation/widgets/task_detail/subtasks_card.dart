@@ -665,7 +665,7 @@ class _HoldReorderListState extends State<_HoldReorderList> {
               elevation: 6 * t,
               shadowColor: Colors.black.withValues(alpha: 0.25),
               color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(10),
               clipBehavior: Clip.antiAlias,
               child: child,
             ),

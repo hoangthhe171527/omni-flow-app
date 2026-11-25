@@ -136,7 +136,9 @@ class _StageChip extends StatelessWidget {
             child: Material(
               type: MaterialType.transparency,
               child: InkWell(
-                customBorder: const StadiumBorder(),
+                customBorder: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(10)),
+                ),
                 onTap: onTap,
                 child: AnimatedContainer(
                   duration: motion
@@ -147,24 +149,26 @@ class _StageChip extends StatelessWidget {
                     horizontal: 14,
                     vertical: 7,
                   ),
-                  decoration: selected
-                      ? OmniGlass.buttonDecoration(
-                          context,
-                        ).copyWith(color: OmniGlass.selectionOf(context))
-                      : BoxDecoration(
-                          color: base,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
+                  // Chip chọn (spec phong cách iOS §3.4): bo 10; đang chọn =
+                  // nền xanh nhạt, chữ xanh, viền xanh 1.5.
+                  decoration: BoxDecoration(
+                    color: selected ? OmniGlass.selectionOf(context) : base,
+                    borderRadius: const BorderRadius.all(Radius.circular(10)),
+                    border: selected
+                        ? Border.all(color: scheme.primary, width: 1.5)
+                        : null,
+                  ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
                         label,
                         style: OmniType.chip.copyWith(
-                          fontWeight:
-                              selected ? FontWeight.w600 : FontWeight.w500,
+                          fontWeight: selected
+                              ? FontWeight.w600
+                              : FontWeight.w500,
                           color: selected
-                              ? scheme.onSurface
+                              ? scheme.primary
                               : scheme.onSurfaceVariant,
                         ),
                       ),
@@ -174,7 +178,9 @@ class _StageChip extends StatelessWidget {
                           '$count',
                           style: OmniType.chip.copyWith(
                             fontWeight: FontWeight.w500,
-                            color: scheme.onSurfaceVariant,
+                            color: selected
+                                ? scheme.primary
+                                : scheme.onSurfaceVariant,
                             fontFeatures: OmniType.tabular,
                           ),
                         ),

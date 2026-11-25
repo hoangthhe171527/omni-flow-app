@@ -103,7 +103,7 @@ class TeamGroup extends StatelessWidget {
       onDragStarted: () => HapticFeedback.mediumImpact(),
       feedback: Material(
         elevation: 0,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         color: Colors.transparent,
         child: Container(
           width: 240,
@@ -111,7 +111,7 @@ class TeamGroup extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
             color: scheme.surface,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: scheme.outlineVariant.withValues(alpha: .45),
             ),
@@ -150,7 +150,7 @@ class TeamGroup extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final motion = OmniMotion.enabled(context);
-    const radius = BorderRadius.all(Radius.circular(14));
+    const radius = BorderRadius.all(Radius.circular(16));
 
     final Widget body = open
         ? Column(

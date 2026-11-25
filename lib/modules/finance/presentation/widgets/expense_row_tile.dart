@@ -374,82 +374,26 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
                       },
                       child: Stack(
                         children: [
-                          ConstrainedBox(
-                            constraints: const BoxConstraints(minHeight: 56),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 10,
-                              ),
-                              child: Row(
-                                children: [
-                                  const OmniIconTile(
-                                    Icons.receipt_long_outlined,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        // Tên khoản xuống tối đa hai dòng
-                                        // thay vì cắt (đợt 3 liquid).
-                                        Text(
-                                          item.title,
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: OmniType.body.copyWith(
-                                            color: p.ink,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          _buildSubtitleText(sortMode, grp),
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: OmniType.caption.copyWith(
-                                            color: p.muted,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        FinanceMonthUtils.formatVndSpace(
-                                          item.amount,
-                                        ),
-                                        maxLines: 1,
-                                        softWrap: false,
-                                        style: OmniType.body.copyWith(
-                                          color: p.ink,
-                                          fontWeight: FontWeight.w600,
-                                          fontFeatures: const [
-                                            FontFeature.tabularFigures(),
-                                          ],
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      _buildStatusIndicator(
-                                        p,
-                                        left: left,
-                                        paid: paid,
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
+                          // Dòng tiền (spec §3.4 Danh sách): tên 16/600 +
+                          // tiền 16/700 không cắt / dòng phụ 14 + nhãn.
+                          OmniMoneyRow(
+                            leading: const OmniIconTile(
+                              Icons.receipt_long_outlined,
+                            ),
+                            title: item.title,
+                            amount: FinanceMonthUtils.formatVndSpace(
+                              item.amount,
+                            ),
+                            subtitle: Text(_buildSubtitleText(sortMode, grp)),
+                            status: _buildStatusIndicator(
+                              p,
+                              left: left,
+                              paid: paid,
                             ),
                           ),
                           if (widget.showBottomDivider)
                             Positioned(
-                              left: 54,
+                              left: 56,
                               right: 0,
                               bottom: 0,
                               child: Container(height: 0.5, color: p.divider),
@@ -467,64 +411,29 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
     );
   }
 
+  /// Nhãn trạng thái (spec §3.4): xanh = trả một phần, vàng = chưa trả,
+  /// xám = hoàn/giảm; trả đủ chỉ còn ✓ xanh lá, không thêm chữ.
   Widget _buildStatusIndicator(
     FinancePalette p, {
     required int left,
     required int paid,
   }) {
     if (widget.item.isRefund) {
-      return Text(
-        'Hoàn/giảm',
-        maxLines: 1,
-        style: OmniType.micro.copyWith(
-          color: p.muted,
-          fontWeight: FontWeight.w600,
-        ),
-      );
+      return const OmniStatusLabel(label: 'Hoàn/giảm');
     }
     if (left <= 0) {
-      return Icon(Icons.check_rounded, size: 12, color: p.ok);
+      return Icon(Icons.check_rounded, size: 16, color: p.ok);
     }
     if (paid > 0) {
-      return Text(
-        'còn ${FinanceMonthUtils.formatVndSpace(left)}',
-        maxLines: 1,
-        softWrap: false,
-        style: OmniType.micro.copyWith(
-          color: p.amber,
-          fontWeight: FontWeight.w600,
-          fontFeatures: const [FontFeature.tabularFigures()],
-        ),
+      return OmniStatusLabel(
+        label: 'còn ${FinanceMonthUtils.formatVndSpace(left)}',
+        tone: OmniTone.info,
       );
     }
     if (widget.item.status == ExpenseStatus.partial) {
-      return Text(
-        'Trả một phần',
-        maxLines: 1,
-        style: OmniType.micro.copyWith(
-          color: p.amber,
-          fontWeight: FontWeight.w600,
-        ),
-      );
+      return const OmniStatusLabel(label: 'Trả một phần', tone: OmniTone.info);
     }
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 6,
-          height: 6,
-          decoration: BoxDecoration(color: p.amber, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          'Chưa trả',
-          style: OmniType.micro.copyWith(
-            color: p.amber,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
-    );
+    return const OmniStatusLabel(label: 'Chưa trả', tone: OmniTone.warning);
   }
 }
 

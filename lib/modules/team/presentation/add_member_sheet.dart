@@ -116,30 +116,19 @@ class _AddMemberSheetState extends ConsumerState<AddMemberSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final roles = ref.watch(assignableRolesProvider).valueOrNull ?? const [];
     final done = _done;
     final create = _mode == _Mode.create;
 
     return OmniSheetBody(
+      // Đầu sheet tự có nút ✕ tròn xám (spec phong cách iOS §3.4).
       header: OmniSheetHeader(
         title: done == null ? 'Thêm nhân viên' : 'Hoàn tất',
-        trailing: OmniGlassCircle(
-          child: IconButton(
-            tooltip: 'Đóng',
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-            icon: Icon(
-              Icons.close_rounded,
-              size: OmniIconSize.md,
-              color: scheme.onSurface,
-            ),
-            onPressed: () => Navigator.of(context).maybePop(),
-          ),
-        ),
       ),
       footer: done == null
-          ? _OutlineButton(
+          ? _SheetButton(
+              // Nút chính xanh đặc, 1 nút/sheet (spec phong cách iOS §3.2).
+              filled: true,
               label: create ? 'Tạo tài khoản' : 'Gửi lời mời',
               busy: _busy,
               onPressed: _busy ? null : () => _submit(roles),
@@ -378,7 +367,7 @@ class _AddMemberSheetState extends ConsumerState<AddMemberSheet> {
       children: [
         if (credentials != null) ...[
           Expanded(
-            child: _OutlineButton(
+            child: _SheetButton(
               label: 'Sao chép',
               icon: Icons.content_copy_rounded,
               onPressed: () async {
@@ -393,7 +382,8 @@ class _AddMemberSheetState extends ConsumerState<AddMemberSheet> {
           const SizedBox(width: OmniSpacing.sm),
         ],
         Expanded(
-          child: _OutlineButton(
+          child: _SheetButton(
+            filled: true,
             label: 'Xong',
             onPressed: () => Navigator.of(context).maybePop(),
           ),
@@ -448,7 +438,7 @@ class _AddMemberSheetState extends ConsumerState<AddMemberSheet> {
                   height: 44,
                   decoration: BoxDecoration(
                     color: scheme.primary.withValues(alpha: .12),
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
                     done.invited
@@ -488,30 +478,45 @@ class _AddMemberSheetState extends ConsumerState<AddMemberSheet> {
   }
 }
 
-/// Nút viền kính (theme `OutlinedButton`), cao 48.
-class _OutlineButton extends StatelessWidget {
-  const _OutlineButton({
+/// Nút đáy sheet (spec phong cách iOS §3.2): [filled] = nút chính xanh đặc
+/// (`FilledButton`), còn lại = nút nhẹ theo theme `OutlinedButton`. Cao 48.
+class _SheetButton extends StatelessWidget {
+  const _SheetButton({
     required this.label,
     required this.onPressed,
     this.icon,
     this.busy = false,
+    this.filled = false,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final IconData? icon;
   final bool busy;
+  final bool filled;
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
+    final scheme = Theme.of(context).colorScheme;
     final child = busy
         ? SizedBox.square(
             dimension: 20,
-            child: CircularProgressIndicator(strokeWidth: 2, color: primary),
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: filled ? scheme.onPrimary : scheme.primary,
+            ),
           )
         : Text(label);
 
+    if (filled) {
+      return icon == null
+          ? FilledButton(onPressed: onPressed, child: child)
+          : FilledButton.icon(
+              onPressed: onPressed,
+              icon: Icon(icon, size: 18),
+              label: child,
+            );
+    }
     return icon == null
         ? OutlinedButton(onPressed: onPressed, child: child)
         : OutlinedButton.icon(

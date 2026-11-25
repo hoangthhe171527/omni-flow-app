@@ -277,7 +277,7 @@ void main() {
       expect(find.text('Đang mở'), findsOneWidget);
       // Chỉ cơ hội còn mở: 5.000.000đ, không cộng cơ hội đã thắng 9.000.000đ.
       expect(find.text('5.000.000đ'), findsOneWidget);
-      expect(find.text('Cơ hội · 2'), findsOneWidget);
+      expect(find.bySemanticsLabel('Cơ hội 2'), findsOneWidget);
     });
 
     testWidgets('summary ném 403 → không dải số, trang vẫn hiện', (
@@ -328,7 +328,7 @@ void main() {
       expect(find.text('Nhắn'), findsOneWidget);
       expect(find.text('Gọi'), findsOneWidget);
       expect(find.text('Việc'), findsNothing);
-      expect(find.text('Cơ hội'), findsNothing);
+      expect(find.widgetWithText(InkWell, 'Cơ hội'), findsNothing);
     });
 
     testWidgets('đủ quyền → có Việc và Cơ hội', (tester) async {
@@ -337,7 +337,8 @@ void main() {
         permissions: {_read, _update, _logs, _oppRead, _oppCreate, _tasks},
       );
       expect(find.text('Việc'), findsOneWidget);
-      expect(find.text('Cơ hội'), findsOneWidget);
+      // Nút hành động (thanh chọn cũng ghi 'Cơ hội', số đếm vẽ riêng).
+      expect(find.widgetWithText(InkWell, 'Cơ hội'), findsOneWidget);
     });
 
     testWidgets('Gọi không mở được → SnackBar báo lỗi', (tester) async {
@@ -468,7 +469,7 @@ void main() {
 
     testWidgets('Cơ hội: danh sách dòng cơ hội của khách', (tester) async {
       await open(tester);
-      await tester.tap(find.text('Cơ hội · 2'));
+      await tester.tap(find.bySemanticsLabel('Cơ hội 2'));
       await tester.pumpAndSettle();
       expect(find.text('Gói spa 12 buổi'), findsOneWidget);
       expect(find.text('Đã chốt'), findsOneWidget);
@@ -482,7 +483,7 @@ void main() {
         tester,
         permissions: {_read, _update, _logs, _oppRead, _oppCreate},
       );
-      await tester.tap(find.text('Cơ hội · 2'));
+      await tester.tap(find.bySemanticsLabel('Cơ hội 2'));
       await tester.pumpAndSettle();
       expect(find.text('Chưa có cơ hội'), findsOneWidget);
       expect(find.text('Tạo cơ hội'), findsOneWidget);
@@ -493,7 +494,7 @@ void main() {
       (tester) async {
         server.opportunitiesError = const NetworkException('mất mạng');
         await open(tester);
-        await tester.tap(find.text('Cơ hội · 2'));
+        await tester.tap(find.bySemanticsLabel('Cơ hội 2'));
         await tester.pumpAndSettle();
         expect(find.text('Chưa có cơ hội'), findsOneWidget);
         expect(find.text('Tạo cơ hội'), findsNothing);

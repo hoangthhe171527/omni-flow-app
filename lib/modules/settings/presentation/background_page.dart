@@ -40,7 +40,7 @@ class BackgroundPage extends ConsumerWidget {
       // OmniAppBar như hai màn tài khoản kia: màn đẩy vào nên nó tự giữ nút
       // quay lại và không vẽ avatar (xem OmniAppBar).
       appBar: const OmniAppBar(title: 'Nền'),
-      // Lưới ba cột; ô đang chọn = vành trắng mờ + dấu ✓ (không câu dẫn).
+      // Lưới ba cột; ô đang chọn = viền xanh 2 + dấu ✓ (không câu dẫn).
       body: CustomScrollView(
         slivers: [
           SliverPadding(
@@ -99,7 +99,8 @@ class _Tile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    const radius = BorderRadius.all(Radius.circular(18));
+    // Thẻ bo 16 (thang 6/10/16/32).
+    const radius = BorderRadius.all(Radius.circular(16));
 
     return Semantics(
       button: true,
@@ -122,14 +123,7 @@ class _Tile extends StatelessWidget {
                     color: selected ? scheme.primary : scheme.outlineVariant,
                     width: selected ? 2 : 1,
                   ),
-                  boxShadow: selected
-                      ? [
-                          BoxShadow(
-                            color: OmniGlass.selectionOf(context),
-                            spreadRadius: 3,
-                          ),
-                        ]
-                      : null,
+                  // Chọn: chỉ viền xanh 2 + ✓, không quầng bóng quanh thẻ.
                 ),
                 child: Stack(
                   fit: StackFit.expand,

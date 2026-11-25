@@ -24,11 +24,7 @@ import '../domain/plan.dart';
 /// `PUT /tasks/{id} {archived:false}`; dòng biến mất ngay khi server nhận,
 /// việc quay về bảng.
 class ArchivedTasksPage extends ConsumerStatefulWidget {
-  const ArchivedTasksPage({
-    super.key,
-    this.planId,
-    this.canRestore,
-  });
+  const ArchivedTasksPage({super.key, this.planId, this.canRestore});
 
   /// Null khi mở trực tiếp từ menu Vận hành (xem tất cả hoặc chọn kế hoạch).
   final String? planId;
@@ -128,7 +124,12 @@ class _ArchivedTasksPageState extends ConsumerState<ArchivedTasksPage> {
     }
   }
 
-  bool _canRestoreTask(Task task, Map<String, Plan> planById, bool canUpdate, String? me) {
+  bool _canRestoreTask(
+    Task task,
+    Map<String, Plan> planById,
+    bool canUpdate,
+    String? me,
+  ) {
     final explicit = widget.canRestore;
     if (explicit != null) return explicit;
     if (!canUpdate) return false;
@@ -159,14 +160,16 @@ class _ArchivedTasksPageState extends ConsumerState<ArchivedTasksPage> {
 
     final showPlanFilter = widget.planId == null;
     final groups = showPlanFilter
-        ? ref.watch(teamsWithPlansProvider).valueOrNull ?? const <TeamWithPlans>[]
+        ? ref.watch(teamsWithPlansProvider).valueOrNull ??
+              const <TeamWithPlans>[]
         : const <TeamWithPlans>[];
     final allPlans = [
       for (final g in groups) ...[...g.plans, ...g.closedPlans],
     ];
     final planById = {for (final p in allPlans) p.id: p};
 
-    final canUpdate = widget.canRestore ?? ref.watch(taskAccessProvider).canUpdate;
+    final canUpdate =
+        widget.canRestore ?? ref.watch(taskAccessProvider).canUpdate;
     final me = widget.canRestore == null
         ? ref.watch(sessionProvider).user?.id
         : null;
@@ -350,7 +353,15 @@ class _RestoreGlassPill extends StatelessWidget {
                 height: 32,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 alignment: Alignment.center,
-                decoration: OmniGlass.buttonDecoration(context),
+                // Nút phụ: nền xanh nhạt + chữ xanh (spec phong cách iOS §3.2).
+                decoration: BoxDecoration(
+                  color: scheme.primary.withValues(
+                    alpha: Theme.of(context).brightness == Brightness.dark
+                        ? .18
+                        : .10,
+                  ),
+                  borderRadius: BorderRadius.circular(999),
+                ),
                 child: Text(
                   'Khôi phục',
                   style: OmniType.caption.copyWith(

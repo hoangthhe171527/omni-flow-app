@@ -60,20 +60,17 @@ class OmniFilterPill extends StatelessWidget {
           ? OmniColors.darkPrimaryForeground
           : OmniColors.inkMutedForeground;
       countColor = foreground;
-    } else if (selected && outlined) {
-      background = scheme.surface;
-      foreground = scheme.onSurface;
-      countColor = scheme.onSurfaceVariant;
-      // Cùng kiểu chip đang chọn của theme: trắng mờ, viền màu chính nhạt.
-      border = Border.all(color: scheme.primary.withValues(alpha: .45));
+    } else if (selected && tint != null) {
+      background = tint!;
+      foreground = Colors.white;
+      countColor = Colors.white.withValues(alpha: 0.75);
     } else if (selected) {
-      background = tint ?? (dark ? scheme.onSurface : OmniColors.ink);
-      foreground = dark && tint == null ? scheme.surface : Colors.white;
-      countColor = tint != null
-          ? Colors.white.withValues(alpha: 0.75)
-          : dark
-          ? scheme.surface.withValues(alpha: 0.72)
-          : OmniColors.inkMutedForeground;
+      // Chip chọn (spec phong cách iOS §3.4): nền xanh nhạt, chữ xanh, viền
+      // xanh 1.5 — một màu nhấn duy nhất, không còn khối mực.
+      background = scheme.primary.withValues(alpha: dark ? .16 : .10);
+      foreground = scheme.primary;
+      countColor = scheme.primary;
+      border = Border.all(color: scheme.primary, width: 1.5);
     } else if (outlined) {
       background = scheme.surface;
       foreground = scheme.onSurface;

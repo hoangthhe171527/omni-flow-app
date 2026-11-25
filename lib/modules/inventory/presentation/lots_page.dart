@@ -134,8 +134,9 @@ class _LotsPageState extends ConsumerState<LotsPage> {
                             title: 'Đặt trước',
                             trailing: Text(
                               '${InventoryFormat.number(resv)} cây',
+                              // Số đếm màu mực: màu chỉ dành cho trạng thái.
                               style: OmniType.bodyStrong.copyWith(
-                                color: Theme.of(context).colorScheme.primary,
+                                color: Theme.of(context).colorScheme.onSurface,
                                 fontFeatures: OmniType.tabular,
                               ),
                             ),
@@ -145,9 +146,10 @@ class _LotsPageState extends ConsumerState<LotsPage> {
                               title: 'Còn nợ NCC',
                               trailing: Text(
                                 InventoryFormat.yen(dueJpy),
+                                // Số tiền màu mực (spec §3.5).
                                 style: OmniType.bodyStrong.copyWith(
                                   color: dueJpy > 0
-                                      ? OmniColors.warningTextOf(context)
+                                      ? Theme.of(context).colorScheme.onSurface
                                       : Theme.of(
                                           context,
                                         ).colorScheme.onSurfaceVariant,
@@ -279,10 +281,7 @@ class LotRow extends StatelessWidget {
                 children: [
                   Text(
                     l.title,
-                    style: OmniType.body.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: scheme.onSurface,
-                    ),
+                    style: OmniType.section.copyWith(color: scheme.onSurface),
                   ),
                   Text(
                     l.units == 0
@@ -294,7 +293,7 @@ class LotRow extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 5),
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(3),
+                        borderRadius: BorderRadius.circular(99),
                         child: SizedBox(
                           height: 4,
                           child: Stack(
@@ -322,22 +321,22 @@ class LotRow extends StatelessWidget {
                         s.startsWith('Thuế phí chưa trả'))
                       Padding(
                         padding: const EdgeInsets.only(top: 4),
-                        child: InvStatusPill(
+                        child: OmniStatusLabel(
                           label: s,
-                          tone: OmniColors.warningTextOf(context),
+                          tone: OmniTone.warning,
                         ),
                       )
                     else if (s.startsWith('Đã cọc'))
                       Padding(
                         padding: const EdgeInsets.only(top: 4),
-                        child: InvStatusPill(label: s, tone: scheme.primary),
+                        child: OmniStatusLabel(label: s, tone: OmniTone.info),
                       )
                     else if (s == 'Đã trả đủ')
                       Padding(
                         padding: const EdgeInsets.only(top: 4),
-                        child: InvStatusPill(
+                        child: OmniStatusLabel(
                           label: s,
-                          tone: OmniColors.successTextOf(context),
+                          tone: OmniTone.success,
                         ),
                       )
                     else

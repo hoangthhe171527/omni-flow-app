@@ -75,7 +75,8 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
       // Nền xám để các thẻ nhóm lồng nổi lên.
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       // Thanh trên kiểu B (viomni-apple-uiux.html "Thông báo"): tiêu đề lớn,
-      // "Đọc hết" là viên kính chữ; không chuông — đang ở chính trang này.
+      // "Đọc hết" là nút chữ xanh trơn (spec phong cách iOS §3.2 bậc "Chữ" —
+      // kính chỉ cho lớp điều hướng); không chuông — đang ở chính trang này.
       extendBodyBehindAppBar: true,
       appBar: OmniTopBar(
         semanticsTitle: 'Thông báo',
@@ -88,27 +89,24 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
             : null,
         showBell: false,
         actions: [
-          OmniGlass(
-            radius: 22,
-            child: SizedBox(
-              height: 44,
-              child: TextButton(
-                onPressed: unread > 0
-                    ? () {
-                        HapticFeedback.selectionClick();
-                        ref.read(notificationsProvider.notifier).markAllRead();
-                      }
-                    : null,
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  shape: const StadiumBorder(),
-                ),
-                child: Text(
-                  'Đọc hết',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: unread > 0 ? scheme.primary : null,
-                  ),
+          SizedBox(
+            height: 44,
+            child: TextButton(
+              onPressed: unread > 0
+                  ? () {
+                      HapticFeedback.selectionClick();
+                      ref.read(notificationsProvider.notifier).markAllRead();
+                    }
+                  : null,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                shape: const StadiumBorder(),
+              ),
+              child: Text(
+                'Đọc hết',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: unread > 0 ? scheme.primary : null,
                 ),
               ),
             ),
@@ -118,10 +116,9 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(44),
           child: OmniSegmented(
-            labels: [
-              'Tất cả',
-              unreadCount == null ? 'Chưa đọc' : 'Chưa đọc · $unreadCount',
-            ],
+            // Số đếm cạnh nhãn, không ghép vào chữ (spec phong cách iOS §3.4).
+            labels: const ['Tất cả', 'Chưa đọc'],
+            counts: [null, unreadCount],
             index: unreadOnly ? 1 : 0,
             onChanged: (i) =>
                 ref.read(notificationUnreadOnlyProvider.notifier).state =

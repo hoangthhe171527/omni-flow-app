@@ -99,8 +99,8 @@ void main() {
     final api = await pump(t);
 
     expect(api.listCalls.first['place'], 'in_stock');
-    expect(find.text('Còn bán 2'), findsOneWidget);
-    expect(find.text('Đã có khách 1'), findsOneWidget);
+    expect(find.bySemanticsLabel('Còn bán 2'), findsOneWidget);
+    expect(find.bySemanticsLabel('Đã có khách 1'), findsOneWidget);
     expect(find.text('2 cây'), findsOneWidget);
     // Đã tải hết → có tổng niêm yết và vốn, đủ chữ số.
     expect(find.text('53.000.000đ'), findsOneWidget);
@@ -146,7 +146,7 @@ void main() {
   testWidgets('Đã có khách: tải sale=reserved,sold, hiện tên khách', (t) async {
     final api = await pump(t);
 
-    await t.tap(find.text('Đã có khách 1'));
+    await t.tap(find.bySemanticsLabel('Đã có khách 1'));
     await t.pumpAndSettle();
 
     expect(api.listCalls.last['sale'], 'reserved,sold');

@@ -23,7 +23,8 @@ EdgeInsets hrListPadding(
       : ShellBarInset.coveredBottom(context) + OmniSpacing.xxl,
 );
 
-/// Viên trạng thái nhỏ: `Chưa chấm`, `Đang trong ca`, `Chờ duyệt`, `Mới`.
+/// Nhãn trạng thái nhỏ: `Chưa chấm`, `Đang trong ca`, `Chờ duyệt`, `Mới` —
+/// cùng khuôn [OmniStatusLabel] (cao 22, bo 6, 12/600; spec §3.4).
 class HrPill extends StatelessWidget {
   const HrPill(this.label, {super.key, this.tone = OmniTone.neutral});
 
@@ -31,29 +32,8 @@ class HrPill extends StatelessWidget {
   final OmniTone tone;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final (fg, bg) = tone.resolve(
-      theme.colorScheme,
-      dark: theme.brightness == Brightness.dark,
-    );
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-        child: Text(
-          label,
-          style: OmniType.caption.copyWith(
-            color: fg,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) =>
+      OmniStatusLabel(label: label, tone: tone);
 }
 
 /// Giá trị bên phải một dòng, không bao giờ cắt (tiền đủ số).
@@ -166,8 +146,9 @@ class HrHero extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final muted = scheme.onSurfaceVariant;
+    // Khối tổng (spec §3.4): nhãn 13 xám, số 30/800 là số lớn nhất màn.
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -176,7 +157,10 @@ class HrHero extends StatelessWidget {
               Expanded(
                 child: Text(
                   label,
-                  style: OmniType.bodySm.copyWith(color: muted),
+                  style: OmniType.caption.copyWith(
+                    color: muted,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
               ?pill,
@@ -188,9 +172,11 @@ class HrHero extends StatelessWidget {
               children: [
                 TextSpan(
                   text: number,
-                  style: OmniType.moneyHero.copyWith(
+                  style: OmniType.displayLg.copyWith(
                     color: scheme.onSurface,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.6,
+                    fontFeatures: OmniType.tabular,
                   ),
                 ),
                 if (unit != null)
@@ -295,10 +281,16 @@ class HrMonthSwitcher extends StatelessWidget {
       children: [
         arrow(Icons.chevron_left_rounded, 'Tháng trước', onPrev),
         const SizedBox(width: 10),
+        // Nút chọn tháng: nền xám đặc dáng viên thuốc, không kính (spec §3.1).
         Flexible(
-          child: OmniGlass(
-            radius: 999,
-            blur: false,
+          child: Material(
+            color: scheme.onSurface.withValues(
+              alpha: Theme.of(context).brightness == Brightness.dark
+                  ? .12
+                  : .06,
+            ),
+            shape: const StadiumBorder(),
+            clipBehavior: Clip.antiAlias,
             child: InkWell(
               borderRadius: BorderRadius.circular(999),
               onTap: onTapLabel,
@@ -373,10 +365,19 @@ class HrLocationRow extends StatelessWidget {
       subtitle: line.subtitle,
       onTap: onTap,
       chevron: onTap != null,
-      trailing: HrValue(
-        line.value,
-        tone: tone == OmniTone.neutral ? null : tone,
-      ),
+      // Trạng thái vị trí có sắc = nhãn bo 6 (spec §3.4); trung tính = chữ.
+      trailing: tone == OmniTone.neutral
+          ? HrValue(line.value)
+          : ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.sizeOf(context).width * .5,
+              ),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: OmniStatusLabel(label: line.value, tone: tone),
+              ),
+            ),
     );
   }
 }

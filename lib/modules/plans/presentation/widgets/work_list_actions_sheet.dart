@@ -66,7 +66,7 @@ class WorkListActionsSheet extends StatelessWidget {
                 height: 36,
                 decoration: BoxDecoration(
                   color: coverColor,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
               ),
         trailing: OmniGlassCircle(

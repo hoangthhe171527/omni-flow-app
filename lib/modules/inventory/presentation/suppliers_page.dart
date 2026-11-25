@@ -84,27 +84,23 @@ class _SuppliersPageState extends ConsumerState<SuppliersPage> {
                     padding: EdgeInsets.fromLTRB(16, 4, 16, bottom),
                     children: [
                       if (debt) ...[
-                        OmniGroupSection(
+                        // Khối tổng (spec §3.4): tổng nợ là số lớn, quá hạn /
+                        // trả dư là số phụ dưới đường kẻ.
+                        OmniTotalCard(
                           key: const ValueKey('inv-sup-summary'),
-                          children: [
-                            OmniGroupRow(
-                              title: 'Nợ quá hạn',
-                              trailing: _Money(
-                                InventoryFormat.yen(late),
-                                danger: late > 0,
-                              ),
-                            ),
-                            OmniGroupRow(
-                              title: 'Tổng nợ',
-                              subtitle: open > 0 ? '$open lô còn nợ' : null,
-                              trailing: _Money(
-                                InventoryFormat.yen(sum((s) => s.debtJpy)),
-                              ),
+                          label: 'Tổng nợ',
+                          trailingLabel: open > 0 ? '$open lô còn nợ' : null,
+                          amount: InventoryFormat.yen(sum((s) => s.debtJpy)),
+                          stats: [
+                            OmniTotalStat(
+                              value: InventoryFormat.yen(late),
+                              label: 'Nợ quá hạn',
+                              warning: late > 0,
                             ),
                             if (prepaid > 0)
-                              OmniGroupRow(
-                                title: 'Trả dư',
-                                trailing: _Money(InventoryFormat.yen(prepaid)),
+                              OmniTotalStat(
+                                value: InventoryFormat.yen(prepaid),
+                                label: 'Trả dư',
                               ),
                           ],
                         ),
@@ -112,7 +108,7 @@ class _SuppliersPageState extends ConsumerState<SuppliersPage> {
                       ],
                       OmniGroupSection(
                         key: const ValueKey('inv-sup-list'),
-                        dividerIndent: 14,
+                        dividerIndent: 16,
                         children: [
                           if (rows.isEmpty)
                             const InvMutedRow('Chưa có nhà cung cấp')
@@ -156,32 +152,35 @@ class _SupplierRow extends StatelessWidget {
     final late = s.overdueJpy ?? 0;
     final pre = s.prepaidJpy ?? 0;
     final lots = s.openLots ?? 0;
-    return OmniGroupRow(
+    final subtitle = [
+      if (s.name.trim().isNotEmpty && s.name.trim() != s.code) s.name.trim(),
+      s.originLabel,
+      if (debt && lots > 0) '$lots lô còn nợ',
+    ].join(' · ');
+    if (!debt) {
+      return OmniGroupRow(
+        title: s.code,
+        subtitle: subtitle,
+        chevron: true,
+        onTap: onTap,
+      );
+    }
+    // Dòng tiền (spec §3.4): số nợ màu mực, quá hạn / trả dư là nhãn bo 6.
+    return OmniMoneyRow(
       title: s.code,
-      subtitle: [
-        if (s.name.trim().isNotEmpty && s.name.trim() != s.code) s.name.trim(),
-        s.originLabel,
-        if (debt && lots > 0) '$lots lô còn nợ',
-      ].join(' · '),
-      trailing: debt
-          ? InvValue(
-              InventoryFormat.yen(s.debtJpy ?? 0),
-              valueColor: (s.debtJpy ?? 0) > 0
-                  ? OmniColors.warningTextOf(context)
-                  : null,
-              sub: late > 0
-                  ? 'quá hạn ${InventoryFormat.yen(late)}'
-                  : pre > 0
-                  ? 'trả dư ${InventoryFormat.yen(pre)}'
-                  : null,
-              subColor: late > 0
-                  ? OmniColors.dangerTextOf(context)
-                  : pre > 0
-                  ? OmniColors.successTextOf(context)
-                  : null,
+      amount: InventoryFormat.yen(s.debtJpy ?? 0),
+      subtitle: Text(subtitle),
+      status: late > 0
+          ? OmniStatusLabel(
+              label: 'quá hạn ${InventoryFormat.yen(late)}',
+              tone: OmniTone.danger,
+            )
+          : pre > 0
+          ? OmniStatusLabel(
+              label: 'trả dư ${InventoryFormat.yen(pre)}',
+              tone: OmniTone.info,
             )
           : null,
-      chevron: true,
       onTap: onTap,
     );
   }
@@ -283,38 +282,22 @@ class SupplierDetailPage extends ConsumerWidget {
     ];
     return [
       if (s.hasDebt) ...[
-        OmniGroupSection(
+        // Khối tổng (spec §3.4): "Còn nợ" là số lớn; quá hạn / trả dư / hạn
+        // trả là số phụ dưới đường kẻ.
+        OmniTotalCard(
           key: const ValueKey('inv-sup-debt'),
-          children: [
-            OmniGroupRow(
-              title: 'Còn nợ',
-              trailing: Text(
-                InventoryFormat.yen(s.debtJpy),
-                style: OmniType.bodyStrong.copyWith(
-                  color: (s.debtJpy ?? 0) > 0
-                      ? OmniColors.warningTextOf(context)
-                      : Theme.of(context).colorScheme.onSurface,
-                  fontFeatures: OmniType.tabular,
-                ),
-              ),
-            ),
+          label: 'Còn nợ',
+          amount: InventoryFormat.yen(s.debtJpy),
+          stats: [
             if (late > 0)
-              OmniGroupRow(
-                title: 'Quá hạn',
-                trailing: _Money(InventoryFormat.yen(late), danger: true),
+              OmniTotalStat(
+                value: InventoryFormat.yen(late),
+                label: 'Quá hạn',
+                warning: true,
               ),
             if (pre > 0)
-              OmniGroupRow(
-                title: 'Trả dư',
-                trailing: Text(
-                  InventoryFormat.yen(pre),
-                  style: OmniType.bodyStrong.copyWith(
-                    color: OmniColors.successTextOf(context),
-                    fontFeatures: OmniType.tabular,
-                  ),
-                ),
-              ),
-            OmniGroupRow(title: 'Hạn trả', value: s.termLabel),
+              OmniTotalStat(value: InventoryFormat.yen(pre), label: 'Trả dư'),
+            OmniTotalStat(value: s.termLabel, label: 'Hạn trả'),
           ],
         ),
         if (lots.isNotEmpty) ...[
@@ -333,14 +316,24 @@ class SupplierDetailPage extends ConsumerWidget {
                       : l.receivedAt != null
                       ? 'Về kho ${InventoryFormat.dmy(l.receivedAt)}'
                       : LotStatus.parse(l.status).label,
-                  trailing: InvValue(
-                    l.dueJpy > 0
-                        ? InventoryFormat.yen(l.dueJpy)
-                        : 'trả dư ${InventoryFormat.yen(l.prepaidJpy)}',
-                    sub: l.overdue ? 'Quá hạn' : null,
-                    subColor: l.overdue
-                        ? OmniColors.dangerTextOf(context)
-                        : null,
+                  // Quá hạn = nhãn đỏ bo 6 dưới số tiền (spec §3.4).
+                  trailing: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      InvValue(
+                        l.dueJpy > 0
+                            ? InventoryFormat.yen(l.dueJpy)
+                            : 'trả dư ${InventoryFormat.yen(l.prepaidJpy)}',
+                      ),
+                      if (l.overdue) ...[
+                        const SizedBox(height: 3),
+                        const OmniStatusLabel(
+                          label: 'Quá hạn',
+                          tone: OmniTone.danger,
+                        ),
+                      ],
+                    ],
                   ),
                   chevron: true,
                   onTap: () => context.pushNamed(
@@ -388,24 +381,3 @@ class SupplierDetailPage extends ConsumerWidget {
     ];
   }
 }
-
-/// Số tiền bên phải dòng: đủ số, đỏ khi quá hạn.
-class _Money extends StatelessWidget {
-  const _Money(this.text, {this.danger = false});
-
-  final String text;
-  final bool danger;
-
-  @override
-  Widget build(BuildContext context) => Text(
-    text,
-    style: OmniType.bodyStrong.copyWith(
-      color: danger
-          ? OmniColors.dangerTextOf(context)
-          : Theme.of(context).colorScheme.onSurface,
-      fontFeatures: OmniType.tabular,
-    ),
-  );
-}
-
-

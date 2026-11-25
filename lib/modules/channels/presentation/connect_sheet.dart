@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../core/domain/channel.dart';
 import '../../../design/components/components.dart';
-import '../../../design/tokens/tokens.dart';
 import '../../../security/permissions/access_policy.dart';
 import '../domain/channel_permissions.dart';
 import '../domain/connectable_channel.dart';
@@ -40,7 +39,6 @@ class _ConnectContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final oauth = ChannelPermissions.canConnectCompany(access)
         ? ConnectableChannels.oauth
         : const <Channel>[];
@@ -63,22 +61,8 @@ class _ConnectContent extends StatelessWidget {
     ];
     if (!compact) {
       return OmniSheetBody(
-        header: OmniSheetHeader(
-          title: 'Kết nối kênh mới',
-          trailing: OmniGlassCircle(
-            child: IconButton(
-              tooltip: 'Đóng',
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-              icon: Icon(
-                Icons.close_rounded,
-                size: OmniIconSize.md,
-                color: scheme.onSurface,
-              ),
-              onPressed: () => Navigator.of(context).maybePop(),
-            ),
-          ),
-        ),
+        // Đầu sheet tự có nút ✕ tròn xám (spec phong cách iOS §3.4).
+        header: const OmniSheetHeader(title: 'Kết nối kênh mới'),
         children: groups,
       );
     }

@@ -192,7 +192,7 @@ class _UnitPhotosSectionState extends ConsumerState<UnitPhotosSection> {
                         label: 'Thêm ảnh',
                         child: InkWell(
                           key: const ValueKey('inv-photo-add'),
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(10),
                           onTap: _busy
                               ? null
                               : () {
@@ -208,7 +208,7 @@ class _UnitPhotosSectionState extends ConsumerState<UnitPhotosSection> {
                             width: side,
                             height: side,
                             child: OmniDashedBox(
-                              radius: 14,
+                              radius: 10,
                               strokeWidth: 1.2,
                               child: Center(
                                 child: _busy
@@ -270,7 +270,7 @@ class _PhotoTile extends StatelessWidget {
           ? 'Ảnh thợ chụp'
           : 'Ảnh kho',
       child: InkWell(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(10),
         onTap: onTap,
         child: SizedBox(
           width: side,
@@ -279,7 +279,7 @@ class _PhotoTile extends StatelessWidget {
             fit: StackFit.expand,
             children: [
               ClipRRect(
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(10),
                 child: InvPhoto(url: photo.url),
               ),
               if (badge != null)
@@ -337,13 +337,14 @@ class InvPhoto extends StatelessWidget {
       builder: (context, constraints) {
         final dpr = MediaQuery.devicePixelRatioOf(context);
         final screen = MediaQuery.sizeOf(context);
-        final rawW = constraints.hasBoundedWidth && constraints.maxWidth.isFinite
+        final rawW =
+            constraints.hasBoundedWidth && constraints.maxWidth.isFinite
             ? constraints.maxWidth
             : screen.width;
         final rawH =
             constraints.hasBoundedHeight && constraints.maxHeight.isFinite
-                ? constraints.maxHeight
-                : screen.height;
+            ? constraints.maxHeight
+            : screen.height;
         final memW = cacheWidth ?? (rawW * dpr).round().clamp(48, 1440);
         final memH = cacheHeight ?? (rawH * dpr).round().clamp(48, 1440);
         return CachedNetworkImage(
@@ -371,13 +372,14 @@ class InvUnitThumb extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final px = (size * MediaQuery.devicePixelRatioOf(context))
-        .round()
-        .clamp(40, 256);
+    final px = (size * MediaQuery.devicePixelRatioOf(context)).round().clamp(
+      40,
+      256,
+    );
     return SizedBox.square(
       dimension: size,
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(10),
         child: InvPhoto(
           url: unit.coverUrl ?? '',
           cacheWidth: px,

@@ -244,10 +244,8 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
                   child: TextFormField(
                     controller: _value,
                     keyboardType: TextInputType.number,
-                    style: OmniType.money.copyWith(
-                      fontSize: OmniType.money.fontSize! + 1,
-                      color: scheme.onSurface,
-                    ),
+                    // Kiểu tiền có sẵn, không đặt cỡ chữ ngoài lib/design.
+                    style: OmniType.money.copyWith(color: scheme.onSurface),
                     decoration: _bare(
                       InputDecoration(
                         hintText: '0',

@@ -500,7 +500,7 @@ class _TickButtonState extends State<_TickButton>
         height: 22,
         decoration: BoxDecoration(
           color: filled ? scheme.primary : scheme.surface,
-          borderRadius: BorderRadius.circular(7.5),
+          borderRadius: BorderRadius.circular(6),
           border: filled ? null : Border.all(color: border, width: 1.5),
         ),
         child: widget.done

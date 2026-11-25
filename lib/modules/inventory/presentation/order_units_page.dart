@@ -51,6 +51,10 @@ class OrderUnitsPage extends ConsumerWidget {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: OmniAppBar(
         title: title,
+        // Tên khách + mã đơn dưới (spec phong cách iOS §3.4 Chi tiết đơn).
+        subtitle: data != null && data.customerName.isNotEmpty
+            ? data.code
+            : null,
         showAccount: false,
         fallbackBack: () =>
             GoRouter.maybeOf(context)?.go(InventoryRoutes.ordersPath),
@@ -86,19 +90,12 @@ class OrderUnitsPage extends ConsumerWidget {
     }
 
     return [
-      OmniGroupSection(
-        key: const ValueKey('order-progress'),
-        children: [
-          _ProgressBlock(
-            data: d,
-            onPay: canPay && d.remaining > 0 ? pay : null,
-          ),
-        ],
-      ),
+      _ProgressBlock(data: d, onPay: canPay && d.remaining > 0 ? pay : null),
       for (final (bucket, units) in d.groups)
         OmniGroupSection(
           key: ValueKey('order-group-${bucket.name}'),
           title: bucket.label,
+          dividerIndent: 16,
           children: [
             for (final u in units)
               _UnitRow(
@@ -135,31 +132,24 @@ class OrderUnitsPage extends ConsumerWidget {
               ),
           ],
         ),
-      if (d.value > 0)
-        OmniGroupSection(
-          key: const ValueKey('order-money'),
-          children: [
-            OmniGroupRow(title: 'Tổng đơn', value: Formatters.vnd(d.value)),
-            OmniGroupRow(title: 'Đã thu', value: Formatters.vnd(d.paid)),
-          ],
-        ),
     ];
   }
 }
 
-/// Khối tiến độ (bản mẫu): "N/M cây xong" · "còn X" một dòng, mã đơn, vạch gộp
-/// (đã giao, sẵn sàng, có vấn đề, ở xưởng, chưa vào — theo số cây).
+/// Khối đầu (spec phong cách iOS §3.4 Chi tiết đơn): Còn phải thu là số chính,
+/// "N/M cây xong" cùng hàng nhãn, vạch gộp (đã giao, sẵn sàng, có vấn đề, ở
+/// xưởng, chưa vào — theo số cây), Tổng đơn · Đã thu ngay dưới. Chạm khối mở
+/// Ghi thu (tiền chạm để sửa).
 class _ProgressBlock extends StatelessWidget {
   const _ProgressBlock({required this.data, this.onPay});
   final OrderUnits data;
 
-  /// Chạm "còn …" mở Ghi thu (tiền chạm để sửa). null = không ghi được.
+  /// null = không ghi thu được (thiếu quyền, đơn huỷ, đã thu đủ).
   final VoidCallback? onPay;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final muted = OmniType.caption.copyWith(color: scheme.onSurfaceVariant);
     final parts = <(int, Color)>[
       (data.count(OrderUnitBucket.delivered), scheme.onSurfaceVariant),
       (data.count(OrderUnitBucket.ready), OmniColors.success),
@@ -171,93 +161,65 @@ class _ProgressBlock extends StatelessWidget {
       for (final b in OrderUnitBucket.values)
         if (data.count(b) > 0) '${data.count(b)} ${b.label}',
     ].join(', ');
-    final due = 'còn ${Formatters.vnd(data.remaining)}';
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 8,
-            runSpacing: 6,
-            children: [
-              Text(
-                data.total == 0
-                    ? 'Chưa có cây nào'
-                    : '${data.done}/${data.total} cây xong',
-                style: OmniType.bodyStrong.copyWith(color: scheme.onSurface),
-              ),
-              if (data.remaining > 0)
-                onPay == null
-                    ? Text(
-                        due,
-                        style: muted.copyWith(fontFeatures: OmniType.tabular),
-                      )
-                    : Semantics(
-                        button: true,
-                        label: '$due, ghi thu',
-                        excludeSemantics: true,
-                        child: Material(
-                          color: scheme.primary.withValues(alpha: .10),
-                          borderRadius: BorderRadius.circular(18),
-                          child: InkWell(
-                            key: const ValueKey('order-due'),
-                            onTap: onPay,
-                            borderRadius: BorderRadius.circular(18),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 5,
-                                horizontal: 10,
-                              ),
-                              child: Text(
-                                'Còn ${Formatters.vnd(data.remaining)} · Ghi thu',
-                                style: OmniType.caption.copyWith(
-                                  color: scheme.primary,
-                                  fontWeight: FontWeight.w600,
-                                  fontFeatures: OmniType.tabular,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-            ],
-          ),
-          const SizedBox(height: 2),
-          Text(data.code, style: muted),
-          if (data.total > 0) ...[
-            const SizedBox(height: 10),
-            Semantics(
+    final progress = data.total == 0
+        ? 'Chưa có cây nào'
+        : '${data.done}/${data.total} cây xong';
+    final hasMoney = data.value > 0;
+    final due = data.remaining > 0;
+    final label = !hasMoney
+        ? 'Tiến độ'
+        : due
+        ? 'Còn phải thu'
+        : 'Đã thu đủ';
+    final amount = !hasMoney
+        ? progress
+        : Formatters.vnd(due ? data.remaining : data.value);
+
+    return OmniTotalCard(
+      key: ValueKey(onPay == null ? 'order-progress' : 'order-due'),
+      label: label,
+      trailingLabel: hasMoney ? progress : null,
+      amount: amount,
+      onTap: onPay,
+      semanticsLabel: onPay == null ? null : '$label $amount, ghi thu',
+      stats: [
+        if (hasMoney) ...[
+          OmniTotalStat(value: Formatters.vnd(data.value), label: 'Tổng đơn'),
+          OmniTotalStat(value: Formatters.vnd(data.paid), label: 'Đã thu'),
+        ],
+      ],
+      child: data.total == 0
+          ? null
+          : Semantics(
               label: barLabel,
               excludeSemantics: true,
               child: _bar(parts),
             ),
-          ],
-        ],
-      ),
     );
   }
 
-  Widget _bar(List<(int, Color)> parts) => ClipRRect(
-    borderRadius: BorderRadius.circular(3),
-    child: SizedBox(
-      height: 6,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (final (n, c) in parts)
-            if (n > 0)
-              Expanded(
-                flex: n,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 1),
-                  child: ColoredBox(color: c),
-                ),
+  /// Vạch 6 chia đoạn, mỗi đoạn bo 2, khe 3 (bản đề xuất).
+  Widget _bar(List<(int, Color)> parts) => SizedBox(
+    height: 6,
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final (i, (n, c)) in [
+          for (final p in parts)
+            if (p.$1 > 0) p,
+        ].indexed) ...[
+          if (i > 0) const SizedBox(width: 3),
+          Expanded(
+            flex: n,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: c,
+                borderRadius: BorderRadius.circular(2),
               ),
+            ),
+          ),
         ],
-      ),
+      ],
     ),
   );
 }
@@ -286,64 +248,52 @@ class _UnitRow extends StatelessWidget {
         ?UnitCondition.parse(u.condition)?.label,
         ?u.lotCode,
       ].join(' · '),
-      OrderUnitBucket.delivered =>
-        u.deliveredAt == null ? null : Formatters.dayMonth(u.deliveredAt!),
+      // Ngày giao lên nhãn xám bên phải.
+      OrderUnitBucket.delivered => null,
     };
-    final progress =
-        w != null && w.total > 0 && u.bucket != OrderUnitBucket.delivered
-        ? _ProgressChip(done: w.done, total: w.total)
+    final Widget? status = u.bucket == OrderUnitBucket.delivered
+        ? (u.deliveredAt == null
+              ? null
+              : OmniStatusLabel(label: Formatters.dayMonth(u.deliveredAt!)))
+        : w != null && w.total > 0
+        ? _ProgressLabel(done: w.done, total: w.total)
         : null;
+    final sub = [?u.serial, if (line2 != null && line2.isNotEmpty) line2];
 
     final danger = OmniColors.dangerTextOf(context);
-    return OmniGroupRow(
+    return OmniMoneyRow(
       key: ValueKey('order-unit-${u.id}'),
-      title: [u.label.isEmpty ? '—' : u.label, ?u.serial].join(' '),
-      subtitle: line2 == null || line2.isEmpty ? null : line2,
-      // Cây có vấn đề: ô icon 28 bo 12 nền đỏ mềm đầu dòng, lời báo ở dòng phụ.
+      title: u.label.isEmpty ? '—' : u.label,
+      subtitle: sub.isEmpty ? null : Text(sub.join(' · ')),
+      status: status,
+      // Cây có vấn đề: dấu ! đỏ đầu dòng, lời báo ở dòng phụ.
       leading: u.bucket == OrderUnitBucket.issue
-          ? Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                color: danger.withValues(alpha: .12),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(Icons.error_outline_rounded, size: 16, color: danger),
-            )
+          ? Icon(Icons.error_outline_rounded, size: 20, color: danger)
           : null,
-      trailing: progress,
-      chevron: onTap != null,
       onTap: onTap,
     );
   }
 }
 
-/// Ô `x/y` công đoạn bốn mức, cùng ngưỡng với thẻ bảng việc.
-class _ProgressChip extends StatelessWidget {
-  const _ProgressChip({required this.done, required this.total});
+/// Ô `x/y` công đoạn thành nhãn bốn mức, cùng ngưỡng với thẻ bảng việc: dưới
+/// 60% đỏ, tới 90% vàng, gần xong xanh, xong xanh + ✓ (không chỉ khác màu).
+class _ProgressLabel extends StatelessWidget {
+  const _ProgressLabel({required this.done, required this.total});
   final int done;
   final int total;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final color = switch (progressLevelOf(done, total)) {
-      ProgressLevel.low => OmniColors.dangerTextOf(context),
-      ProgressLevel.mid => OmniColors.warningTextOf(context),
-      ProgressLevel.near => OmniColors.byBrightness(
-        context,
-        OmniColors.infoText,
-        OmniColors.darkInfoText,
-      ),
-      ProgressLevel.done => scheme.primary,
-      null => scheme.onSurfaceVariant,
-    };
-    return Text(
-      '$done/$total',
-      style: OmniType.caption.copyWith(
-        color: color,
-        fontFeatures: OmniType.tabular,
-      ),
+    final level = progressLevelOf(done, total);
+    return OmniStatusLabel(
+      label: '$done/$total',
+      icon: level == ProgressLevel.done ? Icons.check_rounded : null,
+      tone: switch (level) {
+        ProgressLevel.low => OmniTone.danger,
+        ProgressLevel.mid => OmniTone.warning,
+        ProgressLevel.near || ProgressLevel.done => OmniTone.info,
+        null => OmniTone.neutral,
+      },
     );
   }
 }

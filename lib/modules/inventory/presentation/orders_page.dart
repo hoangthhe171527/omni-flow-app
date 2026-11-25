@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/utils/formatters.dart';
 import '../../../design/components/components.dart';
-import '../../../design/tokens/tokens.dart';
 import '../application/inventory_providers.dart';
 import '../domain/order_list.dart';
 import '../routes.dart';
@@ -49,31 +48,22 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
     final rows = res.valueOrNull;
     final List<Widget> list = [
       OmniSegmented(
-        labels: [
-          due == null || due.awaiting == 0
-              ? 'Cần thu'
-              : 'Cần thu ${due.awaiting}',
-          'Đang xử lý',
-          'Tất cả',
+        labels: const ['Cần thu', 'Đang xử lý', 'Tất cả'],
+        counts: [
+          if (due == null || due.awaiting == 0) null else due.awaiting,
+          null,
+          null,
         ],
         index: OrderListFilter.values.indexOf(_filter),
         onChanged: (i) => setState(() => _filter = OrderListFilter.values[i]),
       ),
+      // Khối tổng (spec phong cách iOS §3.1): số tiền là số lớn nhất màn.
       if (due != null && due.outstanding > 0)
-        OmniGroupSection(
+        OmniTotalCard(
           key: const ValueKey('orders-due'),
-          children: [
-            OmniGroupRow(
-              title: 'Còn phải thu',
-              trailing: Text(
-                Formatters.vnd(due.outstanding),
-                style: OmniType.bodyStrong.copyWith(
-                  color: OmniColors.warningTextOf(context),
-                  fontFeatures: OmniType.tabular,
-                ),
-              ),
-            ),
-          ],
+          label: 'Còn phải thu',
+          trailingLabel: due.awaiting > 0 ? '${due.awaiting} đơn' : null,
+          amount: Formatters.vnd(due.outstanding),
         ),
       ...switch (res) {
         AsyncValue(:final error?) when rows == null => [
@@ -111,6 +101,7 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
               OmniGroupSection(
                 key: ValueKey('orders-group-$title'),
                 title: title,
+                dividerIndent: 16,
                 children: [for (final o in group) _OrderRowTile(order: o)],
               ),
         ],
@@ -183,41 +174,34 @@ class _OrderRowTile extends StatelessWidget {
   const _OrderRowTile({required this.order});
   final OrderRow order;
 
+  /// "5 cây: KAWAI BL-71, …" → "5 cây". Tên hàng tự do (đơn cũ) giữ nguyên.
+  static String? _unitCount(String product) {
+    final p = product.trim();
+    if (p.isEmpty) return null;
+    final m = RegExp(r'^(\d+ cây)\b').firstMatch(p);
+    return m?.group(1) ?? p;
+  }
+
   @override
   Widget build(BuildContext context) {
     final o = order;
-    final scheme = Theme.of(context).colorScheme;
     final router = GoRouter.maybeOf(context);
     final money = o.remaining > 0 ? o.remaining : o.value;
-    final payColor = switch (o.payStatus) {
-      OrderPayStatus.unpaid => OmniColors.warningTextOf(context),
-      OrderPayStatus.partial => scheme.primary,
-      OrderPayStatus.paid => OmniColors.successTextOf(context),
-    };
+    final (label, tone) = o.cancelled
+        ? ('Đã huỷ', OmniTone.neutral)
+        : switch (o.payStatus) {
+            OrderPayStatus.unpaid => (o.payStatus.label, OmniTone.warning),
+            OrderPayStatus.partial => (o.payStatus.label, OmniTone.info),
+            OrderPayStatus.paid => (o.payStatus.label, OmniTone.success),
+          };
 
-    return OmniGroupRow(
+    return OmniMoneyRow(
       key: ValueKey('order-row-${o.id}'),
       title: o.customerName.isEmpty ? o.code : o.customerName,
-      subtitle: [
-        o.code,
-        if (o.product.isNotEmpty) o.product,
-        if (o.cancelled) 'Đã huỷ',
-      ].join(' · '),
-      trailing: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Text(
-            Formatters.vnd(money),
-            style: OmniType.bodyStrong.copyWith(
-              color: scheme.onSurface,
-              fontFeatures: OmniType.tabular,
-            ),
-          ),
-          const SizedBox(height: 3),
-          InvStatusPill(label: o.payStatus.label, tone: payColor),
-        ],
-      ),
+      amount: Formatters.vnd(money),
+      // Dòng phụ chỉ "mã · n cây" (spec §3.1): danh sách model ở màn chi tiết.
+      subtitle: Text([o.code, ?_unitCount(o.product)].join(' · ')),
+      status: OmniStatusLabel(label: label, tone: tone),
       onTap: router == null
           ? null
           : () => router.pushNamed(

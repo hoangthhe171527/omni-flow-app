@@ -162,7 +162,7 @@ class _ReportIssueSheetState extends State<_ReportIssueSheet> {
                 clipBehavior: Clip.none,
                 children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                     child: SizedBox.square(
                       dimension: 64,
                       child: kIsWeb
@@ -206,14 +206,14 @@ class _ReportIssueSheetState extends State<_ReportIssueSheet> {
                 label: 'Thêm ảnh',
                 child: InkWell(
                   key: const Key('issue-add-photo'),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                   onTap: _add,
                   child: Container(
                     width: 64,
                     height: 64,
                     decoration: BoxDecoration(
                       color: scheme.surface,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: scheme.outlineVariant),
                     ),
                     child: Icon(
@@ -260,36 +260,43 @@ class IssueCard extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: scheme.surface,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                decoration: BoxDecoration(
-                  color: red.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.report_outlined, size: 15, color: red),
-                    const SizedBox(width: 5),
-                    Flexible(
-                      child: Text(
-                        who.isEmpty ? 'Vấn đề' : who,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: OmniType.micro.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: red,
+              // Khuôn nhãn trạng thái đỏ (spec phong cách iOS §3.4): bo 6,
+              // 12/600; tự dựng để tên dài còn cắt "…".
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: red.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.report_outlined, size: 13, color: red),
+                      const SizedBox(width: 3),
+                      Flexible(
+                        child: Text(
+                          who.isEmpty ? 'Vấn đề' : who,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: OmniType.micro.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: red,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -310,7 +317,7 @@ class IssueCard extends StatelessWidget {
                     attachment: photo,
                     gallery: issuePhotos,
                     size: 56,
-                    radius: 12,
+                    radius: 10,
                   ),
               ],
             ),

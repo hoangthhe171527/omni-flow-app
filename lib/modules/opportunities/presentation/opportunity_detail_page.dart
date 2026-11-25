@@ -354,18 +354,25 @@ class _StageStepper extends StatelessWidget {
     // Thắng/thua theo `opportunity_status` của máy chủ — một quy trình tuỳ
     // biến gọi giai đoạn Thắng là `da_mua`, không phải `won`.
     if (opportunity.isCancelled) {
-      return const OmniStatusChip(
-        label: 'Đã huỷ',
-        tone: OmniTone.neutral,
-        icon: Icons.block_rounded,
+      // Nhãn trạng thái (spec phong cách iOS §3.4).
+      return const Align(
+        alignment: Alignment.centerLeft,
+        child: OmniStatusLabel(
+          label: 'Đã huỷ',
+          tone: OmniTone.neutral,
+          icon: Icons.block_rounded,
+        ),
       );
     }
     if (opportunity.isClosed) {
       final won = opportunity.isWon;
-      return OmniStatusChip(
-        label: won ? 'Đã thắng' : 'Đã thua',
-        tone: won ? OmniTone.success : OmniTone.danger,
-        icon: won ? Icons.emoji_events_outlined : Icons.cancel_outlined,
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: OmniStatusLabel(
+          label: won ? 'Đã thắng' : 'Đã thua',
+          tone: won ? OmniTone.success : OmniTone.danger,
+          icon: won ? Icons.emoji_events_outlined : Icons.cancel_outlined,
+        ),
       );
     }
 

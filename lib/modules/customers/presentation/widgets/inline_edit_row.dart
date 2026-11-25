@@ -179,7 +179,8 @@ class _InlineEditRowState extends State<InlineEditRow> {
           : Duration.zero,
       decoration: BoxDecoration(
         color: _flash ? flashColor : flashColor.withValues(alpha: 0),
-        borderRadius: BorderRadius.circular(14),
+        // Ô nội dung bo 10 (thang bo góc, spec phong cách iOS §3.5).
+        borderRadius: BorderRadius.circular(10),
       ),
       constraints: const BoxConstraints(minHeight: 44),
       child: motion.enabled
@@ -268,10 +269,10 @@ class _InlineEditRowState extends State<InlineEditRow> {
         child: InkResponse(
           onTap: onTap,
           radius: 22,
+          // Nút tròn bậc Nhẹ: nền xám đặc (spec phong cách iOS §3.2).
           child: Center(
-            child: OmniGlass(
-              blur: false,
-              radius: 14,
+            child: DecoratedBox(
+              decoration: OmniGlass.buttonDecoration(context),
               child: SizedBox.square(
                 dimension: 28,
                 child: Center(

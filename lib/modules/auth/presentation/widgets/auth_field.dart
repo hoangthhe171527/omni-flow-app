@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../design/tokens/tokens.dart';
 
-/// Ô nhập một dòng theo ô của theme (nền mờ lõm, bo 14, viền xám mảnh): cao
+/// Ô nhập một dòng theo ô của theme (nền mờ lõm, bo 10, viền xám mảnh): cao
 /// 50, viền `primary` nhạt khi focus, viền đỏ + rung + chữ lỗi dưới ô.
 class AuthField extends StatefulWidget {
   const AuthField({
@@ -97,7 +97,8 @@ class _AuthFieldState extends State<AuthField> {
                 height: 50,
                 decoration: BoxDecoration(
                   color: theme.fillColor ?? scheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(14),
+                  // Ô nhập bo 10 (thang 6/10/16/32).
+                  borderRadius: BorderRadius.circular(10),
                   border: Border.fromBorderSide(side),
                 ),
                 child: Row(

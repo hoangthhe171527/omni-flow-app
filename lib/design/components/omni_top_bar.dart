@@ -80,7 +80,11 @@ class OmniTopBar extends StatefulWidget implements PreferredSizeWidget {
     this.showBell = true,
     this.showAccount = true,
     this.backIcon,
+    this.subtitle,
   });
+
+  /// Dòng phụ dưới tiêu đề màn con (12 xám). Màn gốc bỏ qua.
+  final String? subtitle;
 
   /// Ô tìm, bộ lọc, nút riêng của màn. Cần biết chiều cao để Scaffold chừa chỗ.
   final PreferredSizeWidget? bottom;
@@ -314,19 +318,43 @@ class _OmniTopBarState extends State<OmniTopBar> {
                   )
                 : title == null
                 ? const SizedBox.shrink()
-                : Semantics(
-                    header: true,
-                    child: Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: OmniType.body.copyWith(
-                        color: scheme.onSurface,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w600,
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Semantics(
+                        header: true,
+                        child: Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: OmniType.body.copyWith(
+                            color: scheme.onSurface,
+                            fontSize: 17,
+                            height: 1.25,
+                            fontWeight: widget.subtitle == null
+                                ? FontWeight.w600
+                                : FontWeight.w700,
+                          ),
+                        ),
                       ),
-                    ),
+                      // Dòng phụ màn con (vd mã đơn dưới tên khách, spec §3.4).
+                      if (widget.subtitle case final sub? when sub.isNotEmpty)
+                        Text(
+                          sub,
+                          key: const ValueKey('omni-top-bar-subtitle'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 12,
+                            height: 1.3,
+                            fontWeight: FontWeight.w500,
+                            color: scheme.onSurfaceVariant,
+                            fontFeatures: OmniType.tabular,
+                          ),
+                        ),
+                    ],
                   ),
           ),
           if (subPage) ...[

@@ -2034,7 +2034,7 @@ class _FilterBar extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: tone.background,
-          borderRadius: const BorderRadius.all(Radius.circular(14)),
+          borderRadius: const BorderRadius.all(Radius.circular(16)),
         ),
         child: Padding(
           padding: const EdgeInsets.only(left: OmniSpacing.md),
@@ -2104,7 +2104,7 @@ class _TruncatedNotice extends StatelessWidget {
           color: solid
               ? scheme.surface
               : scheme.surface.withValues(alpha: dark ? .84 : .86),
-          borderRadius: const BorderRadius.all(Radius.circular(14)),
+          borderRadius: const BorderRadius.all(Radius.circular(16)),
           border: Border.all(
             color: Colors.white.withValues(alpha: dark ? .12 : .65),
           ),
@@ -2163,7 +2163,7 @@ class _ClosedBanner extends StatelessWidget {
         color: solid
             ? scheme.surface
             : scheme.surface.withValues(alpha: dark ? .84 : .86),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: Colors.white.withValues(alpha: dark ? .12 : .65),
         ),

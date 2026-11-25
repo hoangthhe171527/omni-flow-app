@@ -615,10 +615,8 @@ class _StockPageState extends ConsumerState<StockPage> {
       ),
       () => const SizedBox(height: OmniGroupSection.gap),
       () => OmniSegmented(
-        labels: [
-          for (final (label, _, n) in segments)
-            n == null ? label : '$label ${InventoryFormat.number(n)}',
-        ],
+        labels: [for (final (label, _, _) in segments) label],
+        counts: [for (final (_, _, n) in segments) n],
         index: segIndex,
         onChanged: (i) => _setSegment(segments[i].$2),
       ),
@@ -639,7 +637,8 @@ class _StockPageState extends ConsumerState<StockPage> {
         ],
         _ => [
           for (final (groupIdx, e) in groups.entries.indexed) ...[
-            if (groupIdx > 0) () => const SizedBox(height: OmniGroupSection.gap),
+            if (groupIdx > 0)
+              () => const SizedBox(height: OmniGroupSection.gap),
             if (e.key != null || (groupIdx == 0 && pickToggle != null))
               () => Padding(
                 padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
@@ -673,9 +672,9 @@ class _StockPageState extends ConsumerState<StockPage> {
                       : null,
                   color: scheme.surface,
                   borderRadius: BorderRadius.vertical(
-                    top: idx == 0 ? const Radius.circular(18) : Radius.zero,
+                    top: idx == 0 ? const Radius.circular(16) : Radius.zero,
                     bottom: idx == len - 1
-                        ? const Radius.circular(18)
+                        ? const Radius.circular(16)
                         : Radius.zero,
                   ),
                   clipBehavior: Clip.antiAlias,
@@ -688,7 +687,8 @@ class _StockPageState extends ConsumerState<StockPage> {
                           Divider(
                             height: 1,
                             thickness: 1,
-                            indent: 54,
+                            // Kẻ thụt theo chữ: sau ảnh 40 + khe 12 nếu có ảnh.
+                            indent: perms.photos && !_multi ? 68 : 16,
                             color: scheme.outlineVariant.withValues(alpha: .7),
                           ),
                         row(u),
@@ -829,35 +829,26 @@ class _StatStrip extends StatelessWidget {
   final VoidCallback onPickAge;
   final String? cost;
 
+  /// Khối tổng (spec phong cách iOS §3.3): Niêm yết là số chính; Vốn · số cây
+  /// · Tồn lâu ở dưới. Chạm Tồn lâu lọc nhanh cây tồn quá [StockUnitRow.oldDays].
   @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final oldColor = activeAge
-        ? scheme.primary
-        : oldWarning
-        ? OmniColors.warningTextOf(context)
-        : scheme.onSurface;
-    return OmniGroupSection(
-      dividerIndent: 14,
-      children: [
-        OmniGroupRow(title: countLabel, trailing: InvValue(countValue)),
-        OmniGroupRow(title: 'Niêm yết', trailing: InvValue(priceValue)),
-        if (cost != null) OmniGroupRow(title: 'Vốn', trailing: InvValue(cost!)),
-        OmniGroupRow(
-          title: 'Tồn lâu (> ${StockUnitRow.oldDays} ngày)',
-          chevron: true,
-          onTap: onPickAge,
-          trailing: Text(
-            oldValue,
-            style: OmniType.bodyStrong.copyWith(
-              color: oldColor,
-              fontFeatures: OmniType.tabular,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+  Widget build(BuildContext context) => OmniTotalCard(
+    label: 'Niêm yết',
+    amount: priceValue,
+    stats: [
+      if (cost != null) OmniTotalStat(value: cost!, label: 'Vốn', flex: 14),
+      OmniTotalStat(value: countValue, label: countLabel, flex: 10),
+      OmniTotalStat(
+        key: const ValueKey('inv-stock-old'),
+        value: oldValue,
+        label: 'Tồn lâu',
+        warning: oldWarning,
+        active: activeAge,
+        onTap: onPickAge,
+        flex: 10,
+      ),
+    ],
+  );
 }
 
 /// Một cây trong danh sách tồn: tên model, dòng phụ serial · lô · tuổi tồn
@@ -926,7 +917,7 @@ class StockUnitRow extends StatelessWidget {
           child: ConstrainedBox(
             constraints: const BoxConstraints(minHeight: 56),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               child: Row(
                 children: [
                   if (thumb) ...[
@@ -941,8 +932,8 @@ class StockUnitRow extends StatelessWidget {
                         Text(
                           u.name,
                           maxLines: 2,
-                          style: OmniType.body.copyWith(
-                            fontWeight: FontWeight.w600,
+                          overflow: TextOverflow.ellipsis,
+                          style: OmniType.section.copyWith(
                             color: scheme.onSurface,
                           ),
                         ),
@@ -1003,17 +994,28 @@ class StockUnitRow extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 12),
+                  // Giá 16/700 không cắt + nhãn tình trạng (spec §3.3 Tồn kho).
                   Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      InvValue(
+                      Text(
                         InvUi.vnd(u.listPrice),
-                        sub: work ?? UnitCondition.labelOf(u.condition),
-                        subColor: work != null
-                            ? null
-                            : InvUi.conditionColor(context, u.condition),
+                        maxLines: 1,
+                        softWrap: false,
+                        style: OmniType.section.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onSurface,
+                          fontFeatures: OmniType.tabular,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      OmniStatusLabel(
+                        label: work ?? UnitCondition.labelOf(u.condition),
+                        tone: work != null
+                            ? OmniTone.neutral
+                            : InvUi.conditionTone(u.condition),
                       ),
                       if (location != null)
                         Text(location!, maxLines: 1, style: muted),
@@ -1050,58 +1052,32 @@ class _SearchBottom extends StatelessWidget implements PreferredSizeWidget {
   @override
   Size get preferredSize => const Size.fromHeight(44);
 
+  /// Ô tìm nền xám có nút lọc xanh bên trong (spec phong cách iOS §3.3).
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return SizedBox(
-      height: 44,
-      child: Row(
-          children: [
-            Expanded(
-              child: OmniGlass(
-                radius: 22,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  child: OmniSearchField(
-                    key: const ValueKey('inv-search'),
-                    hint: hint,
-                    flat: true,
-                    dense: true,
-                    onChanged: onChanged,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            OmniGlassCircle(
-              child: IconButton(
-                key: const ValueKey('inv-filter'),
-                tooltip: activeFilters > 0
-                    ? 'Lọc · đang bật $activeFilters'
-                    : 'Lọc',
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints.tightFor(
-                  width: 44,
-                  height: 44,
-                ),
-                onPressed: onFilter,
-                icon: Badge(
-                  isLabelVisible: activeFilters > 0,
-                  label: Text('$activeFilters'),
-                  backgroundColor: scheme.primary,
-                  textColor: scheme.onPrimary,
-                  child: Icon(
-                    Icons.tune_rounded,
-                    size: OmniIconSize.md,
-                    color: activeFilters > 0
-                        ? scheme.primary
-                        : scheme.onSurface,
-                  ),
-                ),
-              ),
-            ),
-          ],
+    return OmniSearchBottom(
+      fieldKey: const ValueKey('inv-search'),
+      hint: hint,
+      onChanged: onChanged,
+      trailing: IconButton(
+        key: const ValueKey('inv-filter'),
+        tooltip: activeFilters > 0 ? 'Lọc · đang bật $activeFilters' : 'Lọc',
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+        onPressed: onFilter,
+        icon: Badge(
+          isLabelVisible: activeFilters > 0,
+          label: Text('$activeFilters'),
+          backgroundColor: scheme.primary,
+          textColor: scheme.onPrimary,
+          child: Icon(
+            Icons.tune_rounded,
+            size: OmniIconSize.md,
+            color: scheme.primary,
+          ),
         ),
-      );
+      ),
+    );
   }
 }

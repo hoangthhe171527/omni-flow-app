@@ -221,7 +221,7 @@ void main() {
       final box = find.byKey(const ValueKey('title-tick-box'));
       expect(t.getSize(box), const Size(26, 26));
       final deco = t.widget<Container>(box).decoration! as BoxDecoration;
-      expect(deco.borderRadius, BorderRadius.circular(8.5));
+      expect(deco.borderRadius, BorderRadius.circular(6));
       expect(deco.border!.top.width, 2);
       expect(deco.border!.top.color, const Color(0xFF9AA5B8));
 

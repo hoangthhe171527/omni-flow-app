@@ -11,8 +11,8 @@ import '../application/register_controller.dart';
 import '../auth_module.dart';
 import 'widgets/auth_widgets.dart';
 
-/// Màn đăng ký (`#s-auth-register`): nút kính tròn `OmniGlassCircle`, 2 thẻ nhóm
-/// bo 18, thanh độ mạnh mật khẩu 4 mức, dòng đồng ý vòng tròn Liquid 22×22 (bỏ
+/// Màn đăng ký (`#s-auth-register`): `‹` xanh trơn, 2 thẻ nhóm
+/// bo 16, thanh độ mạnh mật khẩu 4 mức, dòng đồng ý vòng tròn Liquid 22×22 (bỏ
 /// `Checkbox` Material) và đăng ký nhanh qua Google vector.
 class RegisterPage extends ConsumerStatefulWidget {
   const RegisterPage({super.key});
@@ -398,7 +398,8 @@ class _TermsRow extends StatelessWidget {
       child: Material(
         color: scheme.surface,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
+          // Thẻ bo 16 (thang 6/10/16/32).
+          borderRadius: BorderRadius.circular(16),
           side: BorderSide(color: scheme.outlineVariant),
         ),
         clipBehavior: Clip.antiAlias,

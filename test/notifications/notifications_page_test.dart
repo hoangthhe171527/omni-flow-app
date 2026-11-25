@@ -152,12 +152,12 @@ void main() {
     expect(find.text('HÔM NAY'), findsNothing);
     expect(find.text('Hôm nay'), findsOneWidget);
     expect(find.text('Trước đó'), findsOneWidget);
-    expect(find.text('Chưa đọc · 2'), findsOneWidget);
+    expect(find.bySemanticsLabel('Chưa đọc 2'), findsOneWidget);
     // Tin nhắn không hiển thị trong phần chuông thông báo.
     expect(find.text('Tin nhan bi an khoi chuong'), findsNothing);
   });
 
-  testWidgets('mỗi nhóm ngày là một thẻ lồng bo 18 (viomni-apple-uiux.html)', (
+  testWidgets('mỗi nhóm ngày là một thẻ lồng bo 16 (phong cách iOS §3.5)', (
     t,
   ) async {
     await pump(t);
@@ -169,7 +169,7 @@ void main() {
         find.descendant(of: group, matching: find.byType(Material)).first,
       );
       final radius = material.borderRadius! as BorderRadius;
-      expect(radius.topLeft, const Radius.circular(18), reason: label);
+      expect(radius.topLeft, const Radius.circular(16), reason: label);
       expect(material.clipBehavior, Clip.antiAlias, reason: label);
     }
   });
@@ -192,7 +192,7 @@ void main() {
   testWidgets('đang tải số chưa đọc → "Chưa đọc" không kèm số', (t) async {
     await pump(t, countPending: true);
     expect(find.text('Chưa đọc'), findsOneWidget);
-    expect(find.textContaining('Chưa đọc ·'), findsNothing);
+    expect(find.bySemanticsLabel(RegExp(r'^Chưa đọc \d')), findsNothing);
   });
 
   testWidgets('bấm thông báo chưa đọc → gọi markRead, dòng thành đã đọc', (
@@ -230,7 +230,7 @@ void main() {
 
   testWidgets('Chưa đọc trống → "Bạn đã đọc hết thông báo"', (t) async {
     await pump(t, emptyWhenUnreadOnly: true);
-    await t.tap(find.text('Chưa đọc · 2'));
+    await t.tap(find.bySemanticsLabel('Chưa đọc 2'));
     await t.pumpAndSettle();
     expect(find.text('Bạn đã đọc hết thông báo'), findsOneWidget);
   });

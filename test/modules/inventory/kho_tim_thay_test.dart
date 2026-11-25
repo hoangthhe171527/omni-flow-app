@@ -158,7 +158,7 @@ void main() {
       await t.pumpAndSettle();
       // Còn bán không gồm cây không thấy.
       expect(find.byKey(const ValueKey('inv-unit-u7')), findsNothing);
-      await t.tap(find.text('Không thấy 1'));
+      await t.tap(find.bySemanticsLabel('Không thấy 1'));
       await t.pumpAndSettle();
       expect(api.listCalls.last['condition'], 'missing');
       expect(api.listCalls.last['sale'], isNull);
@@ -175,7 +175,7 @@ void main() {
       final api = fake();
       await t.pumpWidget(app(api, perms));
       await t.pumpAndSettle();
-      await t.tap(find.text('Không thấy 1'));
+      await t.tap(find.bySemanticsLabel('Không thấy 1'));
       await t.pumpAndSettle();
       await t.tap(find.byKey(const ValueKey('inv-unit-u7')));
       await t.pumpAndSettle();
@@ -211,7 +211,7 @@ void main() {
       await t.tapAt(const Offset(195, 20));
       await t.pumpAndSettle();
       expect(find.byKey(const ValueKey('inv-unit-u7')), findsNothing);
-      expect(find.text('Không thấy 0'), findsOneWidget);
+      expect(find.bySemanticsLabel('Không thấy 0'), findsOneWidget);
       await t.tap(find.textContaining('Còn bán'));
       await t.pumpAndSettle();
       expect(find.byKey(const ValueKey('inv-unit-u7')), findsOneWidget);
@@ -221,7 +221,7 @@ void main() {
       phone(t);
       await t.pumpWidget(app(fake(), viewer));
       await t.pumpAndSettle();
-      await t.tap(find.text('Không thấy 1'));
+      await t.tap(find.bySemanticsLabel('Không thấy 1'));
       await t.pumpAndSettle();
       await t.tap(find.byKey(const ValueKey('inv-unit-u7')));
       await t.pumpAndSettle();

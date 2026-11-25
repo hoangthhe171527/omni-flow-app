@@ -39,28 +39,14 @@ class _AssignSheetState extends ConsumerState<AssignSheet> {
     final members = ref.watch(teamMembersProvider);
 
     return OmniSheetBody(
-      header: OmniSheetHeader(
-        title: 'Gán nhân viên',
-        trailing: OmniGlassCircle(
-          child: IconButton(
-            tooltip: 'Đóng',
-            onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(Icons.close_rounded),
-          ),
-        ),
-      ),
+      // Đầu sheet tự có nút ✕ tròn xám (spec phong cách iOS §3.4).
+      header: const OmniSheetHeader(title: 'Gán nhân viên'),
       children: [
-        OmniGlass(
-          blur: false,
-          radius: 22,
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: OmniSearchField(
-            hint: 'Tìm nhân viên...',
-            flat: true,
-            dense: true,
-            debounce: const Duration(milliseconds: 150),
-            onChanged: (value) => setState(() => _search = value.toLowerCase()),
-          ),
+        // Ô tìm nền xám bo 10 (spec phong cách iOS §3.4).
+        OmniSearchBottom(
+          hint: 'Tìm nhân viên...',
+          debounce: const Duration(milliseconds: 150),
+          onChanged: (value) => setState(() => _search = value.toLowerCase()),
         ),
         OmniGroupSection(
           title: 'Ghi chú bàn giao',

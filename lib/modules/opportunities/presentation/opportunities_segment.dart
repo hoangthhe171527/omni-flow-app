@@ -227,8 +227,8 @@ class _Body extends ConsumerWidget {
             );
           }
           // Nhóm lồng (viomni-apple-uiux.html "Cơ hội" `.group`): danh sách
-          // là một thẻ bo 18 cách mép 16 trên nền xám.
-          const r = Radius.circular(18);
+          // là một thẻ bo 16 cách mép 16 trên nền xám.
+          const r = Radius.circular(16);
           final last = at == items.length - 1 && tail == items.length;
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -695,7 +695,8 @@ class _OpportunityMenuRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final active = selected == true;
-    // Bật = viên trắng mờ + ✓; tắt giữ vòng rỗng. Không nền xanh.
+    // Bật = ✓ xanh cuối dòng, không tô cả dòng (spec phong cách iOS §3.4);
+    // tắt giữ vòng rỗng.
     return Semantics(
       button: true,
       selected: selected,
@@ -708,66 +709,58 @@ class _OpportunityMenuRow extends StatelessWidget {
             customBorder: RoundedRectangleBorder(
               borderRadius: OmniRadius.mdAll,
             ),
-            child: Ink(
-              decoration: active
-                  ? OmniGlass.buttonDecoration(context).copyWith(
-                      color: OmniGlass.selectionOf(context),
-                      borderRadius: OmniRadius.mdAll,
-                    )
-                  : null,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 48),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  child: Row(
-                    children: [
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 48),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      icon,
+                      size: OmniIconSize.md,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        label,
+                        style: OmniType.body.copyWith(
+                          color: scheme.onSurface,
+                          fontWeight: active
+                              ? FontWeight.w600
+                              : FontWeight.w400,
+                        ),
+                      ),
+                    ),
+                    if (value != null) ...[
+                      Flexible(
+                        child: Text(
+                          value!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: OmniType.caption.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
                       Icon(
-                        icon,
+                        Icons.chevron_right_rounded,
                         size: OmniIconSize.md,
                         color: scheme.onSurfaceVariant,
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          label,
-                          style: OmniType.body.copyWith(
-                            color: scheme.onSurface,
-                            fontWeight: active
-                                ? FontWeight.w600
-                                : FontWeight.w400,
-                          ),
-                        ),
+                    ] else
+                      Icon(
+                        active ? Icons.check_rounded : Icons.circle_outlined,
+                        size: OmniIconSize.md,
+                        color: active
+                            ? scheme.primary
+                            : scheme.onSurfaceVariant,
                       ),
-                      if (value != null) ...[
-                        Flexible(
-                          child: Text(
-                            value!,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: OmniType.caption.copyWith(
-                              color: scheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Icon(
-                          Icons.chevron_right_rounded,
-                          size: OmniIconSize.md,
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ] else
-                        Icon(
-                          active ? Icons.check_rounded : Icons.circle_outlined,
-                          size: OmniIconSize.md,
-                          color: active
-                              ? scheme.primary
-                              : scheme.onSurfaceVariant,
-                        ),
-                    ],
-                  ),
+                  ],
                 ),
               ),
             ),
@@ -808,9 +801,12 @@ class _PanelBody extends ConsumerWidget {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-      child: OmniGlass(
-        radius: 20,
-        blur: false,
+      // Thẻ nền đặc bo 16 (spec phong cách iOS §3.1: kính chỉ cho điều hướng).
+      child: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: OmniRadius.xxlAll,
+        ),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: SizedBox(
           width: double.infinity,
@@ -881,16 +877,8 @@ class PipelinePickerSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return OmniSheetBody(
-      header: OmniSheetHeader(
-        title: 'Quy trình bán hàng',
-        trailing: OmniGlassCircle(
-          child: IconButton(
-            tooltip: 'Đóng',
-            onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(Icons.close_rounded),
-          ),
-        ),
-      ),
+      // Đầu sheet tự có nút ✕ tròn xám (spec phong cách iOS §3.4).
+      header: const OmniSheetHeader(title: 'Quy trình bán hàng'),
       children: [
         OmniGroupSection(
           dividerIndent: 14,

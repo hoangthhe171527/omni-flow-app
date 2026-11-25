@@ -68,10 +68,10 @@ class MessageFileAttachments extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 4),
             child: Material(
               color: tileBg,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(10),
               child: InkWell(
                 onTap: () => _open(attachment.url),
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(10),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 10,
@@ -289,7 +289,7 @@ class _InlineVideoState extends State<_InlineVideo>
     final scheme = Theme.of(context).colorScheme;
     if (!_activated) {
       return ClipRRect(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         child: AspectRatio(
           aspectRatio: 16 / 9,
           child: Material(
@@ -347,7 +347,7 @@ class _InlineVideoState extends State<_InlineVideo>
     final controller = _controller;
     if (_failed || controller == null) {
       return ClipRRect(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         child: AspectRatio(
           aspectRatio: 16 / 9,
           child: ColoredBox(
@@ -368,7 +368,7 @@ class _InlineVideoState extends State<_InlineVideo>
     }
     if (!controller.value.isInitialized) {
       return ClipRRect(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         child: AspectRatio(
           aspectRatio: 16 / 9,
           child: ColoredBox(
@@ -381,7 +381,7 @@ class _InlineVideoState extends State<_InlineVideo>
       );
     }
     return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(16),
       child: Stack(
         alignment: Alignment.bottomCenter,
         children: [

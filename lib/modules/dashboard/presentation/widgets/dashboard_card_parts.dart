@@ -70,7 +70,8 @@ class _DashboardGroupState extends State<DashboardGroup> {
     final Widget card = widget.placeholder != null
         ? Material(
             color: scheme.surface,
-            borderRadius: BorderRadius.circular(18),
+            // Thẻ bo 16 (spec §3.5).
+            borderRadius: BorderRadius.circular(16),
             clipBehavior: Clip.antiAlias,
             child: widget.placeholder,
           )
@@ -100,7 +101,7 @@ class _DashboardGroupState extends State<DashboardGroup> {
             expanded: _expanded,
             child: InkWell(
               onTap: _toggle,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(10),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(minHeight: 44),
                 child: Padding(
@@ -112,8 +113,8 @@ class _DashboardGroupState extends State<DashboardGroup> {
                           widget.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: OmniType.caption.copyWith(
-                            fontWeight: FontWeight.w600,
+                          // Đầu nhóm 13/600 xám (spec §3.4).
+                          style: OmniType.overline.copyWith(
                             color: scheme.onSurfaceVariant,
                           ),
                         ),
@@ -190,11 +191,11 @@ class DashboardCardSkeleton extends StatelessWidget {
     padding: EdgeInsets.all(12),
     child: Column(
       children: [
-        OmniSkeletonBox(height: 40, radius: 12),
+        OmniSkeletonBox(height: 40, radius: 10),
         SizedBox(height: 8),
-        OmniSkeletonBox(height: 40, radius: 12),
+        OmniSkeletonBox(height: 40, radius: 10),
         SizedBox(height: 8),
-        OmniSkeletonBox(height: 40, radius: 12),
+        OmniSkeletonBox(height: 40, radius: 10),
       ],
     ),
   );

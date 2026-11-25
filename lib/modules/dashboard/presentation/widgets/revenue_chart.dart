@@ -193,7 +193,8 @@ class _RevenueChartState extends State<RevenueChart>
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
               color: scheme.surface.withValues(alpha: dark ? .92 : .94),
-              borderRadius: BorderRadius.circular(12),
+              // Ô gợi ý nổi trên biểu đồ: bo 10, giữ bóng (lớp nổi).
+              borderRadius: BorderRadius.circular(10),
               border: Border.all(
                 color: dark
                     ? Colors.white.withValues(alpha: .14)

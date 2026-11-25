@@ -398,10 +398,16 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
           ),
         ),
         const SizedBox(width: 8),
+        // Nút chọn kỳ: nền xám đặc dáng viên thuốc, không kính (spec §3.1).
         Expanded(
-          child: OmniGlass(
-            blur: false,
-            radius: 22,
+          child: Material(
+            color: scheme.onSurface.withValues(
+              alpha: Theme.of(context).brightness == Brightness.dark
+                  ? .12
+                  : .06,
+            ),
+            shape: const StadiumBorder(),
+            clipBehavior: Clip.antiAlias,
             child: Semantics(
               button: true,
               label: 'Chọn kỳ, $label',
@@ -460,7 +466,7 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 36),
       decoration: BoxDecoration(
         color: p.card,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         children: [
@@ -557,165 +563,89 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
         avgAmount = (total / divisor).round();
     }
 
-    return OmniGroupSection(
+    // Khối tổng (spec §3.4): nhãn 13 xám, số 30/800 lớn nhất màn, số phụ
+    // Đã trả / Phải trả dưới đường kẻ. Biến động = nhãn trạng thái.
+    return OmniTotalCard(
       key: const ValueKey('finance-summary-hero-card'),
-      dividerIndent: 14,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+      label: titleText,
+      amount: FinanceMonthUtils.formatVndSpace(total),
+      stats: [
+        OmniTotalStat(
+          value: FinanceMonthUtils.formatVndSpace(paid),
+          label: 'Đã trả',
+        ),
+        OmniTotalStat(
+          value: FinanceMonthUtils.formatVndSpace(outstanding),
+          label: 'Phải trả',
+          warning: outstanding > 0,
+        ),
+      ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      titleText,
-                      maxLines: 2,
-                      style: OmniType.caption.copyWith(
-                        color: p.muted,
+              if (deltaBadge != null)
+                OmniStatusLabel(
+                  label: deltaBadge.text,
+                  tone: deltaBadge.isIncrease
+                      ? OmniTone.warning
+                      : OmniTone.success,
+                ),
+              RichText(
+                text: TextSpan(
+                  style: OmniType.micro.copyWith(
+                    color: p.muted,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                  children: [
+                    TextSpan(text: avgPrefix),
+                    TextSpan(
+                      text: FinanceMonthUtils.formatVndSpace(avgAmount),
+                      style: TextStyle(
+                        color: p.ink2,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                  ),
-                  if (deltaBadge != null) ...[
-                    const SizedBox(width: 8),
-                    Container(
-                      height: 23,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: deltaBadge.isIncrease ? p.amberSoft : p.okSoft,
-                        borderRadius: BorderRadius.circular(99),
-                      ),
-                      child: Text(
-                        deltaBadge.text,
-                        style: OmniType.micro.copyWith(
-                          color: deltaBadge.isIncrease ? p.amber : p.ok,
-                          fontWeight: FontWeight.w600,
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                        ),
-                      ),
-                    ),
                   ],
-                ],
-              ),
-              const SizedBox(height: 3),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: [
-                      Text(
-                        FinanceMonthUtils.formatNumber(total),
-                        maxLines: 1,
-                        softWrap: false,
-                        style: OmniType.displayLg.copyWith(
-                          color: p.ink,
-                          fontWeight: FontWeight.w600,
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'đ',
-                        style: OmniType.section.copyWith(
-                          color: p.muted,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
               ),
-              const SizedBox(height: 4),
-              Wrap(
-                spacing: 6,
-                runSpacing: 2,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  RichText(
-                    text: TextSpan(
-                      style: OmniType.micro.copyWith(
-                        color: p.muted,
-                        fontFeatures: const [FontFeature.tabularFigures()],
+              Text('•', style: OmniType.micro.copyWith(color: p.muted)),
+              RichText(
+                text: TextSpan(
+                  style: OmniType.micro.copyWith(color: p.muted),
+                  children: [
+                    TextSpan(
+                      text: '$count',
+                      style: TextStyle(
+                        color: p.ink2,
+                        fontWeight: FontWeight.w600,
                       ),
-                      children: [
-                        TextSpan(text: avgPrefix),
-                        TextSpan(
-                          text: FinanceMonthUtils.formatVndSpace(avgAmount),
-                          style: TextStyle(
-                            color: p.ink2,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
                     ),
-                  ),
-                  Text('•', style: OmniType.micro.copyWith(color: p.muted)),
-                  RichText(
-                    text: TextSpan(
-                      style: OmniType.micro.copyWith(color: p.muted),
-                      children: [
-                        TextSpan(
-                          text: '$count',
-                          style: TextStyle(
-                            color: p.ink2,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const TextSpan(text: ' khoản chi'),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              Padding(
-                padding: const EdgeInsets.only(top: 10),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(99),
-                  child: SizedBox(
-                    height: 6,
-                    child: LinearProgressIndicator(
-                      value: paidRatio,
-                      backgroundColor: p.amberSoft,
-                      valueColor: AlwaysStoppedAnimation<Color>(p.primary),
-                    ),
-                  ),
+                    const TextSpan(text: ' khoản chi'),
+                  ],
                 ),
               ),
             ],
           ),
-        ),
-        OmniGroupRow(
-          title: 'Đã trả',
-          chevron: false,
-          trailing: Text(
-            FinanceMonthUtils.formatVndSpace(paid),
-            maxLines: 1,
-            style: OmniType.bodyStrong.copyWith(
-              color: p.ink,
-              fontFeatures: const [FontFeature.tabularFigures()],
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(99),
+            child: SizedBox(
+              height: 6,
+              child: LinearProgressIndicator(
+                value: paidRatio,
+                backgroundColor: p.amberSoft,
+                valueColor: AlwaysStoppedAnimation<Color>(p.primary),
+              ),
             ),
           ),
-        ),
-        OmniGroupRow(
-          title: 'Phải trả',
-          chevron: false,
-          trailing: Text(
-            FinanceMonthUtils.formatVndSpace(outstanding),
-            maxLines: 1,
-            style: OmniType.bodyStrong.copyWith(
-              color: outstanding > 0 ? p.amber : p.ink2,
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -878,7 +808,7 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
       padding: const EdgeInsets.fromLTRB(15, 13, 15, 13),
       decoration: BoxDecoration(
         color: p.card,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -928,7 +858,7 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
           color: row.isCurrent ? p.control : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1019,7 +949,7 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
         ),
         const SizedBox(height: OmniGroupSection.gap),
         OmniGroupSection(
-          dividerIndent: 54,
+          dividerIndent: 56,
           children: [
             if (rows.isEmpty)
               Padding(
@@ -1140,72 +1070,36 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
     final icon = _dimension == SummaryDimension.group
         ? Icons.category_outlined
         : Icons.account_balance_wallet_outlined;
-    return InkWell(
+    // Dòng tiền (spec §3.4): tên 16/600 + tiền 16/700 / dòng phụ 14 + vạch.
+    return OmniMoneyRow(
       key: ValueKey('finance-summary-row-${row.id}'),
       onTap: () => _openDimensionDrilldownSheet(row),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            OmniIconTile(icon, color: p.primary, background: p.primarySoft),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          row.name,
-                          maxLines: 2,
-                          style: OmniType.bodyStrong.copyWith(color: p.ink),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        FinanceMonthUtils.formatVndSpace(row.amount),
-                        maxLines: 1,
-                        style: OmniType.bodyStrong.copyWith(
-                          color: p.ink,
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${row.countLabel} · '
-                    '${row.sharePct.toStringAsFixed(1).replaceAll('.', ',')}%',
-                    maxLines: 1,
-                    style: OmniType.caption.copyWith(
-                      color: p.muted,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(99),
-                    child: SizedBox(
-                      height: 4,
-                      child: LinearProgressIndicator(
-                        value: ratio,
-                        backgroundColor: p.control,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          p.primary.withValues(alpha: barAlpha),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+      leading: OmniIconTile(icon, color: p.primary, background: p.primarySoft),
+      title: row.name,
+      amount: FinanceMonthUtils.formatVndSpace(row.amount),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '${row.countLabel} · '
+            '${row.sharePct.toStringAsFixed(1).replaceAll('.', ',')}%',
+          ),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(99),
+            child: SizedBox(
+              height: 4,
+              child: LinearProgressIndicator(
+                value: ratio,
+                backgroundColor: p.control,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  p.primary.withValues(alpha: barAlpha),
+                ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -1233,19 +1127,13 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
               color: p.primary,
               background: p.primarySoft,
             ),
-            trailing: OmniGlassCircle(
-              child: IconButton(
-                tooltip: 'Đóng',
-                onPressed: () => Navigator.of(ctx).pop(),
-                icon: const Icon(Icons.close_rounded),
-              ),
-            ),
+            // ✕ do OmniSheetHeader tự thêm (spec §3.4).
           ),
           // Các khoản gom trong MỘT nhóm lồng, không từng thẻ viền.
           children: [
             Material(
               color: p.card,
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(16),
               clipBehavior: Clip.antiAlias,
               child: Column(
                 children: [
@@ -1342,15 +1230,7 @@ class _PeriodPickerSheetState extends State<_PeriodPickerSheet> {
     return OmniSheetBody(
       header: OmniSheetHeader(
         title: 'Chọn kỳ',
-        trailing: OmniGlassCircle(
-          child: IconButton(
-            tooltip: 'Đóng',
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-            icon: const Icon(Icons.close_rounded, size: OmniIconSize.md),
-            onPressed: () => Navigator.of(context).maybePop(),
-          ),
-        ),
+        // ✕ do OmniSheetHeader tự thêm (spec §3.4).
       ),
       children: [
         OmniGroupSection(

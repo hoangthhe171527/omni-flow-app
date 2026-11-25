@@ -141,7 +141,8 @@ class _PayslipPageState extends ConsumerState<PayslipPage> {
           HrStatRow(
             title: 'Trừ',
             value: HrFormat.money(p.deduct),
-            tone: p.deduct > 0 ? OmniTone.danger : null,
+            // Số tiền màu mực (spec §3.5): nghĩa "trừ" nằm ở tên dòng.
+            strong: true,
           ),
         ],
       ),
@@ -169,8 +170,8 @@ class _PayslipPageState extends ConsumerState<PayslipPage> {
             for (final l in deductions)
               HrStatRow(
                 title: l.name,
+                // Dấu − đã nói là khoản trừ; số tiền màu mực (spec §3.5).
                 value: HrFormat.money(-l.amount.abs()),
-                tone: OmniTone.danger,
                 subtitle: l.detail,
               ),
           ],

@@ -588,7 +588,7 @@ class _Preview extends StatelessWidget {
                 height: 56,
                 decoration: BoxDecoration(
                   color: scheme.surface,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: scheme.outlineVariant),
                 ),
                 clipBehavior: Clip.antiAlias,

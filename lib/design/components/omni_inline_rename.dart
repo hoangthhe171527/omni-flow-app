@@ -166,7 +166,7 @@ class _OmniInlineRenameState extends State<OmniInlineRename> {
   }
 
   static OutlineInputBorder _border(Color color) => OutlineInputBorder(
-    borderRadius: BorderRadius.circular(12),
+    borderRadius: BorderRadius.circular(10),
     borderSide: BorderSide(color: color, width: 1.5),
   );
 }

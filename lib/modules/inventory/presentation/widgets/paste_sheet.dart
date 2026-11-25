@@ -161,17 +161,20 @@ class _PasteSheetState extends ConsumerState<PasteSheet> {
       ].join(' · ');
     }
 
-    Widget count(String key, String title, int n, {Color? color}) =>
+    // Số dòng thiếu / lỗi = nhãn trạng thái bo 6 (spec §3.4); còn lại chữ xám.
+    Widget count(String key, String title, int n, {OmniTone? tone}) =>
         OmniGroupRow(
           key: ValueKey(key),
           title: title,
-          trailing: Text(
-            '$n',
-            style: OmniType.bodyStrong.copyWith(
-              color: color ?? scheme.onSurfaceVariant,
-              fontFeatures: OmniType.tabular,
-            ),
-          ),
+          trailing: tone != null
+              ? OmniStatusLabel(label: '$n', tone: tone)
+              : Text(
+                  '$n',
+                  style: OmniType.bodyStrong.copyWith(
+                    color: scheme.onSurfaceVariant,
+                    fontFeatures: OmniType.tabular,
+                  ),
+                ),
         );
 
     return OmniSheetBody(
@@ -217,14 +220,14 @@ class _PasteSheetState extends ConsumerState<PasteSheet> {
                 'inv-paste-noyen',
                 'Thiếu giá ¥',
                 noYen,
-                color: OmniColors.warningTextOf(context),
+                tone: OmniTone.warning,
               ),
             if (noModel > 0)
               count(
                 'inv-paste-nomodel',
                 'Thiếu model · bỏ qua',
                 noModel,
-                color: OmniColors.dangerTextOf(context),
+                tone: OmniTone.danger,
               ),
           ],
         ),
@@ -260,10 +263,7 @@ class _PasteSheetState extends ConsumerState<PasteSheet> {
               children: [
                 Text(
                   '${r.maker} ${r.model.isEmpty ? '—' : r.model}'.trim(),
-                  style: OmniType.body.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: scheme.onSurface,
-                  ),
+                  style: OmniType.section.copyWith(color: scheme.onSurface),
                 ),
                 Text(sub, style: invMuted(context)),
                 if (r.customer.isNotEmpty)
@@ -278,16 +278,20 @@ class _PasteSheetState extends ConsumerState<PasteSheet> {
             ),
           ),
           const SizedBox(width: 10),
-          InvValue(
-            (r.listPrice ?? 0) > 0 ? InvUi.vnd(r.listPrice) : '—',
-            sub: perms.cost
-                ? (r.yenPrice != null
-                      ? InventoryFormat.yen(r.yenPrice)
-                      : 'thiếu ¥')
-                : null,
-            subColor: perms.cost && r.yenPrice == null
-                ? OmniColors.warningTextOf(context)
-                : null,
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              InvValue(
+                (r.listPrice ?? 0) > 0 ? InvUi.vnd(r.listPrice) : '—',
+                sub: perms.cost && r.yenPrice != null
+                    ? InventoryFormat.yen(r.yenPrice)
+                    : null,
+              ),
+              // Thiếu giá ¥ = nhãn vàng (spec §3.4).
+              if (perms.cost && r.yenPrice == null)
+                const OmniStatusLabel(label: 'thiếu ¥', tone: OmniTone.warning),
+            ],
           ),
         ],
       ),

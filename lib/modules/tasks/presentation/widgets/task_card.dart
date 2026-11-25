@@ -37,8 +37,8 @@ class TaskCard extends StatelessWidget {
   /// (nền vàng nhạt như thiết kế). Rỗng thì không tô.
   final String highlight;
 
-  /// Thẻ = một nhóm lồng trắng bo 18, không viền (liquid, đợt 3).
-  static const _radius = BorderRadius.all(Radius.circular(18));
+  /// Thẻ = một nhóm lồng trắng bo 16, không viền (liquid, đợt 3).
+  static const _radius = BorderRadius.all(Radius.circular(16));
 
   @override
   Widget build(BuildContext context) {

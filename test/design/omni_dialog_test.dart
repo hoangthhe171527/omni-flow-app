@@ -38,7 +38,7 @@ void main() {
 
   // Một thẻ kính kiểu iOS cho cả hai nền tảng (viomni-apple-uiux.html).
   for (final platform in [TargetPlatform.iOS, TargetPlatform.android]) {
-    testWidgets('$platform: thẻ kính bo 24, hai nút chữ chia đôi', (
+    testWidgets('$platform: thẻ đặc bo 16, hai nút chữ chia đôi', (
       tester,
     ) async {
       await open(tester, platform);
@@ -47,7 +47,7 @@ void main() {
       expect(find.byType(CupertinoAlertDialog), findsNothing);
       final dialog = tester.widget<AlertDialog>(find.byType(AlertDialog));
       final shape = dialog.shape! as RoundedRectangleBorder;
-      expect((shape.borderRadius as BorderRadius).topLeft.x, 24);
+      expect((shape.borderRadius as BorderRadius).topLeft.x, 16);
       final cancel = tester.getRect(find.text('Huỷ'));
       final ok = tester.getRect(find.text('Hoàn thành'));
       expect(cancel.center.dy, closeTo(ok.center.dy, 1));

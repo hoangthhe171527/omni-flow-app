@@ -14,7 +14,8 @@ import '../../../../design/tokens/tokens.dart';
 final authSignedInEmailProvider = StateProvider<String?>((ref) => null);
 
 /// Nền chung của phân hệ xác thực: màu nền hệ thống sạch kèm quầng sáng xanh
-/// V-Orbit rất dịu ở đỉnh màn hình.
+/// V-Orbit rất dịu ở đỉnh màn hình. Đây là nền thương hiệu sau logo của luồng
+/// đăng nhập — ngoại lệ duy nhất được giữ chuyển màu (spec iOS Q4).
 class AuthBackdrop extends StatelessWidget {
   const AuthBackdrop({super.key, required this.child});
 
@@ -75,8 +76,8 @@ class AuthScaffold extends StatelessWidget {
   }
 }
 
-/// Thanh đầu màn con (Đăng ký, Quên mật khẩu): nút quay lại kính tròn
-/// `OmniGlassCircle` (`‹`) đồng nhất toàn hệ thống.
+/// Thanh đầu màn con (Đăng ký, Quên mật khẩu): `‹` xanh trơn, không vòng kính
+/// (spec iOS §3.3), đồng nhất với `OmniTopBar`.
 class AuthSubBar extends StatelessWidget {
   const AuthSubBar({
     super.key,
@@ -108,7 +109,7 @@ class AuthSubBar extends StatelessWidget {
               icon: Icon(
                 Icons.arrow_back_ios_new_rounded,
                 size: OmniIconSize.md,
-                color: scheme.onSurface,
+                color: scheme.primary,
               ),
             ),
           ),
@@ -198,7 +199,7 @@ class AuthBrandHeader extends StatelessWidget {
   }
 }
 
-/// Thẻ nhóm ô nhập chuẩn iOS / Liquid Glass: bo 18, nền `card`, viền mảnh 1px
+/// Thẻ nhóm ô nhập chuẩn iOS: bo 16, nền `card`, viền mảnh 1px
 /// và vạch ngăn mảnh thụt lề giữa các ô xếp chồng.
 class AuthFieldGroup extends StatelessWidget {
   const AuthFieldGroup({
@@ -247,7 +248,8 @@ class AuthFieldGroup extends StatelessWidget {
         Material(
           color: scheme.surface,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
+            // Nhóm bo 16 (thang 6/10/16/32).
+            borderRadius: BorderRadius.circular(16),
             side: BorderSide(color: scheme.outlineVariant),
           ),
           clipBehavior: Clip.antiAlias,
@@ -659,7 +661,8 @@ class AuthErrorBox extends StatelessWidget {
           color: dark
               ? OmniColors.dangerTextDark.withValues(alpha: 0.12)
               : OmniColors.dangerSoft,
-          borderRadius: BorderRadius.circular(14),
+          // Hộp báo nhỏ cỡ ô nhập → bo 10 (thang 6/10/16/32).
+          borderRadius: BorderRadius.circular(10),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -683,7 +686,7 @@ class AuthErrorBox extends StatelessWidget {
   }
 }
 
-/// Nút chính của các màn xác thực: nút kính viên thuốc cao 50; hiện vòng quay
+/// Nút chính của các màn xác thực: viên thuốc xanh đặc cao 50; hiện vòng quay
 /// thay chữ khi [busy]. [onPressed] null thì nút bị khoá.
 class AuthPrimaryButton extends StatelessWidget {
   const AuthPrimaryButton({
@@ -721,7 +724,8 @@ class AuthPrimaryButton extends StatelessWidget {
   }
 }
 
-/// Nút Google kính cao 50dp kèm biểu tượng vector 4 màu chuẩn.
+/// Nút Google viền cao 50dp (bậc phụ, không tranh nút chính) kèm biểu tượng
+/// vector 4 màu chuẩn.
 class AuthGoogleButton extends StatelessWidget {
   const AuthGoogleButton({
     super.key,

@@ -197,26 +197,13 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
               ),
             ),
             const SizedBox(width: 8),
-            OmniGlassCircle(
-              child: IconButton(
-                tooltip: 'Đóng',
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints.tightFor(
-                  width: 44,
-                  height: 44,
-                ),
-                icon: Icon(
-                  Icons.close_rounded,
-                  size: OmniIconSize.md,
-                  color: scheme.onSurface,
-                ),
-                onPressed: () => Navigator.of(context).maybePop(),
-              ),
-            ),
+            // ✕ tròn 32 nền xám chuẩn của đầu sheet (spec iOS §3.4).
+            const OmniSheetCloseButton(),
           ],
         ),
       ),
-      footer: OutlinedButton(
+      // Lưu là hành động chính duy nhất của sheet → nút xanh đặc (spec iOS Q1).
+      footer: FilledButton(
         onPressed: _ready && !_busy ? _save : null,
         child: _busy
             ? SizedBox.square(

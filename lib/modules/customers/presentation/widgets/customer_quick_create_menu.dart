@@ -1,5 +1,3 @@
-import 'dart:ui' show ImageFilter;
-
 import 'package:flutter/material.dart';
 
 import '../../../../design/platform/omni_motion_scope.dart';
@@ -8,7 +6,7 @@ import '../../../../design/tokens/tokens.dart';
 import '../../domain/customer.dart';
 import '../customer_form_page.dart';
 
-/// Form đầy đủ tại chỗ. Khung kính chừa cùng một khoảng ở bốn cạnh safe area,
+/// Form đầy đủ tại chỗ. Khung nền đặc chừa cùng một khoảng ở bốn cạnh safe area,
 /// cuộn độc lập khi bàn phím mở và không thay đổi route phía sau.
 Future<Customer?> showCustomerCreateDialog(BuildContext context) {
   final motion = OmniMotion.enabled(context);
@@ -46,48 +44,26 @@ class _CustomerCreateDialog extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
     final solid = MediaQuery.highContrastOf(context);
-    final noBlur = OmniPerformance.solidGlass(context);
     final keyboard = MediaQuery.viewInsetsOf(context).bottom;
-    final shape = BorderRadius.circular(28);
+    // Khung như sheet: nền đặc, bo 32, không mờ (spec phong cách iOS §3.1,
+    // §3.4 — kính chỉ cho điều hướng).
+    final shape = BorderRadius.circular(32);
 
     final body = Material(
-      color: solid
-          ? scheme.surface
-          : scheme.surface.withValues(alpha: noBlur ? .97 : (dark ? .82 : .88)),
+      color: scheme.surface,
       elevation: 0,
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
         borderRadius: shape,
-        side: BorderSide(
-          color: solid
-              ? scheme.outline
-              : Colors.white.withValues(alpha: dark ? .10 : .70),
-        ),
+        side: solid ? BorderSide(color: scheme.outline) : BorderSide.none,
       ),
-      // Sheet gần trắng: nút bên trong là kính nhuộm tông, không chìm.
+      // Nút bên trong theo bậc §3.2 (nút chính xanh đặc).
       child: OmniTintedButtons(
         child: Column(
           children: [
             const SizedBox(height: 6),
-            OmniSheetHeader(
-              title: 'Thêm khách hàng',
-              trailing: OmniGlassCircle(
-                child: IconButton(
-                  tooltip: 'Đóng',
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints.tightFor(
-                    width: 44,
-                    height: 44,
-                  ),
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: Icon(
-                    Icons.close_rounded,
-                    size: OmniIconSize.md,
-                    color: scheme.onSurface,
-                  ),
-                ),
-              ),
-            ),
+            // Đầu sheet tự có nút ✕ tròn xám (spec phong cách iOS §3.4).
+            const OmniSheetHeader(title: 'Thêm khách hàng'),
             Expanded(
               child: CustomerFormEditor(
                 embedded: true,
@@ -114,6 +90,7 @@ class _CustomerCreateDialog extends StatelessWidget {
                 key: const Key('customer-create-dialog'),
                 width: width,
                 height: constraints.maxHeight,
+                // Bóng giữ: khung đang nổi trên màn (spec §3.2).
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     borderRadius: shape,
@@ -125,24 +102,7 @@ class _CustomerCreateDialog extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: solid || noBlur
-                      ? body
-                      : ClipRRect(
-                          borderRadius: shape,
-                          child: BackdropFilter(
-                            filter: ImageFilter.blur(
-                              sigmaX: OmniPerformance.glassSigma(
-                                context,
-                                full: 24,
-                              ),
-                              sigmaY: OmniPerformance.glassSigma(
-                                context,
-                                full: 24,
-                              ),
-                            ),
-                            child: body,
-                          ),
-                        ),
+                  child: body,
                 ),
               ),
             );

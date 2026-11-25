@@ -19,6 +19,7 @@ void main() {
   const rootScreens = [
     'lib/modules/plans/presentation/timeline_page.dart',
     'lib/modules/plans/presentation/teams_page.dart',
+    'lib/modules/plans/presentation/archived_tasks_page.dart',
     'lib/modules/tasks/presentation/my_tasks_page.dart',
     'lib/modules/inbox/presentation/inbox_page.dart',
     'lib/modules/notifications/presentation/notifications_page.dart',

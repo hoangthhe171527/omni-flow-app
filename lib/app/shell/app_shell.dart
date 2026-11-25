@@ -320,8 +320,9 @@ class _ShellNavigationRail extends ConsumerWidget {
       // Mục đang chọn: nền xám trung tính + chữ mực, icon màu chính — không
       // còn chữ teal nhỏ trên nền teal nhạt (`SPrinciples.dc.html` §6).
       indicatorColor: scheme.surfaceContainerHighest,
+      // Ô chọn vuông bo 10 (thang 6/10/16/32).
       indicatorShape: const RoundedRectangleBorder(
-        borderRadius: OmniRadius.mdAll,
+        borderRadius: OmniRadius.xlAll,
       ),
       selectedIconTheme: IconThemeData(
         color: scheme.primary,
@@ -339,10 +340,9 @@ class _ShellNavigationRail extends ConsumerWidget {
         color: scheme.onSurfaceVariant,
         fontWeight: FontWeight.w500,
       ),
-      leading: const Padding(
-        padding: EdgeInsets.only(top: OmniSpacing.lg),
-        child: OmniBrandMark(size: 44, semanticLabel: 'Viomni'),
-      ),
+      // Logo chỉ ở đăng nhập và màn khởi động (spec iOS Q4) → rail không còn
+      // logo ở đầu, chỉ chừa khoảng trống trên.
+      leading: const SizedBox(height: OmniSpacing.lg),
       destinations: [
         for (final destination in tabs)
           NavigationRailDestination(

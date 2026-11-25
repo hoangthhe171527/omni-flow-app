@@ -422,7 +422,7 @@ class _DateBox extends StatelessWidget {
 
     return Material(
       color: scheme.onSurface.withValues(alpha: dark ? .08 : .05),
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(10),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,

@@ -344,7 +344,7 @@ class _FilterMenuHeader extends StatelessWidget {
               style: OmniType.bodyStrong.copyWith(color: scheme.onSurface),
             ),
           ),
-          // Nút đóng là viên kính tròn.
+          // Nút đóng của menu (icon trơn, spec phong cách iOS §3.1).
           OmniGlassCircle(
             child: IconButton(
               tooltip: 'Đóng bộ lọc',
@@ -404,8 +404,8 @@ class CustomerFilterMenuContent extends ConsumerWidget {
   }
 }
 
-/// Dòng "Hiển thị" (chọn một): chọn = viên trắng mờ + ✓, không vòng radio,
-/// không nền xanh đục.
+/// Dòng "Hiển thị" (chọn một): chọn = ✓ xanh cuối dòng, không tô cả dòng,
+/// không vòng radio (spec phong cách iOS §3.4).
 class _FilterMenuRow extends StatelessWidget {
   const _FilterMenuRow({
     required this.label,
@@ -432,38 +432,30 @@ class _FilterMenuRow extends StatelessWidget {
             customBorder: RoundedRectangleBorder(
               borderRadius: OmniRadius.mdAll,
             ),
-            child: Ink(
-              decoration: selected
-                  ? OmniGlass.buttonDecoration(context).copyWith(
-                      color: OmniGlass.selectionOf(context),
-                      borderRadius: OmniRadius.mdAll,
-                    )
-                  : null,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 44),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          label,
-                          style: OmniType.body.copyWith(
-                            color: scheme.onSurface,
-                            fontWeight: selected
-                                ? FontWeight.w600
-                                : FontWeight.w400,
-                          ),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 44),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        label,
+                        style: OmniType.body.copyWith(
+                          color: scheme.onSurface,
+                          fontWeight: selected
+                              ? FontWeight.w600
+                              : FontWeight.w400,
                         ),
                       ),
-                      if (selected)
-                        Icon(
-                          Icons.check_rounded,
-                          size: OmniIconSize.md,
-                          color: scheme.primary,
-                        ),
-                    ],
-                  ),
+                    ),
+                    if (selected)
+                      Icon(
+                        Icons.check_rounded,
+                        size: OmniIconSize.md,
+                        color: scheme.primary,
+                      ),
+                  ],
                 ),
               ),
             ),

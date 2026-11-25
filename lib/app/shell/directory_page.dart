@@ -599,7 +599,8 @@ class _FeatureTile extends ConsumerWidget {
       excludeSemantics: true,
       child: Material(
         color: Colors.transparent,
-        borderRadius: OmniRadius.lgAll,
+        // Vùng chạm ô vuông bo 10 (thang 6/10/16/32).
+        borderRadius: OmniRadius.xlAll,
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () {

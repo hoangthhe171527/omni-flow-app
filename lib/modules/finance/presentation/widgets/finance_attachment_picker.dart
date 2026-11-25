@@ -352,7 +352,7 @@ Widget _buildReceiptVisualFallback(
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
       color: p.bg,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(10),
       border: Border.all(color: p.line, width: 0.5),
     ),
     child: Column(
@@ -425,18 +425,12 @@ class FinanceAttachmentInlineThumb extends StatelessWidget {
         height: height,
         decoration: BoxDecoration(
           color: p.card,
-          borderRadius: BorderRadius.circular(14),
+          // Ảnh nhỏ bo 10, không bóng (spec §3.5).
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(color: p.line, width: 1),
-          boxShadow: [
-            BoxShadow(
-              color: OmniColors.ink.withValues(alpha: 0.06),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(13),
+          borderRadius: BorderRadius.circular(10),
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -510,8 +504,9 @@ Future<void> showFinanceAttachmentPreviewDialog({
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Ảnh lớn bo 16 (spec §3.5).
             ClipRRect(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(16),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxHeight: 340),
                 child: InteractiveViewer(

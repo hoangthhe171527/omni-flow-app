@@ -176,8 +176,8 @@ class _MemberTile extends StatelessWidget {
                       runSpacing: 2,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        // Pill vai giữ viên thuốc nhạt, không tô đặc.
-                        OmniBadge(
+                        // Nhãn vai / trạng thái (spec phong cách iOS §3.4).
+                        OmniStatusLabel(
                           label: member.isPending
                               ? 'Đang chờ'
                               : member.isActive

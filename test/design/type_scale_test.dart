@@ -81,25 +81,31 @@ void main() {
     });
   }
 
-  // Giữ trần 600 cho thang chữ (Be Vietnam Pro có 700 nhưng thang không
-  // dùng). Xin 700 hay 800 là để máy tự chọn
-  // bản gần nhất hoặc tô đậm giả — chữ đậm không đều giữa các máy.
-  test('không chữ nào trong lib/ đậm hơn 600 (trừ chữ thương hiệu)', () {
+  // Trần 800 (spec phong cách iOS 25/11/2026 §3.3–3.5: tên màn 28/800, tiền
+  // 30/800, tiêu đề sheet 20/700, tiền trong dòng 16/700). Trần 600 cũ có vì
+  // xin độ đậm không đóng gói thì máy tô đậm giả — nên 700 và 800 PHẢI có
+  // trong pubspec (bài dưới), và 900 thì không có nên vẫn cấm.
+  test('không chữ nào trong lib/ đậm hơn 800', () {
     final heavy = <String>[];
     for (final entity in Directory('lib').listSync(recursive: true)) {
       if (entity is! File || !entity.path.endsWith('.dart')) continue;
       final lines = entity.readAsLinesSync();
       for (var i = 0; i < lines.length; i++) {
-        if (RegExp(r'FontWeight\.(w[789]00|bold)').hasMatch(lines[i])) {
+        if (RegExp(r'FontWeight\.(w900)').hasMatch(lines[i])) {
           heavy.add('${entity.path.replaceAll(r'\', '/')}:${i + 1}');
         }
       }
     }
 
-    expect(heavy, [
-      // `OmniType.wordmark` — Be Vietnam Pro 800, chỉ cho chữ "Viomni".
-      'lib/design/tokens/omni_typography.dart:55',
-    ]);
+    expect(heavy, isEmpty);
+  });
+
+  test('độ đậm 700 và 800 có tệp font thật (không tô đậm giả)', () {
+    final pubspec = File('pubspec.yaml').readAsStringSync();
+    expect(pubspec, contains('BeVietnamPro-Bold.ttf'));
+    expect(pubspec, contains('weight: 700'));
+    expect(pubspec, contains('BeVietnamPro-ExtraBold.ttf'));
+    expect(pubspec, contains('weight: 800'));
   });
 
   test('font giao diện là Be Vietnam Pro', () {

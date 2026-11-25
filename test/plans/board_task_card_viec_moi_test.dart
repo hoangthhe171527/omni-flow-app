@@ -114,47 +114,48 @@ void main() {
     expect(find.bySemanticsLabel('Nhãn: Gấp, Bảo hành'), findsOneWidget);
   });
 
-  testWidgets('ô x/y việc con: bốn mức màu, xong thì tick đặc màu chính', (
-    t,
-  ) async {
-    Color countColor() => t
-        .widget<Text>(
-          find.descendant(
-            of: find.byKey(const ValueKey('card-checklist')),
-            matching: find.byType(Text),
-          ),
-        )
-        .style!
-        .color!;
+  testWidgets(
+    'ô x/y việc con: nhãn bốn mức, xong thì tick (phong cách iOS §3.4)',
+    (t) async {
+      Color countColor() => t
+          .widget<Text>(
+            find.descendant(
+              of: find.byKey(const ValueKey('card-checklist')),
+              matching: find.byType(Text),
+            ),
+          )
+          .style!
+          .color!;
 
-    final expected = <int, Color>{
-      5: OmniColors.dangerText,
-      6: OmniColors.warningText,
-      9: OmniColors.infoText,
-    };
-    for (final MapEntry(key: done, value: color) in expected.entries) {
-      await t.pumpWidget(
-        wrap(
-          BoardTaskCard(
-            key: ValueKey(done),
-            task: task(subtasks: 10, done: done),
-            onTap: () {},
+      final expected = <int, Color>{
+        5: OmniColors.dangerText,
+        6: OmniColors.warningText,
+        9: OmniColors.infoText,
+      };
+      for (final MapEntry(key: done, value: color) in expected.entries) {
+        await t.pumpWidget(
+          wrap(
+            BoardTaskCard(
+              key: ValueKey(done),
+              task: task(subtasks: 10, done: done),
+              onTap: () {},
+            ),
           ),
-        ),
+        );
+        await t.pumpAndSettle();
+        expect(countColor(), color, reason: '$done/10');
+        expect(find.byIcon(Icons.checklist_rounded), findsOneWidget);
+      }
+
+      await t.pumpWidget(
+        wrap(BoardTaskCard(task: task(subtasks: 10, done: 10), onTap: () {})),
       );
       await t.pumpAndSettle();
-      expect(countColor(), color, reason: '$done/10');
-      expect(find.byIcon(Icons.checklist_rounded), findsOneWidget);
-    }
-
-    await t.pumpWidget(
-      wrap(BoardTaskCard(task: task(subtasks: 10, done: 10), onTap: () {})),
-    );
-    await t.pumpAndSettle();
-    final primary = Theme.of(t.element(title())).colorScheme.primary;
-    expect(countColor(), primary);
-    expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
-  });
+      // 10/10: nhãn xanh như 9/10, phân biệt bằng dấu tick (không chỉ màu).
+      expect(countColor(), OmniColors.infoText);
+      expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
+    },
+  );
 
   testWidgets('không nhãn thì không có dải', (t) async {
     await t.pumpWidget(wrap(BoardTaskCard(task: task(), onTap: () {})));
@@ -337,7 +338,7 @@ void main() {
     final box = find.byKey(const ValueKey('tick-box'));
     expect(t.getSize(box), const Size(20, 20));
     final deco = t.widget<Container>(box).decoration! as BoxDecoration;
-    expect(deco.borderRadius, BorderRadius.circular(5));
+    expect(deco.borderRadius, BorderRadius.circular(6));
     expect((deco.border! as Border).top.width, 1.5);
     expect((deco.border! as Border).top.color, const Color(0xFF9AA5B8));
 
@@ -475,7 +476,7 @@ void main() {
     expect(find.text('Chưa đặt hạn'), findsNothing);
   });
 
-  testWidgets('chip hạn có biểu tượng lịch 13, chữ 12 w500', (t) async {
+  testWidgets('chip hạn có biểu tượng lịch 13, chữ 12 w600', (t) async {
     await t.pumpWidget(
       wrap(
         BoardTaskCard(
@@ -486,7 +487,8 @@ void main() {
     );
     await t.pumpAndSettle();
     final label = t.widget<Text>(find.text('Hạn 14/10'));
-    expect(label.style?.fontWeight, FontWeight.w500);
+    // Dáng nhãn trạng thái 12/600 (phong cách iOS §3.4).
+    expect(label.style?.fontWeight, FontWeight.w600);
     final icon = t.widget<Icon>(find.byIcon(Icons.calendar_today_outlined));
     expect(icon.size, 13);
   });
@@ -528,9 +530,9 @@ void main() {
     await t.pumpAndSettle();
     final shell = t.widget<Container>(find.byKey(const ValueKey('card-shell')));
     final deco = shell.decoration! as BoxDecoration;
-    expect(deco.borderRadius, BorderRadius.circular(14));
-    expect(deco.boxShadow!.single.offset, const Offset(0, 1));
-    expect(deco.boxShadow!.single.blurRadius, 2);
+    // Thẻ lồng trong cột bo 16 → bo 10, không bóng (phong cách iOS §3.5).
+    expect(deco.borderRadius, BorderRadius.circular(10));
+    expect(deco.boxShadow, anyOf(isNull, isEmpty));
     expect(shell.padding, const EdgeInsets.fromLTRB(8, 10, 10, 10));
   });
 

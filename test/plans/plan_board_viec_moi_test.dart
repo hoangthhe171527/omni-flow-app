@@ -232,7 +232,7 @@ void main() {
     // Khung kính trên ảnh bìa (viomni-apple-uiux.html): trắng mờ, bo 20.
     final deco = groove.decoration as BoxDecoration;
     expect(deco.color, Colors.white.withValues(alpha: .62));
-    expect(deco.borderRadius, BorderRadius.circular(20));
+    expect(deco.borderRadius, BorderRadius.circular(16));
   });
 
   testWidgets('(c) "Thêm công việc" mở trang tạo với nhóm của cột', (

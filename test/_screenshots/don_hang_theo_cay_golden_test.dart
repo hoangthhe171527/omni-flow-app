@@ -208,6 +208,21 @@ final _issueTask = Task.fromJson({
   ],
 });
 
+/// Biến thể chụp: `--dart-define=GOLDEN_VARIANT=toi13` = nền tối + chữ 1.3×
+/// (tiêu chí "xong một màn" của spec phong cách iOS, phụ lục Đợt 3 §4).
+const _variant = String.fromEnvironment('GOLDEN_VARIANT');
+final _variantDark = _variant.contains('toi');
+final _variantScale = _variant.contains('13') ? 1.3 : 1.0;
+final _variantSuffix = _variant.isEmpty ? '' : '-$_variant';
+ThemeData _variantTheme() => _variantDark
+    ? OmniTheme.dark(TargetPlatform.iOS)
+    : OmniTheme.light(TargetPlatform.iOS);
+Widget _variantScaled(BuildContext context, Widget? child) => MediaQuery(
+  data: MediaQuery.of(
+    context,
+  ).copyWith(textScaler: TextScaler.linear(_variantScale)),
+  child: child!,
+);
 void main() {
   setUpAll(() async {
     await _loadAppFont();
@@ -229,7 +244,8 @@ void main() {
     ],
     child: MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: OmniTheme.light(TargetPlatform.iOS),
+      theme: _variantTheme(),
+      builder: _variantScaled,
       locale: const Locale('vi'),
       home: home,
     ),
@@ -264,7 +280,7 @@ void main() {
     await t.pumpAndSettle();
     await expectLater(
       find.byType(MaterialApp),
-      matchesGoldenFile('goldens/dhtc-$name.png'),
+      matchesGoldenFile('goldens/dhtc-$name$_variantSuffix.png'),
     );
   }
 

@@ -13,8 +13,8 @@ import '../auth_module.dart';
 import '../data/auth_onboarding_api.dart';
 import 'widgets/auth_widgets.dart';
 
-/// Màn quên mật khẩu (`#s-auth-forgot`): nút quay lại `OmniGlassCircle`, quy
-/// trình 2 bước rõ ràng trong thẻ nhóm bo 18 (nhập email → kiểm tra hộp thư kèm
+/// Màn quên mật khẩu (`#s-auth-forgot`): `‹` xanh trơn (không vòng kính), quy
+/// trình 2 bước rõ ràng trong thẻ nhóm bo 16 (nhập email → kiểm tra hộp thư kèm
 /// thẻ email nhận + nút đổi email nhanh và bộ đếm lùi `tabularFigures`).
 ///
 /// API trả 204 dù email có tồn tại hay không, nên màn này luôn báo trạng thái
@@ -285,7 +285,8 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage>
         Material(
           color: scheme.surface,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
+            // Thẻ bo 16 (thang 6/10/16/32).
+            borderRadius: BorderRadius.circular(16),
             side: BorderSide(color: scheme.outlineVariant),
           ),
           clipBehavior: Clip.antiAlias,

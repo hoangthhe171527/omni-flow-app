@@ -127,6 +127,62 @@ extension OmniToneColors on OmniTone {
   }
 }
 
+/// Nhãn trạng thái của dòng danh sách (spec phong cách iOS §3.4): cao 22, bo 6,
+/// chữ 12/600 trên nền nhạt cùng họ màu. Xanh = Thu một phần / xong, vàng =
+/// Chưa thu / đang làm, đỏ = Lỗi, xám = Chưa kiểm / ngày. [icon] thêm hình
+/// dạng để không chỉ dựa vào màu (vd ✓ cho 10/10).
+class OmniStatusLabel extends StatelessWidget {
+  const OmniStatusLabel({
+    super.key,
+    required this.label,
+    this.tone = OmniTone.neutral,
+    this.icon,
+  });
+
+  final String label;
+  final OmniTone tone;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final (foreground, background) = tone.of(context);
+    // Không `alignment`: Container có alignment giãn hết chỗ cha cho (nhãn
+    // trong Column thành một vạch dài). Đệm dọc 2.5 + chữ 12×1.4 ≈ cao 22.
+    return Container(
+      constraints: const BoxConstraints(minHeight: 22),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon case final i?) ...[
+            Icon(i, size: 13, color: foreground),
+            const SizedBox(width: 3),
+          ],
+          // Flexible + xuống dòng: nhãn quá dài (vd "còn 3.000.000 đ" ở màn
+          // hẹp, chữ lớn) xuống dòng thay vì tràn — không bao giờ cắt "…" vì
+          // nhãn có thể mang số tiền.
+          Flexible(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                height: 1.4,
+                fontWeight: FontWeight.w600,
+                color: foreground,
+                fontFeatures: OmniType.tabular,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Huy hiệu nhãn ngắn trên một dòng danh sách: "VIP", "Mới", "Ngưng"
 /// (`MCustomers.dc.html`). Chip bo 4 cao 20, chữ 12/500 — chip trạng thái của
 /// đề xuất "Chuẩn hoá phong cách", không còn viên thuốc bo tròn.

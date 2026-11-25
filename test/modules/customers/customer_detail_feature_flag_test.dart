@@ -67,9 +67,10 @@ void main() {
   ) async {
     await pump(tester, const {});
 
-    expect(find.text('Cơ hội'), findsOneWidget);
-    expect(find.text('Cơ hội · 0'), findsOneWidget);
-    await tester.tap(find.text('Cơ hội · 0'));
+    // Nút hành động (thanh chọn cũng ghi 'Cơ hội', số đếm vẽ riêng).
+    expect(find.widgetWithText(InkWell, 'Cơ hội'), findsOneWidget);
+    expect(find.bySemanticsLabel('Cơ hội 0'), findsOneWidget);
+    await tester.tap(find.bySemanticsLabel('Cơ hội 0'));
     await tester.pumpAndSettle();
     expect(find.text('Tạo cơ hội'), findsOneWidget);
     expect(opportunityCalls, 1);

@@ -36,7 +36,7 @@ enum DueTone { today, late, upcoming, none }
   return (label: 'Hạn $dd/$mm', tone: DueTone.upcoming);
 }
 
-/// Viên thuốc trạng thái/hạn/ưu tiên chuẩn Liquid Glass (`radius: 999`).
+/// Nhãn trạng thái/hạn/ưu tiên (spec phong cách iOS §3.4: bo 6, chữ 12/600).
 class TaskPillChip extends StatelessWidget {
   const TaskPillChip(this.label, {super.key, required this.pick, this.icon});
 
@@ -60,13 +60,15 @@ class TaskPillChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tone = pick(OmniTaskTones.of(context));
+    // Khuôn nhãn trạng thái (spec phong cách iOS §3.4): cao 22, bo 6, chữ
+    // 12/600; giữ màu tông hạn của OmniTaskTones.
     final text = Text(
       label,
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
-      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+      style: OmniType.micro.copyWith(
         color: tone.foreground,
-        fontWeight: icon == null ? FontWeight.w600 : FontWeight.w500,
+        fontWeight: FontWeight.w600,
         fontFeatures: OmniType.tabular,
       ),
     );
@@ -74,10 +76,10 @@ class TaskPillChip extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: tone.background,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         child: icon == null
             ? text
             : Row(
@@ -96,7 +98,7 @@ class TaskPillChip extends StatelessWidget {
 /// Hạn của một công việc, bằng CHỮ chứ không chỉ bằng màu.
 ///
 /// Một chỗ duy nhất cho thẻ việc, bảng dự án và đầu trang chi tiết. Màu lấy
-/// từ [OmniTaskTones] (token theo chế độ sáng / tối), bo viên thuốc 999px.
+/// từ [OmniTaskTones] (token theo chế độ sáng / tối), khuôn nhãn bo 6.
 class DueChip extends StatelessWidget {
   DueChip({super.key, required Task task, this.icon})
     : due = task.dueDate,

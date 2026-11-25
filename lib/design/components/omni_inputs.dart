@@ -169,7 +169,9 @@ class _OmniSearchFieldState extends State<OmniSearchField> {
   }
 }
 
-/// Thanh tìm kiếm viên kính cao 44 dùng thống nhất làm `bottom` của [OmniAppBar].
+/// Ô tìm cao 44 dùng thống nhất làm `bottom` của [OmniAppBar]: nền xám đặc bo
+/// 10, không viên kính (spec phong cách iOS §3.4) — cùng dáng ô tìm của
+/// [OmniTopBar]. [trailing] nằm trong ô, bên phải (vd nút lọc xanh).
 class OmniSearchBottom extends StatelessWidget implements PreferredSizeWidget {
   const OmniSearchBottom({
     super.key,
@@ -180,11 +182,13 @@ class OmniSearchBottom extends StatelessWidget implements PreferredSizeWidget {
     this.debounce = const Duration(milliseconds: 350),
     this.autofocus = false,
     this.onSubmitted,
+    this.trailing,
   });
 
   final String hint;
   final ValueChanged<String> onChanged;
   final Key? fieldKey;
+  final Widget? trailing;
   final String? initialValue;
   final Duration debounce;
   final bool autofocus;
@@ -194,26 +198,43 @@ class OmniSearchBottom extends StatelessWidget implements PreferredSizeWidget {
   Size get preferredSize => const Size.fromHeight(44);
 
   @override
-  Widget build(BuildContext context) => OmniGlass(
-    radius: 22,
-    child: SizedBox(
-      height: 44,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6),
-        child: OmniSearchField(
-          key: fieldKey,
-          hint: hint,
-          initialValue: initialValue,
-          debounce: debounce,
-          flat: true,
-          dense: true,
-          autofocus: autofocus,
-          onChanged: onChanged,
-          onSubmitted: onSubmitted,
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: scheme.onSurface.withValues(alpha: dark ? .12 : .06),
+        borderRadius: BorderRadius.circular(10),
+        border: MediaQuery.highContrastOf(context)
+            ? Border.all(color: scheme.outline)
+            : null,
+      ),
+      child: SizedBox(
+        height: 44,
+        child: Padding(
+          padding: EdgeInsets.only(left: 6, right: trailing == null ? 6 : 0),
+          child: Row(
+            children: [
+              Expanded(
+                child: OmniSearchField(
+                  key: fieldKey,
+                  hint: hint,
+                  initialValue: initialValue,
+                  debounce: debounce,
+                  flat: true,
+                  dense: true,
+                  autofocus: autofocus,
+                  onChanged: onChanged,
+                  onSubmitted: onSubmitted,
+                ),
+              ),
+              ?trailing,
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 /// Labelled form field wrapper — one place for the label, hint, error and

@@ -140,7 +140,7 @@ class _SectionOrderPageState extends ConsumerState<SectionOrderPage> {
                 return DecoratedBox(
                   decoration: BoxDecoration(
                     color: scheme.surface,
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(16),
                     boxShadow: BoxShadow.lerpList(
                       const [],
                       OmniShadows.dragging,
@@ -151,7 +151,7 @@ class _SectionOrderPageState extends ConsumerState<SectionOrderPage> {
                 );
               },
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(16),
                 child: Material(color: scheme.surface, child: child),
               ),
             ),
@@ -198,7 +198,7 @@ class _SectionOrderPageState extends ConsumerState<SectionOrderPage> {
                   sliver: DecoratedSliver(
                     decoration: BoxDecoration(
                       color: scheme.surface,
-                      borderRadius: BorderRadius.circular(18),
+                      borderRadius: BorderRadius.circular(16),
                     ),
                     sliver: rows,
                   ),
@@ -256,7 +256,7 @@ class _SectionRow extends StatelessWidget {
 
     // Dòng đầu/cuối tự bo góc (K11): DecoratedSliver không cắt con, nên nền
     // vuông của dòng sẽ lòi ra khỏi góc bo của khung viền.
-    const corner = Radius.circular(18);
+    const corner = Radius.circular(16);
     return Material(
       color: scheme.surface,
       shape: RoundedRectangleBorder(
@@ -336,31 +336,10 @@ class _SectionRow extends StatelessWidget {
                   ),
                 ),
                 if (section.requiresChecklist)
-                  Padding(
-                    padding: const EdgeInsets.only(left: 8, right: 4),
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: OmniColors.byBrightness(
-                          context,
-                          OmniColors.warningSoft,
-                          OmniColors.darkWarningSoft,
-                        ),
-                        borderRadius: OmniRadius.pillAll,
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3,
-                        ),
-                        child: Text(
-                          'QC',
-                          style: OmniType.micro.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: OmniColors.warningTextOf(context),
-                          ),
-                        ),
-                      ),
-                    ),
+                  // Nhãn trạng thái (spec phong cách iOS §3.4).
+                  const Padding(
+                    padding: EdgeInsets.only(left: 8, right: 4),
+                    child: OmniStatusLabel(label: 'QC', tone: OmniTone.warning),
                   ),
                 arrow(
                   'Lên trên',

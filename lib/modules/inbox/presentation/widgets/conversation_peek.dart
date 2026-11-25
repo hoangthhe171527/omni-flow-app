@@ -170,9 +170,10 @@ class _PeekCard extends ConsumerWidget {
     final meta = conversation.channel.meta;
     final account = conversation.sourceAccount;
 
+    // Thẻ nổi bo 16, giữ bóng vì đang nổi trên màn (spec phong cách iOS §3.5).
     return DecoratedBox(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: OmniColors.byBrightness(
             context,
@@ -190,7 +191,7 @@ class _PeekCard extends ConsumerWidget {
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         child: Material(
           color: OmniColors.byBrightness(
             context,
@@ -382,8 +383,8 @@ class _PeekBubble extends StatelessWidget {
             borderRadius: BorderRadius.only(
               topLeft: const Radius.circular(16),
               topRight: const Radius.circular(16),
-              bottomLeft: Radius.circular(out ? 16 : 5),
-              bottomRight: Radius.circular(out ? 5 : 16),
+              bottomLeft: Radius.circular(out ? 16 : 6),
+              bottomRight: Radius.circular(out ? 6 : 16),
             ),
           ),
           child: Text(
@@ -414,7 +415,7 @@ class _PeekSkeleton extends StatelessWidget {
         height: 30,
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.outlineVariant,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
         ),
       ),
     );
@@ -444,8 +445,9 @@ class _PeekMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: 236,
+      // Menu đang mở: GIỮ kính (spec phong cách iOS §3.1), bo 16.
       child: OmniGlass(
-        radius: 18,
+        radius: 16,
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Material(
           type: MaterialType.transparency,
