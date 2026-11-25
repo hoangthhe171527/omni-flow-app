@@ -158,14 +158,17 @@ OmniHue hueOfArea(NavArea area) => switch (area) {
   NavArea.work => OmniHue.blue,
   NavArea.admin => OmniHue.violet,
   NavArea.finance => OmniHue.violet,
+  NavArea.hr => OmniHue.blue,
   NavArea.account => OmniHue.neutral,
 };
 
-/// Gom mục của module thành 4 nhóm nghiệp vụ (`tat-ca-tai-khoan-uiux.html`,
-/// duyệt 07/11) và lọc theo từ khoá; nhóm rỗng bị bỏ.
+/// Gom mục của module theo đúng các ứng dụng của web (đề xuất bố cục, duyệt
+/// 24/11) và lọc theo từ khoá; nhóm rỗng bị bỏ.
 ///
-/// Bán hàng · Vận hành (công việc, dòng việc, thông báo) · Tài chính · Đội &
-/// quản trị, cộng nhóm "Kho hàng" (mục của module `inventory`, chỉ khi API
+/// Bàn làm việc (tổng quan, việc của tôi, thông báo) · Bán hàng · Kho · Công
+/// việc · Tài chính · Nhân sự (kể cả Nhân viên). Cấu hình công ty (Kênh kết
+/// nối, Danh mục chi) chỉ làm trên web nên không lên lưới. Nhóm "Kho hàng" là
+/// mục của module `inventory`, chỉ khi API
 /// có capability `inventory` — [inventory] false thì ẩn hẳn). Mục khu Tài khoản (nền, cài đặt thông báo, quyền của tôi) KHÔNG
 /// lên lưới: cài đặt nằm ở danh sách "Cài đặt ứng dụng", quyền ở màn Tài khoản.
 List<DirectorySection> buildDirectorySections(
@@ -200,30 +203,40 @@ List<DirectorySection> buildDirectorySections(
           if (isInventory(e)) fromEntry(e),
   ];
   bool keep(DirectoryTile t) =>
+      !_webOnlyRoutes.contains(t.id) &&
       matchesQuery(label: t.label, subtitle: t.subtitle, query: query);
-  // Thông báo khai báo ở khu "Trao đổi" nhưng là việc hằng ngày của vận hành.
-  bool isNotifications(DirectoryTile t) => t.id == _notificationsRoute;
-  final sales = of([NavArea.communication, NavArea.sales]);
+  bool isHome(DirectoryTile t) => _homeRoutes.contains(t.id);
+  final daily = [
+    ...of([NavArea.work]),
+    ...of([NavArea.communication]),
+  ];
+  // Bàn làm việc theo thứ tự của [_homeRoutes], không theo khu khai báo.
+  final home = [
+    for (final id in _homeRoutes)
+      for (final t in daily)
+        if (t.id == id) t,
+  ];
 
   final raw = <(String, List<DirectoryTile>)>[
+    ('Bàn làm việc', home),
     (
       'Bán hàng',
       [
-        for (final t in sales)
-          if (!isNotifications(t)) t,
+        for (final t in of([NavArea.communication, NavArea.sales]))
+          if (!isHome(t)) t,
       ],
     ),
     ('Kho hàng', stock),
     (
-      'Vận hành',
+      'Công việc',
       [
-        ...of([NavArea.work]),
-        for (final t in sales)
-          if (isNotifications(t)) t,
+        for (final t in of([NavArea.work]))
+          if (!isHome(t)) t,
       ],
     ),
     ('Tài chính', of([NavArea.finance])),
-    ('Đội & quản trị', of([NavArea.admin])),
+    // Nhân viên (khu Quản trị) về Nhân sự: bỏ nhóm chỉ có một mục.
+    ('Nhân sự', of([NavArea.hr, NavArea.admin])),
   ];
 
   return [
@@ -233,9 +246,14 @@ List<DirectorySection> buildDirectorySections(
   ];
 }
 
-/// Tên route trung tâm thông báo (`NotificationRoutes.centre`) — chép chuỗi
-/// để shell không import route của module thông báo.
-const _notificationsRoute = 'notifications.centre';
+/// Mục của Bàn làm việc, theo thứ tự: Tổng quan (`DashboardRoutes.home`), Việc
+/// của tôi (`TaskRoutes.list`), Thông báo (`NotificationRoutes.centre`) — chép
+/// chuỗi để shell không import route của module.
+const _homeRoutes = ['dashboard.home', 'tasks.list', 'notifications.centre'];
+
+/// Cấu hình công ty chỉ làm trên web (đề xuất bố cục 24/11): Kênh kết nối, Danh
+/// mục chi. Route vẫn còn (link cũ, tab đã ghim) nhưng không lên lưới.
+const _webOnlyRoutes = {'channels.list', 'finance.catalog'};
 
 /// Mã module Kho (`InventoryModule.moduleId`) — chép chuỗi để shell không
 /// import lớp module.

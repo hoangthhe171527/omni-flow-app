@@ -72,7 +72,33 @@ const _permissions = <String>[
   'organization.org_units.update',
   'organization.org_units.delete',
   'finance.expenses',
+  // Nhân sự: thợ + quản đốc (bản demo `?vai=tho` bỏ quyền quản đốc).
+  ..._hrSelf,
+  ..._hrManager,
 ];
+
+const _hrSelf = <String>[
+  'hr.attendance.self',
+  'hr.payslips.self',
+  'kpi.team.self',
+];
+
+const _hrManager = <String>[
+  'hr.attendance.read',
+  'hr.requests.approve',
+  'hr.settings.manage',
+];
+
+/// Web demo: `?vai=tho` trên đường dẫn = xem như thợ (không quyền quản đốc),
+/// để chụp được cả hai thẻ Tổng quan từ cùng một bản dựng.
+bool get _demoWorker => Uri.base.queryParameters['vai'] == 'tho';
+
+List<String> get _demoPermissions => _demoWorker
+    ? [
+        for (final p in _permissions)
+          if (!_hrManager.contains(p)) p,
+      ]
+    : _permissions;
 
 const _capabilities = <String>[
   'tasks.pin',
@@ -95,6 +121,9 @@ const _capabilities = <String>[
   'projects.member_names',
   'tasks.copy_options',
   'tasks.points',
+  'kpi.team',
+  'hr.attendance',
+  'hr.payroll',
 ];
 
 Map<String, dynamic> get _tokens => {
@@ -164,7 +193,7 @@ void registerAuthDemo(DemoRoutes r) {
       'roles': [
         {'id': 'role-admin', 'slug': 'admin', 'name': 'Quản trị'},
       ],
-      'permissions': _permissions,
+      'permissions': _demoPermissions,
       'features': {
         'dashboard': true,
         'inbox': true,
@@ -183,6 +212,9 @@ void registerAuthDemo(DemoRoutes r) {
         'channels': true,
         'settings': true,
         'finance': true,
+        'kpi_team_v2': true,
+        'hr_attendance': true,
+        'hr_payroll': true,
       },
       'api_capabilities': _capabilities,
     }),

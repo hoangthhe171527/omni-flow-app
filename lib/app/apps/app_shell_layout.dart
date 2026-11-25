@@ -109,6 +109,15 @@ const appItemSpecs = <String, AppItemSpec>{
   // Hệ thống
   'channels': AppItemSpec('channels.list'),
   'staff': AppItemSpec('team.list'),
+  // Nhân sự (nhan-su-kpi/00 §8). `hr_payroll`, `hr_staff`, `hr_settings` là
+  // màn web — app bỏ qua.
+  'hr_clock': AppItemSpec('hr.clock'),
+  'hr_timesheet': AppItemSpec('hr.timesheet'),
+  'hr_requests': AppItemSpec('hr.requests'),
+  'hr_kpi': AppItemSpec('hr.kpi'),
+  'hr_payslip': AppItemSpec('hr.payslip'),
+  'hr_workshop_today': AppItemSpec('hr.workshop'),
+  'hr_approvals': AppItemSpec('hr.approvals'),
 };
 
 /// Nhãn ngắn trên thanh tab (rà soát 12/11/2026): ô tab rộng ~70px chỉ vừa
@@ -128,6 +137,14 @@ const tabLabels = <String, String>{
   'plans.archived': 'Lưu trữ',
   'settings.notifications': 'Thông báo',
   'settings.permissions': 'Quyền',
+  // Nhân sự (spec 03 §5.1): "Chấm công", "Công", "Đơn từ", "Lương".
+  'hr.clock': 'Chấm công',
+  'hr.timesheet': 'Công',
+  'hr.requests': 'Đơn từ',
+  'hr.payslip': 'Lương',
+  'hr.kpi': 'Thưởng',
+  'hr.workshop': 'Xưởng',
+  'hr.approvals': 'Duyệt',
 };
 
 const maxTabLabelLength = 9;
@@ -250,6 +267,7 @@ IconData appIconOf(String key) => switch (key) {
   'stock' => Icons.inventory_2_rounded,
   'work' => Icons.view_kanban_rounded,
   'finance' => Icons.account_balance_wallet_rounded,
+  'hr' => Icons.badge_rounded,
   'system' => Icons.settings_rounded,
   _ => Icons.apps_rounded,
 };
@@ -327,7 +345,7 @@ AppShellLayout buildAppShellLayout({
           icon: appIconOf(app.key),
           items: pick([
             for (final i in app.items)
-              if (!i.isReport) i.key,
+              if (!i.isReport && !i.isSettings) i.key,
           ]),
           reports: pick([
             for (final i in app.items)

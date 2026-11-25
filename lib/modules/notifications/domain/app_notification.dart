@@ -62,6 +62,7 @@ class AppNotification {
     this.readAt,
     this.entityType,
     this.entityId,
+    this.wireType,
   });
 
   factory AppNotification.fromJson(Map<String, dynamic> json) =>
@@ -74,6 +75,7 @@ class AppNotification {
         readAt: DateUtilsX.parse(json['read_at']),
         entityType: json.str('related_entity_type'),
         entityId: json.str('related_entity_id'),
+        wireType: json.str('notification_type'),
       );
 
   final String id;
@@ -84,6 +86,10 @@ class AppNotification {
   final DateTime? readAt;
   final String? entityType;
   final String? entityId;
+
+  /// `notification_type` nguyên văn của API — loại app chưa có trong
+  /// [NotificationKind] (Nhân sự) vẫn định tuyến được.
+  final String? wireType;
 
   bool get isUnread => readAt == null;
 

@@ -7,6 +7,7 @@ import '../../../design/components/components.dart';
 import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
 import '../application/notifications_providers.dart';
+import '../application/push_notifications.dart';
 import '../domain/app_notification.dart';
 
 /// Chuông (`Notifications.dc.html`).
@@ -189,6 +190,15 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
   void _open(AppNotification notification) {
     HapticFeedback.selectionClick();
     ref.read(notificationsProvider.notifier).markRead(notification.id);
+    // Nhân sự (chấm công, đơn, phiếu lương…): mở qua đường của push.
+    final hr = PushIntent.hrFromInApp(
+      wireType: notification.wireType,
+      entityId: notification.entityId,
+    );
+    if (hr != null) {
+      ref.read(pushIntentProvider.notifier).state = hr;
+      return;
+    }
 
     // Dòng không định tuyến được vẫn đánh dấu đã đọc, chỉ không điều hướng.
     final taskId = notification.taskId;

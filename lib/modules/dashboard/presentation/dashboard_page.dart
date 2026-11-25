@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
+import '../../hr/hr.dart';
 import '../application/dashboard_providers.dart';
 import 'widgets/awaiting_reply_card.dart';
 import 'widgets/my_tasks_card.dart';
@@ -18,6 +19,7 @@ class DashboardPage extends ConsumerWidget {
 
   Future<void> _refresh(WidgetRef ref) {
     final cards = ref.read(dashboardCardsProvider);
+    refreshHrHomeCard(ref);
     ref
       ..invalidate(revenueSeriesProvider)
       ..invalidate(dashboardMyTasksProvider)
@@ -43,7 +45,9 @@ class DashboardPage extends ConsumerWidget {
       final rev = ref.watch(revenueSeriesProvider);
       revenueVisible = !(rev.hasValue && rev.value == null && !rev.isLoading);
     }
-    final none = !revenueVisible && !cards.tasks && !cards.inbox;
+    final hr = ref.watch(hrAccessProvider);
+    final hrCard = hr.clock || hr.workshop;
+    final none = !hrCard && !revenueVisible && !cards.tasks && !cards.inbox;
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: const OmniTopBar(semanticsTitle: 'Tổng quan'),
@@ -69,7 +73,13 @@ class DashboardPage extends ConsumerWidget {
                           title: emptyMessage,
                         ),
                       ]
-                    : const [RevenueCard(), MyTasksCard(), AwaitingReplyCard()],
+                    : const [
+                        // Thẻ chấm công / xưởng hôm nay đứng đầu (nhan-su-kpi/03 §5.1).
+                        HrHomeCard(),
+                        RevenueCard(),
+                        MyTasksCard(),
+                        AwaitingReplyCard(),
+                      ],
               ),
             );
           },

@@ -19,6 +19,9 @@ enum NavArea {
   // Tách khỏi "Quản trị" cho giống menu web (bug sheet 07/11): Sổ chi phí,
   // Tổng hợp chi phí nằm chung nhóm "Tài chính".
   finance('Tài chính'),
+  // Nhân sự (nhan-su-kpi/03 §5.1): chấm công, công, đơn từ, lương, thưởng đội.
+  // Đứng sau "Tài chính" để chỉ số branch của các mục cũ không đổi.
+  hr('Nhân sự'),
   account('Tài khoản');
 
   const NavArea(this.label);
@@ -76,7 +79,13 @@ class ModuleNavEntry {
     this.badgeTone = NavBadgeTone.unread,
     this.badgeDisplay = NavBadgeDisplay.count,
     this.feature,
+    this.capabilities = const [],
   });
+
+  /// Khả năng của bản API đang chạy mục này cần (`Session.apiSupports`).
+  /// NGƯỢC với [feature]: thiếu tên là ẨN — API cũ chưa có màn thì không mời
+  /// người dùng vào một màn chỉ toàn lỗi.
+  final List<String> capabilities;
 
   /// Khoá cờ tính năng của workspace (`inbox`, `tasks`…, như web
   /// `feature-flags.ts`). Cờ tắt thì mục ẩn như khi thiếu quyền. Null = luôn

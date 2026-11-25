@@ -22,6 +22,7 @@ import 'modules/channels/channels_module.dart';
 import 'modules/customers/customers_module.dart';
 import 'modules/dashboard/dashboard_module.dart';
 import 'modules/finance/finance_module.dart';
+import 'modules/hr/hr_module.dart';
 import 'modules/inbox/inbox_module.dart';
 import 'modules/inventory/inventory_module.dart';
 import 'modules/notifications/notifications_module.dart';
@@ -49,6 +50,7 @@ const List<OmniModule> appModules = [
   OpportunitiesModule(),
   FinanceModule(),
   InventoryModule(),
+  HrModule(),
   TeamModule(),
   ChannelsModule(),
   NotificationsModule(),

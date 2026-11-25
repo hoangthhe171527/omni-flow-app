@@ -144,6 +144,37 @@ void main() {
       ]);
     });
 
+    test('mục nhóm settings (cài đặt của ứng dụng) chỉ có trên web', () async {
+      final c = containerFor(
+        session(),
+        manifest: AppManifest.fromJson({
+          ..._manifestJson,
+          'apps': [
+            for (final a in _manifestJson['apps'] as List)
+              {
+                ...a as Map<String, dynamic>,
+                'items': [
+                  for (final i in a['items'] as List)
+                    (i as Map<String, dynamic>)['key'] == 'inventory_counts'
+                        ? {...i, 'group': 'settings'}
+                        : i,
+                ],
+              },
+          ],
+        }),
+      );
+      addTearDown(c.dispose);
+      await c.read(appManifestProvider.future);
+      final layout = c.read(appShellLayoutProvider)!;
+      final keys = [
+        for (final app in layout.entries)
+          for (final i in app.all) i.key,
+      ];
+      // Không lên ứng dụng nào, cũng không trôi về Bàn làm việc.
+      expect(keys, isNot(contains('inventory_counts')));
+      expect(keys, isNot(contains('inventory.counts')));
+    });
+
     test(
       'vai không cho dùng Bàn làm việc (home_enabled: false) thì không có ô đó',
       () async {

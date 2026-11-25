@@ -13,6 +13,7 @@ import '../core/theme/theme_mode_controller.dart';
 import '../design/components/components.dart';
 import '../design/theme/omni_theme.dart';
 import '../modules/customers/application/customers_providers.dart';
+import '../modules/hr/routes.dart';
 import '../modules/inbox/inbox_routes.dart';
 import '../modules/notifications/application/notifications_providers.dart';
 import '../modules/notifications/application/push_notifications.dart';
@@ -211,13 +212,51 @@ class _OmniAppState extends ConsumerState<OmniApp> with WidgetsBindingObserver {
     ref.read(pushIntentProvider.notifier).state = null;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      final router = ref.read(routerProvider);
+      if (intent.target.isHr) {
+        _openHrIntent(router, intent);
+        return;
+      }
       final route = switch (intent.target) {
         PushTarget.conversation => InboxRoutes.thread,
-        PushTarget.task => TasksModule.detail,
+        _ => TasksModule.detail,
       };
-      ref
-          .read(routerProvider)
-          .pushNamed(route, pathParameters: {'id': intent.id});
+      router.pushNamed(route, pathParameters: {'id': intent.id});
     });
+  }
+
+  /// Thông báo Nhân sự mở đúng màn (nhan-su-kpi/00 §9). Màn là branch của
+  /// shell nên dùng `goNamed`; id thiếu thì mở danh sách.
+  void _openHrIntent(GoRouter router, PushIntent intent) {
+    final id = intent.id;
+    final approver = ref.read(sessionProvider).policy.canAny(const [
+      'hr.requests.approve',
+      'hr.attendance.manage',
+    ]);
+    final (name, query) = switch (intent.target) {
+      PushTarget.hrDay => (
+        HrRoutes.timesheet,
+        id.isEmpty ? const <String, String>{} : {'date': id},
+      ),
+      // Người duyệt nhận "có đơn mới"; người gửi nhận "đơn đã duyệt". Cùng
+      // `data.type`, nên người có quyền duyệt mở màn Duyệt đơn.
+      PushTarget.hrRequest when approver => (
+        HrRoutes.approvals,
+        id.isEmpty ? const <String, String>{} : {'id': id},
+      ),
+      PushTarget.hrRequest ||
+      PushTarget.hrMyRequest => (HrRoutes.requests, const <String, String>{}),
+      PushTarget.hrWorkshopToday => (
+        HrRoutes.workshop,
+        const <String, String>{},
+      ),
+      PushTarget.hrPayslip => (
+        HrRoutes.payslip,
+        id.isEmpty ? const <String, String>{} : {'period': id},
+      ),
+      PushTarget.hrKpi => (HrRoutes.kpi, const <String, String>{}),
+      _ => (HrRoutes.clock, const <String, String>{}),
+    };
+    router.goNamed(name, queryParameters: query);
   }
 }

@@ -67,6 +67,16 @@ dependencies:
   path_provider: ^2.1.6
   device_info_plus: ^12.4.0
   battery_plus: ^7.1.2
+  # Chấm công (nhan-su-kpi/03 §5.3): vị trí GPS khi không có WiFi xưởng, và
+  # SSID/BSSID của WiFi đang kết nối. Chỉ xin quyền lúc bấm Chấm lần đầu.
+  # Ghim cứng phiên bản: plugin đụng quyền hệ điều hành, lên bản phải thử máy
+  # thật. 14.0.3 trở lên kéo win32 6 (xung đột device_info_plus 12).
+  geolocator: 14.0.2
+  network_info_plus: 7.0.0
+  # Băm mã máy chấm công (`device_key` = SHA-256), đã có sẵn qua gói khác.
+  crypto: 3.0.7
+  # Mã QR nhận lương (VietQR) vẽ bằng CustomPainter — gói Dart thuần, không plugin.
+  qr: 3.0.2
 
 dev_dependencies:
   flutter_test:

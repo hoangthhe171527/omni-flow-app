@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../application/notifications_providers.dart';
+import '../application/push_notifications.dart';
 import '../domain/app_notification.dart';
 import 'notifications_page.dart' show NotificationRow;
 
@@ -133,6 +134,14 @@ class _NotificationDropState extends ConsumerState<_NotificationDrop> {
     HapticFeedback.selectionClick();
     ref.read(notificationsProvider.notifier).markRead(n.id);
     Navigator.of(context).pop();
+    final hr = PushIntent.hrFromInApp(
+      wireType: n.wireType,
+      entityId: n.entityId,
+    );
+    if (hr != null) {
+      ref.read(pushIntentProvider.notifier).state = hr;
+      return;
+    }
     final taskId = n.taskId;
     if (taskId != null) {
       widget.onOpenTask(taskId);

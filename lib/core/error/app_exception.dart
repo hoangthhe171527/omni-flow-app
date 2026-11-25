@@ -48,6 +48,7 @@ class ValidationException extends AppException {
     super.message, {
     this.errors = const {},
     this.reason,
+    this.data,
   }) : super(code: '422');
 
   final Map<String, List<String>> errors;
@@ -55,6 +56,9 @@ class ValidationException extends AppException {
   /// Mã nghiệp vụ API gửi kèm (`code`, vd `personal_thread_not_reassignable`),
   /// để phân biệt các 422 cùng rơi vào một trường. Null khi API không gửi.
   final String? reason;
+
+  /// `data` API gửi kèm lỗi (lượt chấm công bị từ chối trả `distance_m`).
+  final Object? data;
 
   String? firstFor(String field) => errors[field]?.firstOrNull;
 }
