@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../platform/omni_motion_scope.dart';
 import '../tokens/tokens.dart';
 import 'omni_group.dart';
 import 'omni_inputs.dart';
@@ -112,72 +114,17 @@ class OmniPeriodPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final limit = latest ?? DateTime.now();
     final canNext = !value.next.start.isAfter(limit);
     final choosable = units.length > 1;
-
-    final title = Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Flexible(
-          child: Text(
-            value.label,
-            style: OmniType.navTitle.copyWith(
-              color: scheme.onSurface,
-              fontFeatures: OmniType.tabular,
-            ),
-          ),
-        ),
-        if (choosable) ...[
-          const SizedBox(width: 4),
-          Icon(
-            LucideIcons.chevronDown,
-            size: OmniIconSize.sm,
-            color: scheme.onSurfaceVariant,
-          ),
-        ],
-      ],
-    );
-
-    return SizedBox(
-      height: 44,
-      child: Row(
-        children: [
-          Expanded(
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Semantics(
-                button: choosable,
-                label: choosable ? 'Chọn kỳ, ${value.label}' : value.label,
-                excludeSemantics: true,
-                child: InkWell(
-                  onTap: choosable ? () => _chooseUnit(context) : null,
-                  borderRadius: OmniRadius.mdAll,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 4,
-                      vertical: 10,
-                    ),
-                    child: title,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          _StepButton(
-            icon: LucideIcons.chevronLeft,
-            label: 'Kỳ trước, ${value.previous.label}',
-            onTap: () => onChanged(value.previous),
-          ),
-          const SizedBox(width: 4),
-          _StepButton(
-            icon: LucideIcons.chevronRight,
-            label: 'Kỳ sau, ${value.next.label}',
-            onTap: canNext ? () => onChanged(value.next) : null,
-          ),
-        ],
-      ),
+    return OmniPeriodBar(
+      label: value.label,
+      onTapLabel: choosable ? () => _chooseUnit(context) : null,
+      labelSemantics: choosable ? 'Chọn kỳ, ${value.label}' : value.label,
+      prevSemantics: 'Kỳ trước, ${value.previous.label}',
+      nextSemantics: 'Kỳ sau, ${value.next.label}',
+      onPrev: () => onChanged(value.previous),
+      onNext: canNext ? () => onChanged(value.next) : null,
     );
   }
 
@@ -210,43 +157,175 @@ class OmniPeriodPicker extends StatelessWidget {
   }
 }
 
+/// Phần HÌNH của bộ chọn kỳ (Chuẩn Mobile UI — PeriodPicker), không giữ
+/// logic kỳ: tên kỳ 17/600 bên trái (chạm → [onTapLabel], có ⌄ khi chạm
+/// được), hai nút tròn 32 (vùng chạm 44) ‹ › bên phải. `null` = nút mờ.
+///
+/// Màn có logic kỳ riêng (sổ theo tháng "2026-11", phiếu lương, báo cáo) dùng
+/// thẳng thanh này để mọi bộ chọn kỳ trong app cùng một hình; màn mới dùng
+/// [OmniPeriodPicker].
+class OmniPeriodBar extends StatelessWidget {
+  const OmniPeriodBar({
+    super.key,
+    required this.label,
+    this.onPrev,
+    this.onNext,
+    this.onTapLabel,
+    this.prevTooltip = 'Kỳ trước',
+    this.nextTooltip = 'Kỳ sau',
+    this.labelTooltip,
+    this.prevKey,
+    this.nextKey,
+    this.labelKey,
+    this.labelSemantics,
+    this.prevSemantics,
+    this.nextSemantics,
+  });
+
+  final String label;
+  final VoidCallback? onPrev;
+  final VoidCallback? onNext;
+  final VoidCallback? onTapLabel;
+  final String prevTooltip;
+  final String nextTooltip;
+  final String? labelTooltip;
+  final Key? prevKey;
+  final Key? nextKey;
+
+  /// Gắn vào vùng chạm của tên kỳ — vd GlobalKey để neo popover.
+  final Key? labelKey;
+  final String? labelSemantics;
+  final String? prevSemantics;
+  final String? nextSemantics;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final tappable = onTapLabel != null;
+    Widget title = InkWell(
+      key: labelKey,
+      onTap: onTapLabel,
+      borderRadius: OmniRadius.mdAll,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                label,
+                style: OmniType.navTitle.copyWith(
+                  color: scheme.onSurface,
+                  fontFeatures: OmniType.tabular,
+                ),
+              ),
+            ),
+            if (tappable) ...[
+              const SizedBox(width: 4),
+              Icon(
+                LucideIcons.chevronDown,
+                size: OmniIconSize.sm,
+                color: scheme.onSurfaceVariant,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+    if (labelTooltip != null) {
+      title = Tooltip(message: labelTooltip!, child: title);
+    }
+    return SizedBox(
+      height: 44,
+      child: Row(
+        children: [
+          Expanded(
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Semantics(
+                button: tappable,
+                label: labelSemantics ?? label,
+                excludeSemantics: true,
+                child: title,
+              ),
+            ),
+          ),
+          _StepButton(
+            key: prevKey,
+            icon: LucideIcons.chevronLeft,
+            tooltip: prevTooltip,
+            label: prevSemantics ?? prevTooltip,
+            onTap: onPrev,
+          ),
+          const SizedBox(width: 4),
+          _StepButton(
+            key: nextKey,
+            icon: LucideIcons.chevronRight,
+            tooltip: nextTooltip,
+            label: nextSemantics ?? nextTooltip,
+            onTap: onNext,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _StepButton extends StatelessWidget {
-  const _StepButton({required this.icon, required this.label, this.onTap});
+  const _StepButton({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.tooltip,
+    this.onTap,
+  });
 
   final IconData icon;
   final String label;
+  final String tooltip;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final enabled = onTap != null;
+    final motion = OmniMotion.enabled(context);
+    // IconButton: vùng chạm 44, tooltip, khoá đúng kiểu nền tảng. Giảm chuyển
+    // động: không gợn sóng (không để lại hoạt ảnh sau khi chạm).
     return Semantics(
       button: true,
       enabled: enabled,
       label: label,
       excludeSemantics: true,
-      child: InkResponse(
-        onTap: onTap,
-        radius: 22,
-        child: SizedBox.square(
-          dimension: 44,
-          child: Center(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: scheme.surfaceContainerHighest,
-                shape: BoxShape.circle,
-              ),
-              child: SizedBox.square(
-                dimension: 32,
-                child: Icon(
-                  icon,
-                  size: OmniIconSize.md,
-                  color: enabled
-                      ? scheme.onSurface
-                      : scheme.onSurfaceVariant.withValues(alpha: .45),
-                ),
-              ),
+      child: IconButton(
+        tooltip: tooltip,
+        onPressed: onTap == null
+            ? null
+            : () {
+                HapticFeedback.selectionClick();
+                onTap!();
+              },
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+        style: IconButton.styleFrom(
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          splashFactory: motion ? null : NoSplash.splashFactory,
+          overlayColor: motion ? null : Colors.transparent,
+          animationDuration: motion ? null : Duration.zero,
+        ),
+        icon: DecoratedBox(
+          decoration: BoxDecoration(
+            color: scheme.surfaceContainerHighest,
+            shape: BoxShape.circle,
+          ),
+          child: SizedBox.square(
+            dimension: 32,
+            child: Icon(
+              icon,
+              size: OmniIconSize.md,
+              color: enabled
+                  ? scheme.onSurface
+                  : scheme.onSurfaceVariant.withValues(alpha: .45),
             ),
           ),
         ),

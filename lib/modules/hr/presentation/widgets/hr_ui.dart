@@ -264,73 +264,16 @@ class HrMonthSwitcher extends StatelessWidget {
   final VoidCallback? onNext;
   final VoidCallback? onTapLabel;
 
+  /// Bộ chọn kỳ chuẩn của app (Chuẩn Mobile UI — PeriodPicker, Đợt A4).
   @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    Widget arrow(IconData icon, String tip, VoidCallback? onTap) => Opacity(
-      opacity: onTap == null ? .4 : 1,
-      child: OmniGlassCircle(
-        child: IconButton(
-          tooltip: tip,
-          onPressed: onTap,
-          icon: Icon(icon, color: scheme.onSurface),
-        ),
-      ),
-    );
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        arrow(LucideIcons.chevronLeft, 'Tháng trước', onPrev),
-        const SizedBox(width: 10),
-        // Nút chọn tháng: nền xám đặc dáng viên thuốc, không kính (spec §3.1).
-        Flexible(
-          child: Material(
-            color: scheme.onSurface.withValues(
-              alpha: Theme.of(context).brightness == Brightness.dark
-                  ? .12
-                  : .06,
-            ),
-            shape: const StadiumBorder(),
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(999),
-              onTap: onTapLabel,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        label,
-                        style: OmniType.body.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: scheme.onSurface,
-                        ),
-                      ),
-                    ),
-                    if (onTapLabel != null) ...[
-                      const SizedBox(width: 4),
-                      Icon(
-                        LucideIcons.chevronDown,
-                        size: 18,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        arrow(LucideIcons.chevronRight, 'Tháng sau', onNext),
-      ],
-    );
-  }
+  Widget build(BuildContext context) => OmniPeriodBar(
+    label: label,
+    onPrev: onPrev,
+    onNext: onNext,
+    onTapLabel: onTapLabel,
+    prevTooltip: 'Tháng trước',
+    nextTooltip: 'Tháng sau',
+  );
 }
 
 IconData locationIconData(LocationIcon icon) => switch (icon) {
