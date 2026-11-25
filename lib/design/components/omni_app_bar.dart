@@ -60,6 +60,7 @@ class OmniAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.bottom,
     this.close = false,
     this.fallbackBack,
+    this.subtitle,
     // Ba tham số dưới đây thuộc AppBar cũ; giữ để màn cũ dựng được, không còn
     // tác dụng với thanh kính.
     this.backgroundColor,
@@ -69,6 +70,9 @@ class OmniAppBar extends StatelessWidget implements PreferredSizeWidget {
   });
 
   final String title;
+
+  /// Dòng phụ dưới tên màn con (vd mã đơn). Màn gốc bỏ qua.
+  final String? subtitle;
 
   /// Nút riêng của màn, đứng trước chuông / tài khoản.
   final List<Widget> actions;
@@ -92,6 +96,7 @@ class OmniAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   OmniTopBar _bar(bool canPop, VoidCallback? back) => OmniTopBar(
     semanticsTitle: title,
+    subtitle: subtitle,
     onBack: canPop ? back : null,
     backIcon: close ? Icons.close_rounded : null,
     showAccount: showAccount,

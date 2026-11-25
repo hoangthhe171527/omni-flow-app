@@ -119,7 +119,11 @@ class _RecordPaymentSheetState extends ConsumerState<RecordPaymentSheet> {
     final over = _amount > _full && _full > 0;
 
     return OmniSheetBody(
-      header: OmniSheetHeader(title: 'Ghi thu', subtitle: widget.orderCode),
+      header: OmniSheetHeader(
+        title: 'Ghi thu',
+        subtitle: widget.orderCode,
+        trailing: const OmniSheetCloseButton(key: ValueKey('pay-close')),
+      ),
       footer: FilledButton(
         key: const ValueKey('pay-save'),
         onPressed: _amount <= 0 || over || _saving ? null : _save,

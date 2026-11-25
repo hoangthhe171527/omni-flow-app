@@ -22,6 +22,7 @@ export 'omni_inputs.dart';
 export 'omni_motion_widgets.dart';
 export 'omni_page_layers.dart';
 export 'omni_status_chip.dart';
+export 'omni_summary.dart';
 export 'omni_pills.dart';
 export 'omni_progress_ring.dart';
 export 'omni_segmented.dart';

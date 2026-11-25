@@ -78,7 +78,8 @@ class OmniGroupSection extends StatelessWidget {
           ),
         Material(
           color: background ?? scheme.surface,
-          borderRadius: BorderRadius.circular(18),
+          // Nhóm bo 16 (spec phong cách iOS §3.5).
+          borderRadius: BorderRadius.circular(16),
           clipBehavior: Clip.antiAlias,
           // Thẻ trắng: nút bên trong là kính nhuộm tông, không chìm.
           child: OmniTintedButtons(
@@ -360,9 +361,11 @@ class OmniSheetHeader extends StatelessWidget {
                     title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
+                    // Tiêu đề sheet 20/700 (spec phong cách iOS §3.4).
                     style: OmniType.body.copyWith(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 20,
+                      height: 1.3,
+                      fontWeight: FontWeight.w700,
                       color: scheme.onSurface,
                     ),
                   ),
@@ -372,7 +375,7 @@ class OmniSheetHeader extends StatelessWidget {
                     sub,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: OmniType.caption.copyWith(
+                    style: OmniType.bodySm.copyWith(
                       color: scheme.onSurfaceVariant,
                     ),
                   ),
@@ -381,6 +384,49 @@ class OmniSheetHeader extends StatelessWidget {
           ),
           if (trailing != null) ...[const SizedBox(width: 8), trailing!],
         ],
+      ),
+    );
+  }
+}
+
+/// Nút ✕ đóng sheet (spec §3.4): tròn 32 nền xám, vùng chạm 44. Đặt ở
+/// `trailing` của [OmniSheetHeader]; đóng bằng `Navigator.pop` không kết quả.
+class OmniSheetCloseButton extends StatelessWidget {
+  const OmniSheetCloseButton({super.key, this.onPressed});
+
+  /// Mặc định `Navigator.maybePop(context)`.
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Semantics(
+      button: true,
+      label: 'Đóng',
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onPressed ?? () => Navigator.of(context).maybePop(),
+        child: SizedBox.square(
+          dimension: 44,
+          child: Center(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: scheme.onSurface.withValues(alpha: dark ? .14 : .07),
+              ),
+              child: SizedBox.square(
+                dimension: 32,
+                child: Icon(
+                  Icons.close_rounded,
+                  size: 18,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -129,12 +129,10 @@ class _SerialFieldState extends State<SerialField> {
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: Text(
             has ? widget.serial! : '+ Thêm serial',
+            // Không gạch chấm (spec phong cách iOS §3.3 Tồn kho): chạm serial
+            // để sửa là gợi ý ngầm, như chạm tiền để sửa.
             style: has
-                ? style.copyWith(
-                    decoration: TextDecoration.underline,
-                    decorationStyle: TextDecorationStyle.dotted,
-                    decorationColor: scheme.onSurfaceVariant,
-                  )
+                ? style
                 : style.copyWith(
                     color: scheme.primary,
                     fontWeight: FontWeight.w600,

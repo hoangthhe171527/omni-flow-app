@@ -25,6 +25,15 @@ abstract final class InvUi {
   static String vnd(num? n) => Formatters.vnd(n?.round());
 
   /// Màu chữ tình trạng: lỗi vàng cảnh báo, không thấy đỏ.
+  /// Giọng nhãn tình trạng (spec phong cách iOS §3.4): Lỗi / Không thấy đỏ,
+  /// Sẵn sàng xanh lá, Đang làm xanh, Nguyên thùng / Chưa kiểm xám.
+  static OmniTone conditionTone(UnitCondition? c) => switch (c) {
+    UnitCondition.defective || UnitCondition.missing => OmniTone.danger,
+    UnitCondition.ready => OmniTone.success,
+    UnitCondition.refurbishing => OmniTone.info,
+    UnitCondition.sealed || null => OmniTone.neutral,
+  };
+
   static Color? conditionColor(BuildContext context, UnitCondition? c) =>
       switch (c) {
         UnitCondition.ready => OmniColors.successTextOf(context),
@@ -110,7 +119,9 @@ class InvValue extends StatelessWidget {
   }
 }
 
-/// Nhãn trạng thái dạng viên thuốc nhạt màu, dễ phân biệt mà không gắt mắt.
+/// Nhãn trạng thái tô bằng một màu chữ tuỳ ý — cùng khuôn [OmniStatusLabel]
+/// (cao 22, bo 6, 12/600; spec phong cách iOS §3.4). Màu theo giọng chuẩn thì
+/// dùng thẳng [OmniStatusLabel].
 class InvStatusPill extends StatelessWidget {
   const InvStatusPill({super.key, required this.label, required this.tone});
 
@@ -120,14 +131,20 @@ class InvStatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      constraints: const BoxConstraints(minHeight: 22),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      alignment: Alignment.center,
       decoration: BoxDecoration(
         color: tone.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
         label,
-        style: OmniType.caption.copyWith(
+        maxLines: 1,
+        softWrap: false,
+        style: TextStyle(
+          fontSize: 12,
+          height: 1.4,
           color: tone,
           fontWeight: FontWeight.w600,
         ),

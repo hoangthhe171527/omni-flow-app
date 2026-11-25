@@ -157,7 +157,7 @@ void main() {
     expect(find.text('Tin nhan bi an khoi chuong'), findsNothing);
   });
 
-  testWidgets('mỗi nhóm ngày là một thẻ lồng bo 18 (viomni-apple-uiux.html)', (
+  testWidgets('mỗi nhóm ngày là một thẻ lồng bo 16 (phong cách iOS §3.5)', (
     t,
   ) async {
     await pump(t);
@@ -169,7 +169,7 @@ void main() {
         find.descendant(of: group, matching: find.byType(Material)).first,
       );
       final radius = material.borderRadius! as BorderRadius;
-      expect(radius.topLeft, const Radius.circular(18), reason: label);
+      expect(radius.topLeft, const Radius.circular(16), reason: label);
       expect(material.clipBehavior, Clip.antiAlias, reason: label);
     }
   });

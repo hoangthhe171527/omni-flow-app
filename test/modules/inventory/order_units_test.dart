@@ -123,8 +123,14 @@ void main() {
     ]) {
       expect(find.text(label), findsOneWidget, reason: label);
     }
-    expect(find.text('YAMAHA BL71 1452098'), findsOneWidget);
-    expect(find.text('Nứt bảng cộng hưởng — Bảo'), findsOneWidget);
+    // Khối đầu (phong cách iOS): Còn phải thu là số chính, Tổng đơn · Đã thu
+    // ngay dưới, không còn thẻ tổng ở cuối màn.
+    expect(find.text('Còn phải thu'), findsOneWidget);
+    expect(find.text('Tổng đơn'), findsOneWidget);
+    expect(find.text('303.500.000đ'), findsOneWidget);
+    // Tên dòng = model; serial lên đầu dòng phụ.
+    expect(find.text('YAMAHA BL71'), findsOneWidget);
+    expect(find.text('1452098 · Nứt bảng cộng hưởng — Bảo'), findsOneWidget);
     expect(find.text('6/10'), findsOneWidget);
     expect(find.text('Bộ phím · Hoàng · hạn 15/11'), findsOneWidget);
     expect(find.text('Kho chính · Dãy B'), findsOneWidget);

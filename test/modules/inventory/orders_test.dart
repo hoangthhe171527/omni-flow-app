@@ -157,8 +157,10 @@ void main() {
     t,
   ) async {
     final api = await pumpList(t);
-    expect(find.text('Cần thu 2'), findsOneWidget);
+    // Số đếm vẽ riêng cạnh nhãn; trình đọc màn hình nghe "Cần thu 2".
+    expect(find.bySemanticsLabel('Cần thu 2'), findsOneWidget);
     expect(find.text('Còn phải thu'), findsOneWidget);
+    expect(find.text('2 đơn'), findsOneWidget);
     expect(find.text('261.500.000đ'), findsOneWidget);
     // Đơn đã thu đủ không nằm trong "Cần thu".
     expect(find.text('Lê Thu Hà'), findsNothing);

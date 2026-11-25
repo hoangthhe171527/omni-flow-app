@@ -17,12 +17,30 @@ class OmniSegmented extends StatelessWidget {
     required this.index,
     required this.onChanged,
     this.compact = false,
+    this.counts,
   });
 
   final List<String> labels;
   final int index;
   final ValueChanged<int> onChanged;
   final bool compact;
+
+  /// Số đếm từng đoạn (cùng độ dài [labels]; `null` = không ghi số). Vẽ cỡ 12
+  /// ngay cạnh nhãn, cùng một hàng (spec §3.4): xám, đoạn đang chọn màu chính.
+  final List<int?>? counts;
+
+  /// 1234 → "1.234" (kiểu số Việt, như `Formatters`).
+  static String _group(int n) => n.abs() < 1000
+      ? '$n'
+      : n.toString().replaceAllMapped(
+          RegExp(r'\B(?=(\d{3})+(?!\d))'),
+          (_) => '.',
+        );
+
+  int? _countOf(int i) {
+    final c = counts;
+    return c == null || i >= c.length ? null : c[i];
+  }
 
   /// Núm ở chế độ tối: sáng hơn mặt thẻ một bậc để vẫn thấy "nổi".
   static const Color _darkThumb = Color(0xFF2E3F5C);
@@ -106,7 +124,9 @@ class OmniSegmented extends StatelessWidget {
                     child: Semantics(
                       button: true,
                       selected: i == sel,
-                      label: labels[i],
+                      label: _countOf(i) == null
+                          ? labels[i]
+                          : '${labels[i]} ${_countOf(i)}',
                       onTap: () => pick(i),
                       excludeSemantics: true,
                       child: GestureDetector(
@@ -131,12 +151,40 @@ class OmniSegmented extends StatelessWidget {
                                       ? FontWeight.w600
                                       : FontWeight.w500,
                                 ),
-                                child: Text(
-                                  labels[i],
-                                  maxLines: 1,
-                                  softWrap: false,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                                child: _countOf(i) == null
+                                    ? Text(
+                                        labels[i],
+                                        maxLines: 1,
+                                        softWrap: false,
+                                        overflow: TextOverflow.ellipsis,
+                                      )
+                                    : Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Flexible(
+                                            child: Text(
+                                              labels[i],
+                                              maxLines: 1,
+                                              softWrap: false,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 5),
+                                          Text(
+                                            _group(_countOf(i)!),
+                                            maxLines: 1,
+                                            softWrap: false,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              fontFeatures: OmniType.tabular,
+                                              color: i == sel
+                                                  ? scheme.primary
+                                                  : scheme.onSurfaceVariant,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                               ),
                             ),
                           ),
