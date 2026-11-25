@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/utils/formatters.dart';
@@ -259,14 +258,8 @@ class KpiCard extends StatelessWidget {
   }
 }
 
-/// Chọn tháng: [‹]  Tháng 9/2026  [›] — nút kính tròn.
-///
-/// Cuối tháng chủ xưởng đọc con số để trao thưởng (§B4). Nhưng ngày mùng 1
-/// con số đã về 0, và tháng vừa khép lại là thứ không còn xem được ở đâu cả.
-///
-/// Không đi tới TƯƠNG LAI: một tháng chưa tới luôn có `delivered = 0`, và một
-/// số 0 ở đây trông y hệt "tháng này chưa ai xong cây nào". Nút mờ chứ không
-/// biến mất: một mũi tên biến mất làm hàng nút nhảy chỗ.
+/// Bộ chọn tháng của thẻ KPI — bộ chọn kỳ chuẩn (Chuẩn Mobile UI —
+/// PeriodPicker, A4).
 class _MonthBar extends StatelessWidget {
   const _MonthBar({required this.month, this.onPrev, this.onNext});
 
@@ -275,83 +268,13 @@ class _MonthBar extends StatelessWidget {
   final VoidCallback? onNext;
 
   @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return Row(
-      children: [
-        _MonthButton(
-          tooltip: 'Tháng trước',
-          icon: LucideIcons.chevronLeft,
-          onPressed: onPrev,
-        ),
-        Expanded(
-          child: Text(
-            'Tháng ${month.month}/${month.year}',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: scheme.onSurface,
-              fontFeatures: OmniType.tabular,
-            ),
-          ),
-        ),
-        _MonthButton(
-          tooltip: 'Tháng sau',
-          icon: LucideIcons.chevronRight,
-          onPressed: onNext,
-        ),
-      ],
-    );
-  }
-}
-
-/// Nút kính tròn 44.
-class _MonthButton extends StatelessWidget {
-  const _MonthButton({
-    required this.tooltip,
-    required this.icon,
-    required this.onPressed,
-  });
-
-  final String tooltip;
-  final IconData icon;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return Opacity(
-      opacity: onPressed == null ? 0.4 : 1,
-      child: OmniGlassCircle(
-        child: IconButton(
-          tooltip: tooltip,
-          onPressed: onPressed == null
-              ? null
-              : () {
-                  HapticFeedback.selectionClick();
-                  onPressed!();
-                },
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-          style: IconButton.styleFrom(
-            // Giảm chuyển động: không gợn sóng khi chạm.
-            splashFactory: OmniMotion.enabled(context)
-                ? null
-                : NoSplash.splashFactory,
-            overlayColor: OmniMotion.enabled(context)
-                ? null
-                : Colors.transparent,
-            animationDuration: OmniMotion.enabled(context)
-                ? null
-                : Duration.zero,
-          ),
-          icon: Icon(icon, size: OmniIconSize.md, color: scheme.onSurface),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => OmniPeriodBar(
+    label: 'Tháng ${month.month}/${month.year}',
+    prevTooltip: 'Tháng trước',
+    nextTooltip: 'Tháng sau',
+    onPrev: onPrev,
+    onNext: onNext,
+  );
 }
 
 /// Tiền thưởng đầy đủ (`3.000.000đ`, không `3 triệu`).

@@ -379,85 +379,26 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
     );
   }
 
-  /// ‹ Quý 4 · 2026 ›: nút kính trước / sau, viên giữa mở sheet chọn kỳ.
+  /// ‹ Quý 4 · 2026 ›: bộ chọn kỳ chuẩn (Chuẩn Mobile UI — PeriodPicker, A4);
+  /// chạm tên kỳ mở sheet chọn năm / quý / tháng cụ thể.
   Widget _buildPeriodRow(FinanceLedgerState state) {
-    final scheme = Theme.of(context).colorScheme;
     final unit = switch (_scope) {
       ExpenseSummaryScope.month => 'Tháng',
       ExpenseSummaryScope.quarter => 'Quý',
       ExpenseSummaryScope.year => 'Năm',
     };
     final label = _periodLabel;
-    return Row(
-      children: [
-        OmniGlassCircle(
-          child: IconButton(
-            key: const ValueKey('finance-summary-prev-btn'),
-            tooltip: '$unit trước',
-            onPressed: () => _shiftPeriod(-1),
-            icon: const Icon(LucideIcons.chevronLeft),
-          ),
-        ),
-        const SizedBox(width: 8),
-        // Nút chọn kỳ: nền xám đặc dáng viên thuốc, không kính (spec §3.1).
-        Expanded(
-          child: Material(
-            color: scheme.onSurface.withValues(
-              alpha: Theme.of(context).brightness == Brightness.dark
-                  ? .12
-                  : .06,
-            ),
-            shape: const StadiumBorder(),
-            clipBehavior: Clip.antiAlias,
-            child: Semantics(
-              button: true,
-              label: 'Chọn kỳ, $label',
-              excludeSemantics: true,
-              child: Material(
-                type: MaterialType.transparency,
-                child: InkWell(
-                  key: const ValueKey('finance-summary-period-btn'),
-                  customBorder: const StadiumBorder(),
-                  onTap: () => _openPeriodPicker(state),
-                  child: SizedBox(
-                    height: 44,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Flexible(
-                          child: Text(
-                            label,
-                            maxLines: 1,
-                            style: OmniType.bodyStrong.copyWith(
-                              color: scheme.onSurface,
-                              fontFeatures: OmniType.tabular,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Icon(
-                          LucideIcons.chevronDown,
-                          size: 18,
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        OmniGlassCircle(
-          child: IconButton(
-            key: const ValueKey('finance-summary-next-btn'),
-            tooltip: '$unit sau',
-            onPressed: () => _shiftPeriod(1),
-            icon: const Icon(LucideIcons.chevronRight),
-          ),
-        ),
-      ],
+    return OmniPeriodBar(
+      label: label,
+      labelKey: const ValueKey('finance-summary-period-btn'),
+      labelSemantics: 'Chọn kỳ, $label',
+      onTapLabel: () => _openPeriodPicker(state),
+      prevKey: const ValueKey('finance-summary-prev-btn'),
+      nextKey: const ValueKey('finance-summary-next-btn'),
+      prevTooltip: '$unit trước',
+      nextTooltip: '$unit sau',
+      onPrev: () => _shiftPeriod(-1),
+      onNext: () => _shiftPeriod(1),
     );
   }
 

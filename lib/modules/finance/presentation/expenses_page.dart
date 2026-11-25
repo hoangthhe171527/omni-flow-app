@@ -481,27 +481,6 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
   }
 
   /// Nút ‹ › đổi tháng liền kề trên thẻ tổng chi, vùng chạm 40×40.
-  Widget _buildMonthStepButton(
-    FinancePalette p, {
-    required Key key,
-    required String tooltip,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return Tooltip(
-      message: tooltip,
-      child: InkResponse(
-        key: key,
-        onTap: onTap,
-        radius: 20,
-        child: SizedBox.square(
-          dimension: 40,
-          child: Icon(icon, size: 22, color: p.muted),
-        ),
-      ),
-    );
-  }
-
   Widget _buildSummaryCard(
     FinancePalette p,
     FinanceLedgerState state,
@@ -529,77 +508,25 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
               // không cần nhãn "Tổng chi tháng X".
               Row(
                 children: [
+                  // Bộ chọn kỳ chuẩn (Chuẩn Mobile UI — PeriodPicker, A4):
+                  // tên tháng chạm mở danh sách tháng kèm số khoản / tổng.
                   Expanded(
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      // Lùi 14 để nét mũi tên gần lề chữ của thẻ; vùng chạm vẫn 40.
-                      child: Transform.translate(
-                        offset: const Offset(-14, 0),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _buildMonthStepButton(
-                              p,
-                              key: const ValueKey('finance-prev-month-btn'),
-                              tooltip: 'Tháng trước',
-                              icon: LucideIcons.chevronLeft,
-                              onTap: () => notifier.selectMonth(prevYm),
-                            ),
-                            Flexible(
-                              child: Tooltip(
-                                message: 'Chọn tháng khác',
-                                child: InkWell(
-                                  key: _monthBtnKey,
-                                  onTap: _openMonthPickerMenu,
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 4,
-                                      vertical: 8,
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Flexible(
-                                          child: Text(
-                                            FinanceMonthUtils.formatMonthFull(
-                                              state.activeMonth,
-                                            ),
-                                            maxLines: 1,
-                                            softWrap: false,
-                                            style: OmniType.body.copyWith(
-                                              color: p.ink,
-                                              fontWeight: FontWeight.w600,
-                                              fontFeatures: const [
-                                                FontFeature.tabularFigures(),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 2),
-                                        Icon(
-                                          LucideIcons.chevronDown,
-                                          size: 18,
-                                          color: p.muted,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            _buildMonthStepButton(
-                              p,
-                              key: const ValueKey('finance-next-month-btn'),
-                              tooltip: 'Tháng sau',
-                              icon: LucideIcons.chevronRight,
-                              onTap: () => notifier.selectMonth(nextYm),
-                            ),
-                          ],
-                        ),
+                    child: OmniPeriodBar(
+                      label: FinanceMonthUtils.formatMonthFull(
+                        state.activeMonth,
                       ),
+                      labelKey: _monthBtnKey,
+                      labelTooltip: 'Chọn tháng khác',
+                      onTapLabel: _openMonthPickerMenu,
+                      prevKey: const ValueKey('finance-prev-month-btn'),
+                      nextKey: const ValueKey('finance-next-month-btn'),
+                      prevTooltip: 'Tháng trước',
+                      nextTooltip: 'Tháng sau',
+                      onPrev: () => notifier.selectMonth(prevYm),
+                      onNext: () => notifier.selectMonth(nextYm),
                     ),
                   ),
+                  const SizedBox(width: 4),
                   Tooltip(
                     message: 'Tỷ trọng theo nhóm',
                     child: InkWell(
