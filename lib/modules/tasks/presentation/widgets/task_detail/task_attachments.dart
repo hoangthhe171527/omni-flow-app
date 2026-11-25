@@ -101,8 +101,8 @@ class AttachmentThumb extends StatelessWidget {
                     fit: BoxFit.cover,
                     memCacheWidth:
                         (size * MediaQuery.devicePixelRatioOf(context)).round(),
-                    memCacheHeight:
-                        (size * MediaQuery.devicePixelRatioOf(context)).round(),
+                    // KHÔNG khoá chiều cao: khoá cả hai thì ảnh 3:4 bị giải mã
+                    // méo thành vuông trước khi `cover` cắt.
                     fadeInDuration: OmniMotion.of(context).fast,
                     // Mất mạng hay ảnh hỏng thì rơi về cái tên, chứ không để
                     // lại một ô xám không nói gì.
@@ -140,9 +140,7 @@ class _AttachmentName extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              pdf
-                  ? LucideIcons.fileText
-                  : LucideIcons.file,
+              pdf ? LucideIcons.fileText : LucideIcons.file,
               size: OmniIconSize.lg,
               color: pdf
                   ? OmniTaskTones.of(context).highPriority.foreground

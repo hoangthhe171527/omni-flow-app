@@ -83,7 +83,13 @@ void main() {
       ),
     );
     await t.pumpAndSettle();
-    await t.tap(find.text('Khoản trả'));
+    // Đợt C: khoản trả nằm ở tab Thanh toán, mở sẵn.
+    await t.tap(
+      find.descendant(
+        of: find.byKey(const ValueKey('inv-lot-tabs')),
+        matching: find.text('Thanh toán'),
+      ),
+    );
     await t.pumpAndSettle();
     return api;
   }

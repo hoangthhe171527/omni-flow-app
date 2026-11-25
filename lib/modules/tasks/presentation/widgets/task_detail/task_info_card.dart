@@ -63,6 +63,7 @@ class TaskInfoCard extends StatelessWidget {
         children: [
           _Row(
             label: 'Người làm',
+            icon: LucideIcons.users,
             child: _People(
               task: task,
               onAdd: onAddAssignee,
@@ -71,12 +72,14 @@ class TaskInfoCard extends StatelessWidget {
           ),
           _Row(
             label: 'Thời gian',
+            icon: LucideIcons.calendarDays,
             divider: true,
             onTap: onTime,
             child: _Time(task: task, canEdit: onTime != null),
           ),
           _Row(
             label: 'Đánh giá',
+            icon: LucideIcons.star,
             divider: true,
             child: _Rating(
               rating: task.rating,
@@ -89,6 +92,7 @@ class TaskInfoCard extends StatelessWidget {
           if (showPriority)
             _Row(
               label: 'Ưu tiên',
+              icon: LucideIcons.flag,
               divider: true,
               onTap: onPriority,
               child: Padding(
@@ -117,11 +121,16 @@ class _Row extends StatelessWidget {
   const _Row({
     required this.label,
     required this.child,
+    this.icon,
     this.divider = false,
     this.onTap,
   });
 
   final String label;
+
+  /// Icon đầu dòng (lớp premium, duyệt 25/11): đọc thuộc tính bằng hình
+  /// trước chữ — người, hạn, ưu tiên (Todoist / TickTick).
+  final IconData? icon;
   final Widget child;
   final bool divider;
   final VoidCallback? onTap;
@@ -135,6 +144,10 @@ class _Row extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(12, 0, 6, 0),
         child: Row(
           children: [
+            if (icon case final i?) ...[
+              Icon(i, size: OmniIconSize.md, color: scheme.onSurfaceVariant),
+              const SizedBox(width: 10),
+            ],
             SizedBox(
               width: 104,
               child: Text(

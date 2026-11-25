@@ -517,10 +517,26 @@ void main() {
       final api = FakeInventoryApi(units: units, lots: const [lot]);
       await t.pumpWidget(app(api, allNew, const LotDetailPage(lotId: 'l62')));
       await t.pumpAndSettle();
+      // Đợt C: số ¥ ở tab Chi phí, khoản đòi ở tab Thanh toán.
+      await t.tap(
+        find.descendant(
+          of: find.byKey(const ValueKey('inv-lot-tabs')),
+          matching: find.text('Chi phí'),
+        ),
+      );
+      await t.pumpAndSettle();
 
       expect(find.text('1.850.000 ¥'), findsOneWidget);
       expect(find.text('1.700.000 ¥'), findsOneWidget);
       expect(find.text('50.000 ¥'), findsOneWidget);
+      await t.tap(
+        find.descendant(
+          of: find.byKey(const ValueKey('inv-lot-tabs')),
+          matching: find.text('Thanh toán'),
+        ),
+      );
+      await t.pumpAndSettle();
+
       expect(find.text('#2 KAWAI BL71'), findsOneWidget);
       expect(find.textContaining('Nhà cung cấp trừ tiền'), findsOneWidget);
       expect(find.textContaining('Thiếu · K1 · trừ 150.000 ¥'), findsOneWidget);
