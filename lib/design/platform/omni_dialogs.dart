@@ -103,7 +103,6 @@ class OmniGlassAlert extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final dark = Theme.of(context).brightness == Brightness.dark;
     final line = scheme.onSurface.withValues(alpha: .10);
 
     Widget action(OmniAlertAction a) => Expanded(
@@ -123,16 +122,18 @@ class OmniGlassAlert extends StatelessWidget {
       ),
     );
 
+    // Nền đặc bo 16 (spec phong cách iOS §3.1: kính chỉ cho điều hướng; hộp
+    // thoại là nội dung). Lớp phủ phía sau vẫn tối như cũ.
     return AlertDialog(
-      backgroundColor: scheme.surface.withValues(alpha: dark ? .90 : .94),
+      backgroundColor: scheme.surface,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       insetPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-        side: BorderSide(
-          color: Colors.white.withValues(alpha: dark ? .10 : .70),
-        ),
+        borderRadius: BorderRadius.circular(16),
+        side: MediaQuery.highContrastOf(context)
+            ? BorderSide(color: scheme.outline)
+            : BorderSide.none,
       ),
       clipBehavior: Clip.antiAlias,
       titlePadding: const EdgeInsets.fromLTRB(18, 20, 18, 0),
@@ -360,7 +361,7 @@ Future<DateTime?> pickOmniDate({
               ),
             Material(
               color: scheme.surface,
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(16),
               clipBehavior: Clip.antiAlias,
               child: Theme(
                 data: theme.copyWith(
@@ -456,7 +457,7 @@ Future<TimeOfDay?> pickOmniTime({
         children: [
           Material(
             color: Theme.of(sheetContext).colorScheme.surface,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(16),
             clipBehavior: Clip.antiAlias,
             child: SizedBox(
               height: 180,

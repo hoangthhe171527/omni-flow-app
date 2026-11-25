@@ -27,9 +27,9 @@ void main() {
   testWidgets('mặc định là CÓ nút tài khoản', (tester) async {
     await tester.pumpWidget(wrap(const OmniAppBar(title: 'Dòng việc')));
 
-    // Màn gốc: logo Viomni thay chữ to (2026-11-08); tên màn chỉ đọc.
-    expect(find.byType(OmniBrandMark), findsOneWidget);
-    expect(find.text('Dòng việc'), findsNothing);
+    // Màn gốc có tên: tên màn thay logo (spec phong cách iOS Q4).
+    expect(find.byType(OmniBrandMark), findsNothing);
+    expect(find.text('Dòng việc'), findsOneWidget);
     expect(find.byKey(marker), findsOneWidget);
   });
 
@@ -42,7 +42,7 @@ void main() {
     expect(find.byType(AppBar), findsNothing);
   });
 
-  testWidgets('màn gốc: logo trái, nút riêng rồi tài khoản ở mép phải', (
+  testWidgets('màn gốc: tên màn trái, nút riêng rồi tài khoản ở mép phải', (
     tester,
   ) async {
     // Kiểu B đã duyệt (viomni-apple-uiux.html): tiêu đề lớn đứng đầu dòng,
@@ -58,7 +58,7 @@ void main() {
 
     final account = tester.getTopLeft(find.byKey(marker)).dx;
     final title = tester
-        .getTopLeft(find.byKey(const ValueKey('omni-top-bar-brand')))
+        .getTopLeft(find.byKey(const ValueKey('omni-top-bar-title')))
         .dx;
     final search = tester.getTopLeft(find.byIcon(Icons.search_rounded)).dx;
 
@@ -107,7 +107,8 @@ void main() {
     expect(find.byKey(marker), findsNothing);
     await tester.tap(find.byTooltip('Quay lại'));
     await tester.pumpAndSettle();
-    expect(find.byType(OmniBrandMark), findsOneWidget);
+    // Màn gốc có tên: tên màn thay logo (spec phong cách iOS Q4).
+    expect(find.byType(OmniBrandMark), findsNothing);
   });
 
   testWidgets('tắt được cho màn cố ý không muốn', (tester) async {
@@ -127,7 +128,8 @@ void main() {
       wrap(const OmniAppBar(title: 'Dòng việc'), plugged: false),
     );
 
-    expect(find.byType(OmniBrandMark), findsOneWidget);
+    // Màn gốc có tên: tên màn thay logo (spec phong cách iOS Q4).
+    expect(find.byType(OmniBrandMark), findsNothing);
     expect(tester.takeException(), isNull);
   });
 

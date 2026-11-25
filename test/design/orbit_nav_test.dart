@@ -49,18 +49,19 @@ void main() {
   });
 
   group('tiêu đề lớn', () {
-    testWidgets('màn gốc: logo Viomni canh trái thay chữ to', (tester) async {
-      // Người dùng chọn 2026-11-08: bỏ tiêu đề lớn, đặt logo app.
+    testWidgets('màn gốc: tên màn 28 canh trái, không logo', (tester) async {
+      // Spec phong cách iOS 25/11/2026 Q4: logo chỉ ở đăng nhập/khởi động;
+      // màn gốc của tab ghi tên màn (thay quyết định logo ngày 08/11).
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(appBar: OmniAppBar(title: 'Việc của tôi')),
         ),
       );
 
-      expect(find.text('Việc của tôi'), findsNothing);
-      expect(find.byType(OmniBrandMark), findsOneWidget);
-      expect(find.byType(OmniWordmark), findsOneWidget);
-      expect(tester.getTopLeft(find.byType(OmniBrandMark)).dx, lessThan(40));
+      expect(find.text('Việc của tôi'), findsOneWidget);
+      expect(find.byType(OmniBrandMark), findsNothing);
+      expect(find.byType(OmniWordmark), findsNothing);
+      expect(tester.getTopLeft(find.text('Việc của tôi')).dx, lessThan(40));
     });
 
     testWidgets('màn đẩy vào: tiêu đề màn con 17/600 ở giữa', (tester) async {

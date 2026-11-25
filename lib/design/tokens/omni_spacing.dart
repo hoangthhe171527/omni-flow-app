@@ -21,29 +21,27 @@ abstract final class OmniSpacing {
 }
 
 abstract final class OmniRadius {
-  /// Thang bo góc của đề xuất "Chuẩn hoá phong cách" (`SPrinciples.dc.html`).
-  ///
-  /// App: chip trạng thái 4, chip lọc 6, nút và ô nhập 8, thẻ 10, nút nổi 12,
-  /// sheet 16. Bo tròn hẳn ([pill]) chỉ cho avatar, chấm và số đếm.
-  static const double xs = 4;
+  /// Thang bo góc phong cách iOS (spec 2026-11-25 §3.5): nhãn 6 · ô nhập 10 ·
+  /// nhóm/thẻ 16 · sheet 32 · nút tròn hẳn. Không dùng số khác.
+  static const double xs = 6;
   static const double sm = 6;
-  static const double md = 8;
-  static const double lg = 8;
-  static const double xl = 10;
-  static const double xxl = 16;
+  static const double md = 10;
+  static const double lg = 10;
+  static const double xl = 16;
+  static const double xxl = 32;
 
-  /// Nút nổi ("Tạo mới", "Thêm khách").
-  static const double fab = 12;
+  /// Nút nổi ("Tạo mới", "Thêm khách"): viên thuốc như mọi nút.
+  static const double fab = pill;
 
   /// Chỉ còn cho avatar, chấm đếm và nút tròn.
   static const double pill = 999;
 
-  /// Chip LỌC và chip chọn trong biểu mẫu.
+  /// Chip LỌC và chip chọn trong biểu mẫu: ô bo 10 (spec §3.4 "Chip chọn").
   ///
   /// KHÔNG dùng [pill] cho chip. Một viên bo tròn hoàn toàn đọc như thẻ tag —
   /// thứ để gắn vào — chứ không như bộ lọc, thứ để bật và tắt. Chip TRẠNG THÁI
   /// (chỉ để đọc) dùng [xs].
-  static const double chip = 6;
+  static const double chip = 10;
 
   static const BorderRadius chipAll = BorderRadius.all(Radius.circular(chip));
 

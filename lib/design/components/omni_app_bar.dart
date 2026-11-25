@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'omni_glass.dart';
 import 'omni_top_bar.dart';
 
 /// Chỗ cắm cho nút tài khoản ở góc phải mọi [OmniAppBar].
@@ -118,8 +117,9 @@ class OmniAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
-/// Bọc một nút có sẵn (IconButton, TextButton "Lưu") thành viên kính cao 44:
-/// tròn khi là nút biểu tượng, viên thuốc khi có chữ.
+/// Bọc một nút có sẵn (IconButton, TextButton "Lưu") thành ô chạm 44 trơn —
+/// không còn viên kính (spec phong cách iOS §3.1: nút trên thanh là icon/chữ
+/// trơn). Tương phản cao: viền mảnh để vẫn thấy ranh giới nút.
 class OmniGlassAction extends StatelessWidget {
   const OmniGlassAction({super.key, required this.child});
 
@@ -127,12 +127,17 @@ class OmniGlassAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return OmniGlass(
-      radius: 22,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-        child: Center(widthFactor: 1, child: child),
+    final box = ConstrainedBox(
+      constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+      child: Center(widthFactor: 1, child: child),
+    );
+    if (!MediaQuery.highContrastOf(context)) return box;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Theme.of(context).colorScheme.outline),
       ),
+      child: box,
     );
   }
 }

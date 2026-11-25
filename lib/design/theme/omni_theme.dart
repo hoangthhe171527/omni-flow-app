@@ -226,7 +226,7 @@ abstract final class OmniTheme {
         backgroundColor: surface,
         surfaceTintColor: Colors.transparent,
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
+          borderRadius: BorderRadius.all(Radius.circular(16)),
         ),
       ),
       popupMenuTheme: PopupMenuThemeData(
@@ -336,7 +336,8 @@ abstract final class OmniTheme {
   }
 }
 
-const _fieldRadius = BorderRadius.all(Radius.circular(14));
+/// Ô nhập bo 10 (spec phong cách iOS §3.5).
+const _fieldRadius = BorderRadius.all(Radius.circular(10));
 
 /// Nút hành động chính: nền đặc [primary], chữ [onPrimary], cao 48, viên thuốc.
 ButtonStyle _solidPrimaryButtonStyle(

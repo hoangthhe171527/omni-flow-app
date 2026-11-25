@@ -146,10 +146,11 @@ class OmniStatusLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (foreground, background) = tone.of(context);
+    // Không `alignment`: Container có alignment giãn hết chỗ cha cho (nhãn
+    // trong Column thành một vạch dài). Đệm dọc 2.5 + chữ 12×1.4 ≈ cao 22.
     return Container(
       constraints: const BoxConstraints(minHeight: 22),
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(6),
@@ -161,16 +162,19 @@ class OmniStatusLabel extends StatelessWidget {
             Icon(i, size: 13, color: foreground),
             const SizedBox(width: 3),
           ],
-          Text(
-            label,
-            maxLines: 1,
-            softWrap: false,
-            style: TextStyle(
-              fontSize: 12,
-              height: 1.4,
-              fontWeight: FontWeight.w600,
-              color: foreground,
-              fontFeatures: OmniType.tabular,
+          // Flexible + xuống dòng: nhãn quá dài (vd "còn 3.000.000 đ" ở màn
+          // hẹp, chữ lớn) xuống dòng thay vì tràn — không bao giờ cắt "…" vì
+          // nhãn có thể mang số tiền.
+          Flexible(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                height: 1.4,
+                fontWeight: FontWeight.w600,
+                color: foreground,
+                fontFeatures: OmniType.tabular,
+              ),
             ),
           ),
         ],

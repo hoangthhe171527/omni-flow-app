@@ -213,7 +213,7 @@ class _MenuSurface extends StatelessWidget {
     // Viên kính rời bo 22 (`.pop.glass`): nền thẻ ~78% + nhoè 22 + viền sáng
     // 1px. Đậm hơn thanh tab vì chữ menu phải đọc được trên mọi nội dung.
     // Bậc hiệu năng tối giản: không nhoè, nền gần đặc để chữ vẫn đọc rõ.
-    const radius = BorderRadius.all(Radius.circular(22));
+    const radius = BorderRadius.all(Radius.circular(16));
     final fill = solid
         ? scheme.surface
         : noBlur

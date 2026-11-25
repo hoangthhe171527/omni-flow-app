@@ -34,8 +34,8 @@ class OmniCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    // `flat`: thẻ nhóm lồng bo 18 không viền (viomni-apple-uiux.html `.group`).
-    final radius = flat ? BorderRadius.circular(18) : OmniRadius.xlAll;
+    // Thẻ bo 16 (spec phong cách iOS §3.5); `flat` = không viền.
+    const radius = OmniRadius.xlAll;
 
     // Thẻ trắng: nút bên trong là kính nhuộm tông, không chìm.
     Widget content = OmniTintedButtons(
