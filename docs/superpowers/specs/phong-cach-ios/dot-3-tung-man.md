@@ -462,6 +462,13 @@ Mỗi chỗ còn lại đã được rà bằng mắt và có lý do giữ.
 8. **Khoảng 25 sheet** ở Việc / Dòng việc còn ✕ tự dựng (`IconButton` tooltip "Đóng"). Đổi sang ✕ chung ở đợt sau: ✕ chung đã có tooltip nên test không phải sửa.
 9. **Màn Hàng sắp về (khối tổng) và dòng phiếu giữ** chưa dùng `OmniTotalCard` / `OmniMoneyRow`: khối trộn số lô, số cây và tiền; test ghim chữ.
 
+**Chốt 25/11 (người dùng duyệt theo đề xuất):**
+- **Mục 1:** giữ kính ở thanh trên màn chat.
+- **Mục 2:** làm ở một đợt riêng.
+- **Mục 3:** giữ đỏ đặc cho bước xác nhận xoá.
+- **Mục 4:** đổi sang ✕ chung ở đợt sau.
+- **Mục 5–9:** để lại như ghi ở trên.
+
 ### 6.5 Kiểm
 
 - `flutter analyze lib`: sạch.
