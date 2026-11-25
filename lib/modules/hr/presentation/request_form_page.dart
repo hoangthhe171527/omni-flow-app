@@ -273,15 +273,12 @@ class _RequestFormPageState extends ConsumerState<RequestFormPage> {
     chevron: true,
   );
 
-  InputDecoration _bare(String hint, {String? suffix}) => InputDecoration(
-    hintText: hint,
-    isDense: true,
-    filled: false,
-    contentPadding: EdgeInsets.zero,
-    border: InputBorder.none,
-    enabledBorder: InputBorder.none,
-    focusedBorder: InputBorder.none,
-    suffixText: suffix,
+  InputDecoration _bare(String hint, {String? suffix}) => omniBareDecoration(
+    InputDecoration(
+      hintText: hint,
+      contentPadding: EdgeInsets.zero,
+      suffixText: suffix,
+    ),
   );
 
   Widget _field({

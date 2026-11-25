@@ -264,7 +264,7 @@ class _CustomerFormEditorState extends ConsumerState<CustomerFormEditor> {
                   title: 'Thông tin cơ bản',
                   dividerIndent: 14,
                   children: [
-                    _FormRow(
+                    OmniGroupField(
                       label: 'Tên khách hàng',
                       required: true,
                       error: _fieldErrors['name'],
@@ -275,7 +275,7 @@ class _CustomerFormEditorState extends ConsumerState<CustomerFormEditor> {
                         textInputAction: TextInputAction.next,
                         autofillHints: const [AutofillHints.name],
                         onChanged: (_) => _clearFieldError('name'),
-                        decoration: _bare(
+                        decoration: omniBareDecoration(
                           const InputDecoration(hintText: 'VD: Nguyễn Thu Hà'),
                         ),
                         validator: (value) => (value ?? '').trim().isEmpty
@@ -283,7 +283,7 @@ class _CustomerFormEditorState extends ConsumerState<CustomerFormEditor> {
                             : null,
                       ),
                     ),
-                    _FormRow(
+                    OmniGroupField(
                       label: 'Người liên hệ',
                       error: _fieldErrors['contact'],
                       child: TextFormField(
@@ -292,7 +292,7 @@ class _CustomerFormEditorState extends ConsumerState<CustomerFormEditor> {
                         textCapitalization: TextCapitalization.words,
                         textInputAction: TextInputAction.next,
                         onChanged: (_) => _clearFieldError('contact'),
-                        decoration: _bare(
+                        decoration: omniBareDecoration(
                           const InputDecoration(hintText: 'Nếu khác tên trên'),
                         ),
                       ),
@@ -304,7 +304,7 @@ class _CustomerFormEditorState extends ConsumerState<CustomerFormEditor> {
                   title: 'Liên hệ',
                   dividerIndent: 14,
                   children: [
-                    _FormRow(
+                    OmniGroupField(
                       label: 'Số điện thoại',
                       required: true,
                       error: _fieldErrors['phone'],
@@ -315,7 +315,7 @@ class _CustomerFormEditorState extends ConsumerState<CustomerFormEditor> {
                         textInputAction: TextInputAction.next,
                         autofillHints: const [AutofillHints.telephoneNumber],
                         onChanged: _onPhoneChanged,
-                        decoration: _bare(
+                        decoration: omniBareDecoration(
                           InputDecoration(
                             hintText: '09xx xxx xxx',
                             suffixIcon: _checkingDuplicate
@@ -348,7 +348,7 @@ class _CustomerFormEditorState extends ConsumerState<CustomerFormEditor> {
                               : null,
                         ),
                       ),
-                    _FormRow(
+                    OmniGroupField(
                       label: 'Email',
                       error: _fieldErrors['email'],
                       child: TextFormField(
@@ -358,7 +358,7 @@ class _CustomerFormEditorState extends ConsumerState<CustomerFormEditor> {
                         textInputAction: TextInputAction.next,
                         autofillHints: const [AutofillHints.email],
                         onChanged: (_) => _clearFieldError('email'),
-                        decoration: _bare(
+                        decoration: omniBareDecoration(
                           const InputDecoration(hintText: 'ten@email.com'),
                         ),
                         validator: (value) {
@@ -370,7 +370,7 @@ class _CustomerFormEditorState extends ConsumerState<CustomerFormEditor> {
                         },
                       ),
                     ),
-                    _FormRow(
+                    OmniGroupField(
                       label: 'Địa chỉ',
                       error: _fieldErrors['address'],
                       child: TextFormField(
@@ -379,7 +379,7 @@ class _CustomerFormEditorState extends ConsumerState<CustomerFormEditor> {
                         maxLines: 2,
                         textCapitalization: TextCapitalization.sentences,
                         onChanged: (_) => _clearFieldError('address'),
-                        decoration: _bare(
+                        decoration: omniBareDecoration(
                           const InputDecoration(
                             hintText: 'Số nhà, đường, quận, tỉnh/thành',
                           ),
@@ -393,7 +393,7 @@ class _CustomerFormEditorState extends ConsumerState<CustomerFormEditor> {
                   title: 'Phân loại',
                   dividerIndent: 14,
                   children: [
-                    _FormRow(
+                    OmniGroupField(
                       label: 'Nguồn khách',
                       child: Wrap(
                         spacing: OmniSpacing.sm,
@@ -414,7 +414,7 @@ class _CustomerFormEditorState extends ConsumerState<CustomerFormEditor> {
                         ],
                       ),
                     ),
-                    _FormRow(
+                    OmniGroupField(
                       label: 'Trạng thái',
                       child: Wrap(
                         spacing: OmniSpacing.sm,
@@ -436,7 +436,7 @@ class _CustomerFormEditorState extends ConsumerState<CustomerFormEditor> {
                   title: 'Ghi chú',
                   dividerIndent: 14,
                   children: [
-                    _FormRow(
+                    OmniGroupField(
                       label: 'Ghi chú',
                       error: _fieldErrors['note'],
                       child: TextFormField(
@@ -445,7 +445,7 @@ class _CustomerFormEditorState extends ConsumerState<CustomerFormEditor> {
                         maxLines: 3,
                         textCapitalization: TextCapitalization.sentences,
                         onChanged: (_) => _clearFieldError('note'),
-                        decoration: _bare(
+                        decoration: omniBareDecoration(
                           const InputDecoration(
                             hintText: 'Thông tin cần nhớ về khách này',
                           ),
@@ -467,74 +467,6 @@ class _CustomerFormEditorState extends ConsumerState<CustomerFormEditor> {
           onSave: _save,
         ),
       ],
-    );
-  }
-}
-
-/// Ô nhập nằm TRONG một dòng nhóm: bỏ nền và viền của theme (dòng đã là thẻ),
-/// chỉ còn chữ — ranh giới ô do vạch chia của nhóm đảm nhiệm.
-InputDecoration _bare(InputDecoration base) => base.copyWith(
-  filled: false,
-  isDense: true,
-  border: InputBorder.none,
-  enabledBorder: InputBorder.none,
-  focusedBorder: InputBorder.none,
-  errorBorder: InputBorder.none,
-  focusedErrorBorder: InputBorder.none,
-  disabledBorder: InputBorder.none,
-  contentPadding: const EdgeInsets.symmetric(vertical: 6),
-);
-
-/// Một ô của form trong nhóm lồng: nhãn nhỏ phía trên, giá trị bên dưới.
-class _FormRow extends StatelessWidget {
-  const _FormRow({
-    required this.label,
-    required this.child,
-    this.required = false,
-    this.error,
-  });
-
-  final String label;
-  final Widget child;
-  final bool required;
-  final String? error;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text.rich(
-            TextSpan(
-              text: label,
-              children: [
-                if (required)
-                  TextSpan(
-                    text: ' *',
-                    style: TextStyle(color: scheme.error),
-                  ),
-              ],
-            ),
-            style: OmniType.caption.copyWith(
-              fontWeight: FontWeight.w600,
-              color: scheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 2),
-          child,
-          if (error != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                error!,
-                style: OmniType.caption.copyWith(color: scheme.error),
-              ),
-            ),
-        ],
-      ),
     );
   }
 }

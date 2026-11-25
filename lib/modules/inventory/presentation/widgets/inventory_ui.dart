@@ -489,39 +489,25 @@ class InvInputRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(label, style: invMuted(context)),
-          TextField(
-            key: fieldKey,
-            controller: controller,
-            keyboardType:
-                keyboardType ??
-                (phone ? TextInputType.phone : TextInputType.name),
-            autocorrect: !caps,
-            inputFormatters: inputFormatters,
-            maxLines: keyboardType == TextInputType.multiline ? null : 1,
-            textCapitalization: phone
-                ? TextCapitalization.none
-                : caps
-                ? TextCapitalization.characters
-                : TextCapitalization.words,
-            style: OmniType.body.copyWith(color: scheme.onSurface),
-            decoration: InputDecoration(
-              isDense: true,
-              hintText: hint,
-              border: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              focusedBorder: InputBorder.none,
-              filled: false,
-              contentPadding: const EdgeInsets.symmetric(vertical: 6),
-            ),
-            onChanged: onChanged,
-          ),
-        ],
+    // Ô trong nhóm thẻ chuẩn (Chuẩn Mobile UI — FormField, Đợt A5).
+    return OmniGroupField(
+      label: label,
+      child: TextField(
+        key: fieldKey,
+        controller: controller,
+        keyboardType:
+            keyboardType ?? (phone ? TextInputType.phone : TextInputType.name),
+        autocorrect: !caps,
+        inputFormatters: inputFormatters,
+        maxLines: keyboardType == TextInputType.multiline ? null : 1,
+        textCapitalization: phone
+            ? TextCapitalization.none
+            : caps
+            ? TextCapitalization.characters
+            : TextCapitalization.words,
+        style: OmniType.body.copyWith(color: scheme.onSurface),
+        decoration: omniBareDecoration(InputDecoration(hintText: hint)),
+        onChanged: onChanged,
       ),
     );
   }
