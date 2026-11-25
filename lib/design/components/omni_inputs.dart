@@ -1,10 +1,8 @@
 import 'dart:async';
-import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 
 import '../platform/omni_motion_scope.dart';
-import '../platform/omni_performance.dart';
 import '../platform/omni_platform.dart';
 import '../tokens/tokens.dart';
 import 'omni_tinted_buttons.dart';
@@ -408,8 +406,8 @@ Future<T?> showOmniSheet<T>({
   final apple = isApple(context);
   final fill = backgroundColor ?? Theme.of(context).colorScheme.surface;
 
-  // Viên kính nổi (viomni-apple-uiux.html `.sheet.glass`): cách mép 8, bo 30,
-  // nền thẻ ~86% + nhoè. Tấm Material của sheet để trong suốt; viên kính
+  // Sheet nền đặc (spec phong cách iOS 25/11/2026 §3.4): sát mép dưới, bo
+  // trên 32, không nhoè. Tấm Material của sheet để trong suốt;
   // [OmniGlassSheet] vẽ nền, bo và thanh kéo.
   return showModalBottomSheet<T>(
     context: context,
@@ -431,7 +429,7 @@ Future<T?> showOmniSheet<T>({
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: OmniGlassSheet(
         fill: fill,
-        radius: radius ?? 30,
+        radius: radius ?? OmniGlassSheet.defaultRadius,
         // iOS luôn có thanh kéo — dấu hiệu người dùng iPhone đọc để biết sheet
         // kéo xuống đóng được. Trên Android nút back đã nói điều đó.
         handle: showDragHandle ?? apple,
@@ -442,16 +440,24 @@ Future<T?> showOmniSheet<T>({
   );
 }
 
-/// Viên kính chứa nội dung của [showOmniSheet].
+/// Tấm chứa nội dung của [showOmniSheet].
+///
+/// Phong cách iOS 25/11/2026 (spec §3.4): nền ĐẶC, sát mép dưới, bo trên
+/// [defaultRadius], bóng mảnh hướng lên — không nhoè, không viền sáng. Lớp phủ
+/// phía sau vẫn có thể mờ; bản thân sheet thì không. Giữ tên để mọi chỗ gọi
+/// không phải sửa.
 class OmniGlassSheet extends StatelessWidget {
   const OmniGlassSheet({
     super.key,
     required this.fill,
     required this.child,
-    this.radius = 30,
+    this.radius = defaultRadius,
     this.handle = false,
     this.expand = false,
   });
+
+  /// Bo trên của sheet (thang bo góc: sheet 32).
+  static const double defaultRadius = 32;
 
   final Color fill;
   final double radius;
@@ -463,73 +469,50 @@ class OmniGlassSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final solid = MediaQuery.highContrastOf(context);
-    // Bậc hiệu năng tối giản: không nhoè, nền gần đặc.
-    final noBlur = OmniPerformance.solidGlass(context);
-    final shape = BorderRadius.circular(radius);
-    final body = Material(
-      key: const Key('omni-glass-sheet'),
-      color: solid
-          ? fill
-          : fill.withValues(alpha: noBlur ? .98 : (dark ? .92 : .95)),
-      shape: RoundedRectangleBorder(
+    final shape = BorderRadius.vertical(top: Radius.circular(radius));
+    final sheet = DecoratedBox(
+      decoration: BoxDecoration(
         borderRadius: shape,
-        side: BorderSide(
-          color: Colors.white.withValues(alpha: dark ? .10 : .70),
-        ),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (handle)
-            const Padding(
-              padding: EdgeInsets.only(top: 8),
-              child: OmniSheetHandle(gap: 2),
-            )
-          else
-            // Không thanh kéo (Android/web): chừa mép trên để tiêu đề không
-            // nằm trong đường cong bo 30 của viên kính.
-            const SizedBox(height: 12),
-          // Sheet gần trắng: nút bên trong là kính nhuộm tông, không chìm.
-          Flexible(
-            fit: expand ? FlexFit.tight : FlexFit.loose,
-            child: OmniTintedButtons(child: child),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: dark ? .36 : .10),
+            blurRadius: 30,
+            offset: const Offset(0, -6),
           ),
         ],
       ),
-    );
-
-    final sheet = Padding(
-      padding: EdgeInsets.fromLTRB(
-        8,
-        0,
-        8,
-        8 + MediaQuery.paddingOf(context).bottom,
-      ),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
+      child: Material(
+        key: const Key('omni-glass-sheet'),
+        color: fill,
+        shape: RoundedRectangleBorder(
           borderRadius: shape,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: dark ? .40 : .14),
-              blurRadius: 36,
-              offset: const Offset(0, 12),
+          side: solid
+              ? BorderSide(color: Theme.of(context).colorScheme.outline)
+              : BorderSide.none,
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (handle)
+              const Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: OmniSheetHandle(gap: 2),
+              )
+            else
+              // Không thanh kéo (Android/web): chừa mép trên để tiêu đề không
+              // nằm trong đường cong bo góc.
+              const SizedBox(height: 14),
+            // Nút chính trong sheet là nền đặc màu chính (OmniTintedButtons).
+            Flexible(
+              fit: expand ? FlexFit.tight : FlexFit.loose,
+              child: OmniTintedButtons(child: child),
             ),
+            // Sát mép dưới: chừa vùng an toàn (thanh Home) bên trong sheet.
+            SizedBox(height: MediaQuery.paddingOf(context).bottom),
           ],
         ),
-        child: solid || noBlur
-            ? body
-            : ClipRRect(
-                borderRadius: shape,
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(
-                    sigmaX: OmniPerformance.glassSigma(context, full: 24),
-                    sigmaY: OmniPerformance.glassSigma(context, full: 24),
-                  ),
-                  child: body,
-                ),
-              ),
       ),
     );
 

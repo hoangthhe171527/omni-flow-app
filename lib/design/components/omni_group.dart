@@ -447,9 +447,9 @@ class OmniSheetBody extends StatelessWidget {
   }
 }
 
-/// Chip kính viên thuốc: chọn = trắng mờ + chữ đậm + bóng mềm (không tô
-/// xanh, không viền màu). Dùng cho lựa chọn trong form và sheet thay
-/// ChoiceChip / FilterChip Material.
+/// Chip chọn (spec phong cách iOS 25/11/2026 §3.4): ô bo 10 nền xám nhạt;
+/// đang chọn = nền xanh nhạt + viền xanh 1.5 + chữ xanh đậm. Dùng cho lựa
+/// chọn trong form và sheet thay ChoiceChip / FilterChip Material.
 class OmniChoicePill extends StatelessWidget {
   const OmniChoicePill({
     super.key,
@@ -469,6 +469,10 @@ class OmniChoicePill extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
     final base = scheme.onSurface.withValues(alpha: dark ? .08 : .05);
+    final shape = BorderRadius.circular(10);
+    // Chữ trên nền xanh nhạt: dùng chính màu chính (đã đạt AA trên nền thẻ;
+    // nền chỉ pha 10–16% nên tương phản gần như giữ nguyên).
+    final selectedInk = scheme.primary;
 
     return Semantics(
       button: true,
@@ -476,7 +480,7 @@ class OmniChoicePill extends StatelessWidget {
       child: Material(
         type: MaterialType.transparency,
         child: InkWell(
-          customBorder: const StadiumBorder(),
+          borderRadius: shape,
           onTap: onTap == null
               ? null
               : () {
@@ -486,15 +490,15 @@ class OmniChoicePill extends StatelessWidget {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 160),
             constraints: const BoxConstraints(minHeight: 36),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-            decoration: selected
-                ? OmniGlass.buttonDecoration(
-                    context,
-                  ).copyWith(color: OmniGlass.selectionOf(context))
-                : BoxDecoration(
-                    color: base,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            decoration: BoxDecoration(
+              color: selected ? OmniGlass.selectionOf(context) : base,
+              borderRadius: shape,
+              border: Border.all(
+                color: selected ? scheme.primary : Colors.transparent,
+                width: 1.5,
+              ),
+            ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -502,7 +506,7 @@ class OmniChoicePill extends StatelessWidget {
                   Icon(
                     icon,
                     size: 16,
-                    color: selected ? scheme.primary : scheme.onSurfaceVariant,
+                    color: selected ? selectedInk : scheme.onSurfaceVariant,
                   ),
                   const SizedBox(width: 6),
                 ],
@@ -510,9 +514,7 @@ class OmniChoicePill extends StatelessWidget {
                   label,
                   style: OmniType.chip.copyWith(
                     fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                    color: selected
-                        ? scheme.onSurface
-                        : scheme.onSurfaceVariant,
+                    color: selected ? selectedInk : scheme.onSurfaceVariant,
                   ),
                 ),
               ],

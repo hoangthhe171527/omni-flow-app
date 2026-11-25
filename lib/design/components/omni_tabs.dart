@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 
 import '../platform/omni_motion_scope.dart';
 import '../tokens/tokens.dart';
-import 'omni_glass.dart';
 import 'omni_status_chip.dart';
 
 /// Một tab trong [OmniTabStrip].
@@ -33,10 +32,10 @@ class OmniTab {
   final Key? key;
 }
 
-/// MỘT kiểu tab cho cả app, kiểu kính (viomni-apple-uiux.html "Việc của
-/// tôi": "Tab thành bộ chọn đoạn kính"): viên kính dạng viên thuốc, các tab
-/// chia đều, thấu kính trắng mờ trượt tới tab đang chọn; chữ tab chọn màu chủ
-/// đạo 600, tab khác chữ phụ 500; số đếm xám, số "cần xử lý" là chip đỏ.
+/// MỘT kiểu tab cho cả app, cùng hình với [OmniSegmented] (spec phong cách
+/// iOS 25/11/2026 §3.4): rãnh xám nhạt bo 10, các tab chia đều, núm trắng đặc
+/// bo 8 trượt tới tab đang chọn; chữ tab chọn mực 600, tab khác mực nhạt 500;
+/// số đếm xám, số "cần xử lý" là chip đỏ. Không kính, không thấu kính.
 ///
 /// Chia đều nhưng không cắt chữ: chữ dài thì thu nhỏ vừa ô (FittedBox) thay
 /// vì thành "Hôm …".
@@ -53,11 +52,14 @@ class OmniTabStrip extends StatelessWidget {
   final int selected;
   final ValueChanged<int> onSelected;
 
-  /// Lề ngoài của viên kính.
+  /// Lề ngoài của dải tab.
   final EdgeInsets padding;
 
-  /// Cao của viên kính.
+  /// Cao của khung (vùng chạm); rãnh nhìn thấy cao [track] nằm giữa.
   static const double height = 44;
+
+  /// Cao rãnh xám nhìn thấy.
+  static const double track = 34;
 
   @override
   Widget build(BuildContext context) {
@@ -65,55 +67,94 @@ class OmniTabStrip extends StatelessWidget {
     if (n == 0) return const SizedBox.shrink();
     final sel = selected.clamp(0, n - 1);
     final motion = OmniMotion.enabled(context);
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final dark = theme.brightness == Brightness.dark;
+    final contrast = MediaQuery.highContrastOf(context);
+    const vInset = (height - track) / 2 + 2;
 
     return Padding(
       padding: padding,
-      child: OmniGlass(
-        radius: height / 2,
-        child: SizedBox(
-          height: height,
-          child: LayoutBuilder(
-            builder: (context, box) {
-              const inset = 4.0;
-              final w = (box.maxWidth - inset * 2) / n;
-              return Stack(
-                children: [
-                  AnimatedPositioned(
-                    duration: motion
-                        ? const Duration(milliseconds: 420)
-                        : Duration.zero,
-                    curve: const Cubic(0.34, 1.36, 0.64, 1),
-                    left: inset + w * sel,
-                    top: 4,
-                    bottom: 4,
-                    width: w,
-                    child: const OmniGlassLens(),
+      child: SizedBox(
+        height: height,
+        child: LayoutBuilder(
+          builder: (context, box) {
+            const inset = 2.0;
+            final w = (box.maxWidth - inset * 2) / n;
+            return Stack(
+              children: [
+                // Rãnh xám.
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: (height - track) / 2,
+                  height: track,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: scheme.onSurface.withValues(
+                        alpha: dark ? .12 : .07,
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                      border: contrast
+                          ? Border.all(color: scheme.outline)
+                          : null,
+                    ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: inset),
-                    child: Row(
-                      children: [
-                        for (var i = 0; i < n; i++)
-                          Expanded(
-                            child: OmniTabItem(
-                              key: tabs[i].key,
-                              tab: tabs[i],
-                              selected: i == sel,
-                              onTap: () {
-                                if (i != sel) {
-                                  HapticFeedback.selectionClick();
-                                }
-                                onSelected(i);
-                              },
-                            ),
+                ),
+                // Núm trắng trượt tới tab đang chọn.
+                AnimatedPositioned(
+                  duration: motion
+                      ? const Duration(milliseconds: 260)
+                      : Duration.zero,
+                  curve: Curves.easeOutCubic,
+                  left: inset + w * sel,
+                  top: vInset,
+                  bottom: vInset,
+                  width: w,
+                  child: DecoratedBox(
+                    key: const Key('omni-tab-thumb'),
+                    decoration: BoxDecoration(
+                      color: dark ? const Color(0xFF2E3F5C) : scheme.surface,
+                      borderRadius: BorderRadius.circular(8),
+                      border: contrast
+                          ? Border.all(color: scheme.onSurface)
+                          : null,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(
+                            alpha: dark ? .30 : .12,
                           ),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
                       ],
                     ),
                   ),
-                ],
-              );
-            },
-          ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: inset),
+                  child: Row(
+                    children: [
+                      for (var i = 0; i < n; i++)
+                        Expanded(
+                          child: OmniTabItem(
+                            key: tabs[i].key,
+                            tab: tabs[i],
+                            selected: i == sel,
+                            onTap: () {
+                              if (i != sel) {
+                                HapticFeedback.selectionClick();
+                              }
+                              onSelected(i);
+                            },
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -164,7 +205,7 @@ class OmniTabItem extends StatelessWidget {
                     style: OmniType.body.copyWith(
                       fontSize: 14,
                       color: selected
-                          ? scheme.primary
+                          ? scheme.onSurface
                           : scheme.onSurfaceVariant,
                       fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
                     ),

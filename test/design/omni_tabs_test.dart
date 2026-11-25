@@ -4,7 +4,7 @@ import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/design/tokens/tokens.dart';
 
-/// Một kiểu tab cho cả app: bộ chọn đoạn kính (viomni-apple-uiux.html).
+/// Một kiểu tab cho cả app: rãnh xám + núm trắng (phong cách iOS 25/11/2026).
 void main() {
   Widget host(Widget child, {double width = 360}) => MaterialApp(
     theme: OmniTheme.light(TargetPlatform.android),
@@ -26,20 +26,21 @@ void main() {
       tester.widget<Text>(find.text(label)).style!.color!;
 
   testWidgets(
-    'kính: thấu kính nằm dưới tab đang chọn, chữ tab chọn màu chính',
+    'núm trắng nằm dưới tab đang chọn, không kính; chữ tab chọn màu mực',
     (tester) async {
       await tester.pumpWidget(
         host(OmniTabStrip(tabs: tabs, selected: 1, onSelected: (_) {})),
       );
 
-      expect(find.byType(OmniGlass), findsOneWidget);
-      final lens = tester.getRect(find.byType(OmniGlassLens));
+      expect(find.byType(OmniGlass), findsNothing);
+      expect(find.byType(BackdropFilter), findsNothing);
+      final thumb = tester.getRect(find.byKey(const Key('omni-tab-thumb')));
       final picked = tester.getRect(
         find.widgetWithText(OmniTabItem, 'Quá hạn'),
       );
-      expect(lens.center.dx, closeTo(picked.center.dx, 1));
-      expect(labelColor(tester, 'Quá hạn'), OmniColors.primary);
-      expect(labelColor(tester, 'Sắp tới'), isNot(OmniColors.primary));
+      expect(thumb.center.dx, closeTo(picked.center.dx, 1));
+      expect(labelColor(tester, 'Quá hạn'), OmniColors.foreground);
+      expect(labelColor(tester, 'Sắp tới'), isNot(OmniColors.foreground));
     },
   );
 

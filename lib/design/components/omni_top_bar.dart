@@ -477,7 +477,7 @@ class _SearchVeil extends StatelessWidget {
   }
 }
 
-/// Nút riêng của màn trên thanh trên: viên kính tròn 44.
+/// Nút riêng của màn trên thanh trên: nút icon trơn, vùng chạm 44.
 class OmniTopBarAction extends StatelessWidget {
   const OmniTopBarAction({
     super.key,
@@ -512,7 +512,12 @@ class OmniTopBarAction extends StatelessWidget {
   }
 }
 
-/// Viên kính tròn 44 bọc một nút có sẵn (chuông, avatar, ⋯ của màn riêng).
+/// Ô tròn 44 bọc một nút có sẵn (chuông, avatar, ⋯ của màn riêng).
+///
+/// Phong cách iOS 25/11/2026: nút icon TRƠN trên thanh trên — không viên kính,
+/// không nền, không bóng (kính chỉ còn ở thanh tab / thanh trên khi cuộn).
+/// Giữ tên và API để mọi màn đang gọi tự đổi theo. Tương phản cao: viền mảnh
+/// để vẫn thấy ranh giới vùng chạm.
 class OmniGlassCircle extends StatelessWidget {
   const OmniGlassCircle({super.key, required this.child});
 
@@ -520,13 +525,14 @@ class OmniGlassCircle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Viên 44: làm mờ không nhìn ra, chỉ tốn một lớp đè nội dung cuộn; bỏ
-    // bóng ngoài để không bị cắt thành khung mờ vuông ở hàng đầu.
-    return OmniGlass(
-      blur: false,
-      shadow: false,
-      radius: 22,
-      child: SizedBox.square(dimension: 44, child: Center(child: child)),
+    final box = SizedBox.square(dimension: 44, child: Center(child: child));
+    if (!MediaQuery.highContrastOf(context)) return box;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: Theme.of(context).colorScheme.outline),
+      ),
+      child: box,
     );
   }
 }

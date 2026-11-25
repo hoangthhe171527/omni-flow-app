@@ -48,29 +48,42 @@ void main() {
   // Mỗi nền tảng một test riêng, không mở hai sheet trong cùng một tester:
   // pumpWidget lần hai dùng lại cây widget cũ, nên sheet thứ hai vẫn mang cấu
   // hình của lần đầu và test sẽ "xanh" vì lý do sai.
-  testWidgets('iOS: viên kính nổi bo 30, có thanh kéo bên trong', (
+  testWidgets('iOS: sheet đặc sát mép, bo trên 32, có thanh kéo bên trong', (
     tester,
   ) async {
-    // Thanh kéo là dấu hiệu người dùng iPhone đọc để biết sheet kéo xuống đóng
-    // được.
+    // Phong cách iOS 25/11/2026: sheet nền đặc, không còn viên kính nổi cách
+    // mép. Thanh kéo là dấu hiệu người dùng iPhone đọc để biết sheet kéo xuống
+    // đóng được. Đo ở khung điện thoại: cửa sổ test 800 rộng hơn giới hạn 640
+    // của sheet Material 3 nên sheet bị căn giữa.
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     await open(tester, TargetPlatform.iOS);
 
     expect(sheet(tester).backgroundColor, Colors.transparent);
-    expect(radius(tester), 30);
+    expect(radius(tester), 32);
     expect(find.byKey(const Key('sheet-handle')), findsOneWidget);
-    // Nổi: cách mép trái 8.
     final glassRect = tester.getRect(find.byKey(const Key('omni-glass-sheet')));
     final sheetRect = tester.getRect(find.byType(BottomSheet));
-    expect(glassRect.left, greaterThanOrEqualTo(sheetRect.left + 8));
-    expect(glassRect.right, lessThanOrEqualTo(sheetRect.right - 8));
+    expect(glassRect.left, sheetRect.left);
+    expect(glassRect.right, sheetRect.right);
+    expect(glassRect.bottom, sheetRect.bottom);
+    // Nền đặc: không còn lớp nhoè trong sheet.
+    expect(
+      find.descendant(
+        of: find.byType(BottomSheet),
+        matching: find.byType(BackdropFilter),
+      ),
+      findsNothing,
+    );
   });
 
-  testWidgets('Android: viên kính bo 30, không thanh kéo', (tester) async {
+  testWidgets('Android: sheet bo trên 32, không thanh kéo', (tester) async {
     // Trên Android nút back của hệ thống đã nói sheet đóng được, nên thanh kéo
     // chỉ là thứ thừa chiếm chỗ.
     await open(tester, TargetPlatform.android);
 
-    expect(radius(tester), 30);
+    expect(radius(tester), 32);
     expect(find.byKey(const Key('sheet-handle')), findsNothing);
   });
 

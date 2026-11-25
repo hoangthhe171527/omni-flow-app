@@ -1,16 +1,11 @@
-import 'dart:ui' show ImageFilter;
-
 import 'package:flutter/material.dart';
 
-import '../platform/omni_performance.dart';
-
-/// Nút + tròn kính lỏng nổi ở góc dưới phải (viec-quick-create-uiux.html,
-/// duyệt 2026-11-08).
+/// Nút + tròn nổi ở góc dưới phải, phía trên thanh tab.
 ///
-/// Gần trong suốt: nhoè nhẹ + tăng bão hoà nội dung phía sau, vệt sáng cong ở
-/// nửa trên, ánh màu chính "khúc xạ" ở đáy, viền sáng mảnh. Bấm thì nhún như
-/// giọt nước; [open] xoay dấu + thành ✕. Tương phản cao: nền đặc viền màu
-/// chính. Giảm chuyển động: không nhún, không xoay động.
+/// Phong cách iOS 25/11/2026 (spec §3.3): tròn đặc màu chính, dấu + màu
+/// onPrimary, bóng mảnh cùng tông màu chính — không vệt sáng, không nhoè nền
+/// phía sau. Bấm thì nhún nhẹ; [open] xoay dấu + thành ✕. Tương phản cao: nền
+/// đặc viền màu chính. Giảm chuyển động: không nhún, không xoay động.
 class OmniLiquidFab extends StatefulWidget {
   const OmniLiquidFab({
     super.key,
@@ -74,40 +69,16 @@ class _OmniLiquidFabState extends State<OmniLiquidFab>
     final reduce = MediaQuery.disableAnimationsOf(context);
     const size = OmniLiquidFab.size;
 
-    final glass = Stack(
+    final face = Stack(
       fit: StackFit.expand,
       children: [
-        // Nút tạo mới nổi: nền đặc màu chính để icon + luôn rõ nét trên
-        // mọi danh sách có ảnh/chữ; giữ ánh sáng nhẹ nửa trên cho đồng bộ.
+        // Nền đặc màu chính: icon + luôn rõ trên mọi danh sách có ảnh/chữ.
         DecoratedBox(
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: solid ? scheme.surface : scheme.primary,
           ),
         ),
-        if (!solid)
-          Positioned(
-            top: 2,
-            left: 8,
-            right: 8,
-            height: size * 0.42,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.elliptical(40, 26),
-                  bottom: Radius.elliptical(40, 10),
-                ),
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.white.withValues(alpha: dark ? 0.16 : 0.22),
-                    Colors.white.withValues(alpha: 0),
-                  ],
-                ),
-              ),
-            ),
-          ),
         if (solid)
           DecoratedBox(
             decoration: BoxDecoration(
@@ -139,27 +110,21 @@ class _OmniLiquidFabState extends State<OmniLiquidFab>
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           boxShadow: [
+            // Bóng mảnh cùng tông màu chính + một lớp mực rất nhẹ để tách nền.
+            // Gọn (16/6): bóng dài loang xuống thanh tab làm nút như dính menu.
             BoxShadow(
-              color: Colors.black.withValues(alpha: dark ? 0.42 : 0.14),
-              // Bóng gọn (18/6, trước 24/10): bóng dài loang xuống thanh tab
-              // làm nút trông như dính vào menu.
-              blurRadius: 18,
+              color: scheme.primary.withValues(alpha: dark ? 0.30 : 0.30),
+              blurRadius: 16,
               offset: const Offset(0, 6),
+            ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: dark ? 0.30 : 0.10),
+              blurRadius: 3,
+              offset: const Offset(0, 1),
             ),
           ],
         ),
-        child: ClipOval(
-          // Viên 54 σ8: chỉ làm mờ ở bậc hiệu năng đầy đủ.
-          child: solid || OmniPerformance.tierOf(context) != OmniPerfTier.full
-              ? glass
-              : BackdropFilter(
-                  filter: ImageFilter.compose(
-                    outer: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                    inner: const ColorFilter.matrix(_saturate220),
-                  ),
-                  child: glass,
-                ),
-        ),
+        child: ClipOval(child: face),
       ),
     );
 
@@ -187,11 +152,3 @@ class _OmniLiquidFabState extends State<OmniLiquidFab>
     );
   }
 }
-
-/// Bão hoà 2.2× (như `saturate(220%)` của kính CSS trong thiết kế).
-const List<double> _saturate220 = <double>[
-  1.9448, -0.8582, -0.0870, 0, 0, //
-  -0.2552, 1.3418, -0.0870, 0, 0, //
-  -0.2552, -0.8582, 2.1130, 0, 0, //
-  0, 0, 0, 1, 0,
-];
