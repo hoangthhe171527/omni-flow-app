@@ -97,10 +97,12 @@ void main() {
       t.getSize(find.byKey(const ValueKey('omni-top-bar-bell-face'))),
       const Size(44, 44),
     );
-    // Chữ không hiện (logo đứng chỗ đó) nhưng vẫn đọc tên màn như header.
-    expect(find.text('Hộp thư'), findsNothing);
+    // Phong cách iOS 25/11/2026: màn gốc có tên thì hiện tên màn (thay logo)
+    // và tên đó là header cho trình đọc màn hình.
+    expect(find.text('Hộp thư'), findsOneWidget);
+    expect(find.byKey(const ValueKey('omni-top-bar-brand')), findsNothing);
     final node = t.getSemantics(
-      find.byKey(const ValueKey('omni-top-bar-brand')),
+      find.byKey(const ValueKey('omni-top-bar-title')),
     );
     expect(node.label, 'Hộp thư');
     expect(node.flagsCollection.isHeader, isTrue);

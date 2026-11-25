@@ -17,6 +17,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// Khung ứng dụng (cờ `app_shell`): màn Chọn ứng dụng sau khi chọn công ty,
 /// thanh dưới theo ứng dụng. Cờ tắt hoặc API cũ thì app y như trước.
+/// Mục thanh tab theo nhãn đọc màn hình (nhãn có thể kèm số: "Hộp thư, 3").
+/// Thanh tab chỉ icon (phong cách iOS 25/11/2026) nên không tìm được qua chữ;
+/// `testWidgets` bật ngữ nghĩa sẵn.
+Finder _tab(String name) =>
+    find.bySemanticsLabel(RegExp('^${RegExp.escape(name)}(,|\$)'));
+
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
@@ -186,27 +192,27 @@ void main() {
 
       expect(find.text('page Hàng sắp về'), findsOneWidget);
       for (final label in [
-        // Nhãn ngắn trên thanh tab (rà soát 12/11) — tên đầy đủ ở tiêu đề.
-        'Sắp về',
+        // Tên đầy đủ đọc màn hình của từng mục tab (thanh chỉ còn icon).
+        'Hàng sắp về',
         'Tồn kho',
-        'NCC',
+        'Nhà cung cấp',
         'Đang giữ',
         'Thêm',
       ]) {
-        expect(find.text(label), findsWidgets, reason: label);
+        expect(_tab(label), findsWidgets, reason: label);
       }
       // Thanh dưới tự chọn cũ ("Tất cả") không dùng khi khung bật.
-      expect(find.text('Tất cả'), findsNothing);
+      expect(_tab('Tất cả'), findsNothing);
       expect(find.byKey(const ValueKey('app-switch-button')), findsOneWidget);
 
       // Mục thứ 3 là màn con (branch bản sao) — vẫn nằm trong khung.
-      await tester.tap(find.text('NCC'));
+      await tester.tap(_tab('Nhà cung cấp'));
       await settle(tester);
       expect(find.text('page Nhà cung cấp'), findsOneWidget);
-      expect(find.text('Thêm'), findsOneWidget);
+      expect(_tab('Thêm'), findsOneWidget);
 
       // Thêm: sheet nhóm lồng chứa các mục còn lại.
-      await tester.tap(find.text('Thêm'));
+      await tester.tap(_tab('Thêm'));
       await settle(tester);
       expect(find.byKey(const ValueKey('app-more-inventory_counts')), findsOne);
       await tester.tap(find.byKey(const ValueKey('app-more-inventory_counts')));
@@ -225,7 +231,7 @@ void main() {
 
       expect(await boot(tester, c), '/inventory/lots');
       expect(find.text('page Hàng sắp về'), findsOneWidget);
-      expect(find.text('Thêm'), findsOneWidget);
+      expect(_tab('Thêm'), findsOneWidget);
       expect(find.byKey(const ValueKey('app-switch-button')), findsNothing);
     });
 
@@ -234,7 +240,7 @@ void main() {
       addTearDown(c.dispose);
 
       expect(await boot(tester, c), '/home');
-      expect(find.text('Tất cả'), findsOneWidget);
+      expect(_tab('Tất cả'), findsOneWidget);
       expect(find.byKey(const ValueKey('app-switch-button')), findsNothing);
     });
 
@@ -245,7 +251,7 @@ void main() {
       addTearDown(c.dispose);
 
       expect(await boot(tester, c), '/home');
-      expect(find.text('Tất cả'), findsOneWidget);
+      expect(_tab('Tất cả'), findsOneWidget);
     });
 
     testWidgets('bản khai báo nói tắt (shell: false) thì /apps trả về như cũ', (
@@ -258,7 +264,7 @@ void main() {
       addTearDown(c.dispose);
 
       expect(await boot(tester, c), '/home');
-      expect(find.text('Tất cả'), findsOneWidget);
+      expect(_tab('Tất cả'), findsOneWidget);
     });
   });
 }

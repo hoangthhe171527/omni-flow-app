@@ -361,8 +361,10 @@ class _ShellNavigationRail extends ConsumerWidget {
   }
 }
 
-/// Thanh dưới: nền thẻ, vạch trên mảnh; mục đang chọn là icon màu chính, vạch
-/// 2px màu chính ở mép trên và chữ mực đậm (`SMProjectsTasks.dc.html`).
+/// Thanh tab: viên kính nổi (một trong số ít chỗ còn giữ kính, spec phong
+/// cách iOS 25/11/2026 §3.3), CHỈ ICON — không nhãn chữ. Mục đang chọn: icon
+/// màu chính nét đậm trên một ô tròn xanh nhạt trượt giữa các mục. Tên đầy
+/// đủ vẫn có cho trình đọc màn hình; tên màn hiện ở đầu mỗi màn gốc.
 class _ShellNavBar extends StatelessWidget {
   const _ShellNavBar({
     required this.tabs,
@@ -378,9 +380,13 @@ class _ShellNavBar extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onSelected;
 
+  /// Ô chọn 52×46 (tự co khi ô tab hẹp hơn).
+  static const double _markWidth = 52;
+  static const double _markHeight = 46;
+
   @override
   Widget build(BuildContext context) {
-    // Viên kính nổi cách mép 12 (`liquid-glass-uiux.html`): nội dung cuộn
+    // Viên kính nổi cách mép 16 (`liquid-glass-uiux.html`): nội dung cuộn
     // chạy bên dưới (Scaffold.extendBody). Đáy: vùng an toàn, tối thiểu 12.
     final bottom = MediaQuery.viewPaddingOf(context).bottom;
 
@@ -397,10 +403,10 @@ class _ShellNavBar extends StatelessWidget {
           child: OmniScrollEdge(atTop: false),
         ),
         Padding(
-          padding: EdgeInsets.fromLTRB(12, 0, 12, bottom > 12 ? bottom : 12),
+          padding: EdgeInsets.fromLTRB(16, 0, 16, bottom > 12 ? bottom : 12),
           child: OmniGlass(
             radius: ShellBarInset.pillHeight / 2,
-            padding: const EdgeInsets.symmetric(horizontal: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
             child: SizedBox(
               height: ShellBarInset.pillHeight,
               child: LayoutBuilder(
@@ -408,21 +414,32 @@ class _ShellNavBar extends StatelessWidget {
                   final count = tabs.length + (more == null ? 0 : 1);
                   final slot = box.maxWidth / count;
                   final motion = OmniMotion.enabled(context);
+                  final mark = slot < _markWidth ? slot : _markWidth;
 
                   return Stack(
                     children: [
-                      // MỘT viên chọn trượt từ tab cũ sang tab mới, nảy nhẹ
-                      // như lò xo iOS — không phải mỗi mục tự bật/tắt nền.
+                      // MỘT ô chọn xanh nhạt trượt từ tab cũ sang tab mới —
+                      // không phải mỗi mục tự bật/tắt nền.
                       AnimatedPositioned(
                         duration: motion
-                            ? const Duration(milliseconds: 420)
+                            ? const Duration(milliseconds: 260)
                             : Duration.zero,
-                        curve: const Cubic(0.34, 1.36, 0.64, 1),
-                        left: slot * selectedIndex.clamp(0, count - 1),
-                        top: 6,
-                        bottom: 6,
-                        width: slot,
-                        child: const OmniGlassLens(),
+                        curve: Curves.easeOutCubic,
+                        left:
+                            slot * selectedIndex.clamp(0, count - 1) +
+                            (slot - mark) / 2,
+                        top: (ShellBarInset.pillHeight - _markHeight) / 2,
+                        height: _markHeight,
+                        width: mark,
+                        child: DecoratedBox(
+                          key: const Key('shell-nav-selection'),
+                          decoration: BoxDecoration(
+                            color: OmniGlass.selectionOf(context),
+                            borderRadius: BorderRadius.circular(
+                              _markHeight / 2,
+                            ),
+                          ),
+                        ),
                       ),
                       Row(
                         children: [
@@ -484,7 +501,7 @@ class _ShellNavItem extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    // Mục đang chọn: viên trắng mờ trong kính + icon và chữ màu chính.
+    // Mục đang chọn: ô xanh nhạt (vẽ ở thanh) + icon màu chính.
     final iconColor = selected ? scheme.primary : scheme.onSurfaceVariant;
     final destination = this.destination;
     final badgeProvider = destination?.badge;
@@ -513,56 +530,34 @@ class _ShellNavItem extends ConsumerWidget {
           duration: OmniMotion.of(context).base,
           curve: OmniCurves.standard,
           tween: ColorTween(end: iconColor),
+          // Chỉ icon (spec 25/11 Q2): không nhãn chữ dưới icon.
           builder: (context, color, _) => Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox(
-                  width: 44,
-                  height: 26,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    alignment: Alignment.center,
-                    children: [
-                      Icon(
-                        selected
-                            ? (destination?.selectedIcon ?? selectedIcon!)
-                            : (destination?.icon ?? icon!),
-                        size: 21,
-                        color: color,
+            child: SizedBox(
+              width: 44,
+              height: 30,
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.center,
+                children: [
+                  Icon(
+                    selected
+                        ? (destination?.selectedIcon ?? selectedIcon!)
+                        : (destination?.icon ?? icon!),
+                    size: 26,
+                    color: color,
+                  ),
+                  if (count > 0)
+                    Positioned(
+                      right: -2,
+                      top: -4,
+                      child: _NavBadge(
+                        count: count,
+                        tone: destination!.badgeTone,
+                        display: destination.badgeDisplay,
                       ),
-                      if (count > 0)
-                        Positioned(
-                          right: -4,
-                          top: -4,
-                          child: _NavBadge(
-                            count: count,
-                            tone: destination!.badgeTone,
-                            display: destination.badgeDisplay,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 1),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 2),
-                  // MỘT cỡ chữ cho cả thanh (rà soát 12/11): không FittedBox —
-                  // nó từng thu "Nhà cung cấp" còn 8,6px cạnh nhãn 11px. Nhãn
-                  // dài dùng nhãn ngắn `tabLabels` (≤ 9 ký tự, vừa ô ở 360).
-                  child: Text(
-                    text,
-                    maxLines: 1,
-                    softWrap: false,
-                    overflow: TextOverflow.fade,
-                    textAlign: TextAlign.center,
-                    style: OmniType.micro.copyWith(
-                      color: color,
-                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
                     ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

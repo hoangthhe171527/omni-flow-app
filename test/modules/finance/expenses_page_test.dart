@@ -131,7 +131,9 @@ void main() {
         await tester.pumpWidget(h.app);
         await tester.pumpAndSettle();
 
-        expect(find.text('Sổ chi phí'), findsNothing);
+        // Phong cách iOS 25/11/2026: màn gốc hiện tên màn ở đầu (thanh tab
+        // chỉ còn icon nên tên này không lặp với nhãn tab), đúng một lần.
+        expect(find.text('Sổ chi phí'), findsOneWidget);
         expect(find.text('Tháng 11/2026'), findsOneWidget);
         // 2.450.000 + 6.000.000 + 1.650.000 = 10.100.000
         expect(find.text('10.100.000'), findsOneWidget);
@@ -752,13 +754,9 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        // Màn đứng gốc trong bài kiểm: logo thay chữ, tên chỉ để đọc.
-        expect(
-          find.byWidgetPredicate(
-            (w) => w is Semantics && w.properties.label == 'Tổng hợp chi phí',
-          ),
-          findsOneWidget,
-        );
+        // Màn đứng gốc trong bài kiểm: tên màn hiện ở đầu (phong cách iOS
+        // 25/11/2026), đúng một lần.
+        expect(find.text('Tổng hợp chi phí'), findsOneWidget);
         // Tháng / Quý / Năm là OmniSegmented; kỳ nằm ở nút ‹ kỳ ›, tiêu đề
         // thẻ chỉ còn "Tổng chi" (rà soát 12/11).
         Finder scopeTab(String label) => find.descendant(
