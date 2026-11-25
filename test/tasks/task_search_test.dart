@@ -101,7 +101,7 @@ void main() {
     await tester.enterText(find.byType(TextField), 'S');
     await tester.pump();
 
-    expect(find.byTooltip('Xoá nội dung tìm'), findsOneWidget);
+    expect(find.byTooltip('Xoá tìm kiếm'), findsOneWidget);
   });
 
   testWidgets('xoá đưa màn về lời mời tìm, không để lại kết quả cũ', (
@@ -119,7 +119,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('KAWAI HAT-5'), findsOneWidget);
 
-    await tester.tap(find.byTooltip('Xoá nội dung tìm'));
+    await tester.tap(find.byTooltip('Xoá tìm kiếm'));
     await tester.pumpAndSettle();
 
     expect(find.text('KAWAI HAT-5'), findsNothing);

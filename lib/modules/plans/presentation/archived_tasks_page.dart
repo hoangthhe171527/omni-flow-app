@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../core/utils/text_search.dart';
 import '../../../core/error/app_exception.dart';
 import '../../../core/nav/shell_bar_inset.dart';
 import '../../../design/components/components.dart';
@@ -41,6 +42,9 @@ class ArchivedTasksPage extends ConsumerStatefulWidget {
 }
 
 class _ArchivedTasksPageState extends ConsumerState<ArchivedTasksPage> {
+  /// Từ khoá tìm tại chỗ: tên việc, kế hoạch / nhóm (bỏ dấu).
+  String _q = '';
+
   /// Đã khôi phục trong phiên này: ẩn ngay, không chờ danh sách tải lại.
   final _restored = <String>{};
 
@@ -186,6 +190,12 @@ class _ArchivedTasksPageState extends ConsumerState<ArchivedTasksPage> {
         fallbackBack: widget.planId == null
             ? null
             : () => context.go('/plans/${widget.planId}'),
+        bottom: OmniSearchBottom(
+          fieldKey: const ValueKey('archived-search'),
+          hint: 'Tìm việc, kế hoạch',
+          debounce: const Duration(milliseconds: 200),
+          onChanged: (v) => setState(() => _q = v),
+        ),
       ),
       body: RefreshIndicator.adaptive(
         onRefresh: () async => _invalidateCurrent(),
@@ -193,9 +203,18 @@ class _ArchivedTasksPageState extends ConsumerState<ArchivedTasksPage> {
           value: archived,
           onRetry: _invalidateCurrent,
           data: (result) {
-            final tasks = [
+            final all = [
               for (final t in result.tasks)
                 if (!_restored.contains(t.id)) t,
+            ];
+            final tasks = [
+              for (final t in all)
+                if (matchesQuery(
+                  label: t.title,
+                  subtitle: _subtitleOf(t, planById),
+                  query: _q,
+                ))
+                  t,
             ];
 
             final filterSection = showPlanFilter
@@ -214,12 +233,29 @@ class _ArchivedTasksPageState extends ConsumerState<ArchivedTasksPage> {
                   )
                 : null;
 
+            if (all.isNotEmpty && tasks.isEmpty) {
+              return ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: [
+                  if (filterSection != null)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        OmniSpacing.lg,
+                        OmniSpacing.md,
+                        OmniSpacing.lg,
+                        0,
+                      ),
+                      child: filterSection,
+                    ),
+                  OmniEmptyState.filtered(title: 'Không có việc khớp "$_q"'),
+                ],
+              );
+            }
             if (tasks.isEmpty) {
               if (!showPlanFilter) {
                 return const OmniEmptyState(
                   icon: LucideIcons.package,
                   title: 'Chưa có việc nào được lưu trữ',
-                  message: 'Việc lưu trữ từ menu của việc sẽ nằm ở đây.',
                 );
               }
               return ListView(
@@ -236,7 +272,6 @@ class _ArchivedTasksPageState extends ConsumerState<ArchivedTasksPage> {
                   const OmniEmptyState(
                     icon: LucideIcons.package,
                     title: 'Chưa có việc nào được lưu trữ',
-                    message: 'Việc lưu trữ từ menu của việc sẽ nằm ở đây.',
                   ),
                 ],
               );

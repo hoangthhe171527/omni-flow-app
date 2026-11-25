@@ -24,7 +24,7 @@ void main() {
     // vẫn đọc. Kiểm đúng thuộc tính mà nền tảng thật sự đọc.
     expect(
       tester.getSemantics(find.byType(IconButton)).tooltip,
-      'Xoá nội dung tìm',
+      'Xoá tìm kiếm',
     );
     handle.dispose();
   });
@@ -90,11 +90,7 @@ class _PasswordProbeState extends State<_PasswordProbe> {
         suffixIcon: IconButton(
           tooltip: _obscure ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
           onPressed: () => setState(() => _obscure = !_obscure),
-          icon: Icon(
-            _obscure
-                ? LucideIcons.eye
-                : LucideIcons.eyeOff,
-          ),
+          icon: Icon(_obscure ? LucideIcons.eye : LucideIcons.eyeOff),
         ),
       ),
     );

@@ -75,7 +75,7 @@ void main() {
 
     await tester.tap(find.byTooltip('Liên kết Zalo — Hằng Ni'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), '79000099999');
+    await tester.enterText(find.byType(TextField).last, '79000099999');
     await tester.pump();
     await tester.tap(find.text('Lưu'));
     await tester.pumpAndSettle();
@@ -92,7 +92,7 @@ void main() {
 
     await tester.tap(find.byTooltip('Sửa liên kết Zalo — Bảo Khánh'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), '');
+    await tester.enterText(find.byType(TextField).last, '');
     await tester.pump();
     await tester.tap(find.text('Lưu'));
     await tester.pumpAndSettle();
