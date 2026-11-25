@@ -36,7 +36,7 @@ Widget _host(
 
 void main() {
   testWidgets(
-    'kiểu B: chuông và avatar là viên kính tròn rời, chuông có chấm',
+    'chuông và avatar là nút tròn trơn rời (không kính), chuông có chấm',
     (tester) async {
       final handle = tester.ensureSemantics();
       final c = ProviderContainer();
@@ -47,7 +47,10 @@ void main() {
 
       // Màn gốc: logo Viomni thay tiêu đề lớn (người dùng chọn 2026-11-08).
       expect(find.byType(OmniBrandMark), findsOneWidget);
-      expect(find.byType(OmniGlass), findsNWidgets(2));
+      // Phong cách iOS 25/11/2026: chuông và avatar là nút icon trơn trong ô
+      // 44, không còn viên kính.
+      expect(find.byType(OmniGlassCircle), findsNWidgets(2));
+      expect(find.byType(OmniGlass), findsNothing);
       expect(find.bySemanticsLabel(RegExp('Thông báo')), findsOneWidget);
       expect(
         find.byKey(const ValueKey('omni-top-bar-bell-dot')),
@@ -186,58 +189,60 @@ void main() {
     expect(back, 1);
   });
 
-  testWidgets('chạm ô tìm: bật chế độ tìm, không hiện Huỷ, chạm ngoài thì thoát', (
-    tester,
-  ) async {
-    final c = ProviderContainer();
-    addTearDown(c.dispose);
-    final ctrl = TextEditingController();
-    addTearDown(ctrl.dispose);
-    await tester.pumpWidget(
-      _host(
-        c,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(44),
-          child: TextField(controller: ctrl),
-        ),
-      ),
-    );
-    await tester.pump();
-    expect(find.text('Huỷ'), findsNothing);
-
-    await tester.tap(find.byType(TextField));
-    await tester.pumpAndSettle();
-    expect(c.read(searchModeProvider), isTrue);
-    expect(find.text('Huỷ'), findsNothing);
-
-    // Chạm ra ngoài vùng tìm kiếm (lớp mờ) -> thoát chế độ tìm.
-    await tester.tap(find.bySemanticsLabel('Thoát tìm kiếm'));
-    await tester.pumpAndSettle();
-    expect(c.read(searchModeProvider), isFalse);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('AnnotatedRegion<SystemUiOverlayStyle> theo brightness của theme', (
-    tester,
-  ) async {
-    Future<SystemUiOverlayStyle> styleFor(ThemeData theme) async {
+  testWidgets(
+    'chạm ô tìm: bật chế độ tìm, không hiện Huỷ, chạm ngoài thì thoát',
+    (tester) async {
+      final c = ProviderContainer();
+      addTearDown(c.dispose);
+      final ctrl = TextEditingController();
+      addTearDown(ctrl.dispose);
       await tester.pumpWidget(
-        MaterialApp(
-          theme: theme,
-          home: const Scaffold(appBar: OmniTopBar()),
+        _host(
+          c,
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(44),
+            child: TextField(controller: ctrl),
+          ),
         ),
       );
-      await tester.pumpAndSettle();
-      final region = tester.widget<AnnotatedRegion<SystemUiOverlayStyle>>(
-        find.descendant(
-          of: find.byType(OmniTopBar),
-          matching: find.byType(AnnotatedRegion<SystemUiOverlayStyle>),
-        ),
-      );
-      return region.value;
-    }
+      await tester.pump();
+      expect(find.text('Huỷ'), findsNothing);
 
-    expect(await styleFor(ThemeData.light()), SystemUiOverlayStyle.dark);
-    expect(await styleFor(ThemeData.dark()), SystemUiOverlayStyle.light);
-  });
+      await tester.tap(find.byType(TextField));
+      await tester.pumpAndSettle();
+      expect(c.read(searchModeProvider), isTrue);
+      expect(find.text('Huỷ'), findsNothing);
+
+      // Chạm ra ngoài vùng tìm kiếm (lớp mờ) -> thoát chế độ tìm.
+      await tester.tap(find.bySemanticsLabel('Thoát tìm kiếm'));
+      await tester.pumpAndSettle();
+      expect(c.read(searchModeProvider), isFalse);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'AnnotatedRegion<SystemUiOverlayStyle> theo brightness của theme',
+    (tester) async {
+      Future<SystemUiOverlayStyle> styleFor(ThemeData theme) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: theme,
+            home: const Scaffold(appBar: OmniTopBar()),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final region = tester.widget<AnnotatedRegion<SystemUiOverlayStyle>>(
+          find.descendant(
+            of: find.byType(OmniTopBar),
+            matching: find.byType(AnnotatedRegion<SystemUiOverlayStyle>),
+          ),
+        );
+        return region.value;
+      }
+
+      expect(await styleFor(ThemeData.light()), SystemUiOverlayStyle.dark);
+      expect(await styleFor(ThemeData.dark()), SystemUiOverlayStyle.light);
+    },
+  );
 }

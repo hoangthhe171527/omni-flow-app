@@ -2,20 +2,17 @@ import 'package:flutter/material.dart';
 
 import '../tokens/tokens.dart';
 
-/// Nút "kính nhuộm tông" cho mọi nút nằm trên BỀ MẶT TRẮNG (phương án B,
-/// duyệt 08/11/2026).
+/// Kiểu nút cho mọi nút nằm trên BỀ MẶT TRẮNG (thẻ, sheet, form).
 ///
-/// Nút kính trắng mờ của theme chỉ nổi trên nền xám / ảnh; đặt lên thẻ trắng,
-/// sheet, form trắng thì nền nút trùng nền, chỉ còn bóng nhạt nên trông chìm.
-/// Bọc bề mặt trắng bằng widget này để các `FilledButton` / `OutlinedButton`
-/// bên trong đổi sang:
+/// Theo spec phong cách iOS 25/11/2026 §3.2 (thay phương án B 08/11):
 ///
-/// - nút chính (`FilledButton`): nền màu chính 12% pha sẵn trên nền bề mặt,
-///   chữ màu chính;
-/// - nút phụ (`OutlinedButton`): nền mực 6%, chữ mực.
+/// - nút chính (`FilledButton`): nền ĐẶC màu chính, chữ onPrimary — mỗi màn
+///   hoặc sheet tối đa một nút như vậy;
+/// - nút nhẹ (`OutlinedButton`): nền mực 6% pha sẵn trên mặt, chữ mực, không
+///   viền (kiểu nút xám của iOS).
 ///
-/// Không tô đặc, không viền màu (gu đã chốt). Nền pha sẵn thành màu đặc nên
-/// không chìm theo bề mặt. Tương phản cao: nền bề mặt + viền màu chữ.
+/// Nền pha sẵn thành màu đặc nên không chìm theo bề mặt. Tương phản cao: nền
+/// bề mặt + viền màu chữ.
 class OmniTintedButtons extends StatelessWidget {
   const OmniTintedButtons({super.key, required this.child});
 

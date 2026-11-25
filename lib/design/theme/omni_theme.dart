@@ -272,23 +272,21 @@ abstract final class OmniTheme {
         ),
         overlayColor: WidgetStatePropertyAll(primary.withValues(alpha: 0.06)),
       ),
-      // Chip kiểu kính (viomni-apple-uiux.html `.chip.glass`): viên thuốc,
-      // nền thẻ mờ; đang chọn là viên trắng mờ viền sáng, chữ màu chủ đạo
-      // (gu người dùng: mục chọn trắng mờ, không tô đặc).
+      // Chip (spec phong cách iOS 25/11/2026 §3.4, cùng kiểu OmniChoicePill):
+      // ô bo 10 nền xám nhạt; đang chọn = nền xanh nhạt + viền xanh 1.5, chữ
+      // màu chính. Không còn viên trắng mờ.
       chipTheme: ChipThemeData(
-        // Chưa chọn: nền trong (chỉ viền) — để viên chọn trắng mờ nổi lên.
-        backgroundColor: Colors.transparent,
-
-        selectedColor: brightness == Brightness.dark
-            ? Colors.white.withValues(alpha: .16)
-            : Colors.white.withValues(alpha: .95),
+        backgroundColor: onSurface.withValues(
+          alpha: brightness == Brightness.dark ? .08 : .05,
+        ),
+        selectedColor: primary.withValues(
+          alpha: brightness == Brightness.dark ? .16 : .10,
+        ),
         checkmarkColor: primary,
         side: WidgetStateBorderSide.resolveWith(
-          (states) => BorderSide(
-            color: states.contains(WidgetState.selected)
-                ? primary.withValues(alpha: .45)
-                : borderInteractive,
-          ),
+          (states) => states.contains(WidgetState.selected)
+              ? BorderSide(color: primary, width: 1.5)
+              : BorderSide.none,
         ),
         labelStyle: OmniType.caption.copyWith(
           color: onSurface,
@@ -298,7 +296,9 @@ abstract final class OmniTheme {
           color: primary,
           fontWeight: FontWeight.w600,
         ),
-        shape: const StadiumBorder(),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(10)),
+        ),
         padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.sm),
       ),
       // Thông báo nhỏ là viên kính nổi (đợt 1 liquid, 08/11/2026): nền trắng

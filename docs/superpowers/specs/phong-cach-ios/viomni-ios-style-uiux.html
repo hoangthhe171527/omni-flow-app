@@ -1,0 +1,797 @@
+<title>Phong cách app Viomni</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap">
+<style>
+/* Bố cục: tiêu đề 1 câu → 2 điện thoại 390×844 cạnh nhau → luật kính → hệ thống (nút, bo góc, chữ, màu) → 3 điểm cần chốt.
+   Luật hình: nút = viên thuốc · nhóm/thẻ 16 · ô nhập 10 · nhãn 6 · sheet 32. Một màu nhấn: xanh Viomni. */
+:root{
+  --font:"Be Vietnam Pro",-apple-system,"SF Pro Text","Segoe UI",system-ui,sans-serif;
+  --bg:#EEF1F5; --surface:#FFFFFF; --fg:#0B1A33; --fg2:#3A4760; --muted:#56637A; --line:rgba(11,26,51,.09);
+  --accent:#0159DB; --accent-soft:rgba(1,89,219,.08); --ok:#008650; --bad:#C8322A;
+  --a-canvas:#F5F7FA; --a-card:#FFFFFF; --a-ink:#0B1A33; --a-ink2:#3A4760; --a-muted:#56637A;
+  --a-sep:rgba(11,26,51,.10); --a-fill:rgba(118,128,150,.14); --a-fill2:rgba(118,128,150,.26);
+  --a-blue:#0159DB; --a-on-blue:#FFFFFF; --a-blue-tint:#E6F0FF; --a-blue-ink:#0147B3;
+  --a-amber-tint:#FFF4D6; --a-amber-ink:#7A4F00; --a-red-tint:#FDECEA; --a-red-ink:#A32720; --a-dot:#E5484D;
+  --a-glass:rgba(255,255,255,.66); --a-glass-edge:rgba(255,255,255,.92); --a-sheet:#F2F4F7;
+  --a-scrim:rgba(11,26,51,.30); --a-thumb:#FFFFFF;
+  --o-sheet:#E8E9EC; --o-scrim:#707276; --o-cta:#E1EAF8; --o-glassbtn:rgba(255,255,255,.80);
+  --frame:#0B1A33; --island:#000;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#070D18; --surface:#0F1A2B; --fg:#E8EDF4; --fg2:#C9D3E0; --muted:#9AA8BD; --line:rgba(232,237,244,.09);
+  --accent:#5AAEFF; --accent-soft:rgba(90,174,255,.12); --ok:#41DA9D; --bad:#F0625A;
+  --a-canvas:#0B1422; --a-card:#132033; --a-ink:#E8EDF4; --a-ink2:#C9D3E0; --a-muted:#9AA8BD;
+  --a-sep:rgba(232,237,244,.10); --a-fill:rgba(154,168,189,.16); --a-fill2:rgba(154,168,189,.28);
+  --a-blue:#5AAEFF; --a-on-blue:#0A1931; --a-blue-tint:rgba(90,174,255,.16); --a-blue-ink:#74BDFF;
+  --a-amber-tint:rgba(255,196,61,.14); --a-amber-ink:#FFC43D; --a-red-tint:rgba(240,98,90,.16); --a-red-ink:#FF8A80; --a-dot:#FF6369;
+  --a-glass:rgba(24,36,56,.62); --a-glass-edge:rgba(255,255,255,.14); --a-sheet:#101B2C;
+  --a-scrim:rgba(0,0,0,.5); --a-thumb:#2E3F5C;
+  --o-sheet:#1C2738; --o-scrim:#05080F; --o-cta:rgba(90,174,255,.14); --o-glassbtn:rgba(255,255,255,.12);
+  --frame:#25324A; --island:#000; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#070D18; --surface:#0F1A2B; --fg:#E8EDF4; --fg2:#C9D3E0; --muted:#9AA8BD; --line:rgba(232,237,244,.09);
+  --accent:#5AAEFF; --accent-soft:rgba(90,174,255,.12); --ok:#41DA9D; --bad:#F0625A;
+  --a-canvas:#0B1422; --a-card:#132033; --a-ink:#E8EDF4; --a-ink2:#C9D3E0; --a-muted:#9AA8BD;
+  --a-sep:rgba(232,237,244,.10); --a-fill:rgba(154,168,189,.16); --a-fill2:rgba(154,168,189,.28);
+  --a-blue:#5AAEFF; --a-on-blue:#0A1931; --a-blue-tint:rgba(90,174,255,.16); --a-blue-ink:#74BDFF;
+  --a-amber-tint:rgba(255,196,61,.14); --a-amber-ink:#FFC43D; --a-red-tint:rgba(240,98,90,.16); --a-red-ink:#FF8A80; --a-dot:#FF6369;
+  --a-glass:rgba(24,36,56,.62); --a-glass-edge:rgba(255,255,255,.14); --a-sheet:#101B2C;
+  --a-scrim:rgba(0,0,0,.5); --a-thumb:#2E3F5C;
+  --o-sheet:#1C2738; --o-scrim:#05080F; --o-cta:rgba(90,174,255,.14); --o-glassbtn:rgba(255,255,255,.12);
+  --frame:#25324A; --island:#000; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:40px 72px}
+.wrap{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:48px}
+.wrap > section:first-of-type{margin-top:-24px}
+.tnum{font-variant-numeric:tabular-nums}
+h1,h2,h3{text-wrap:balance;margin:0;line-height:1.25}
+h1{font-size:clamp(26px,4.2vw,38px);font-weight:800;letter-spacing:-.02em}
+h2{font-size:20px;font-weight:700;letter-spacing:-.01em}
+h3{font-size:15px;font-weight:700}
+p{margin:0}
+svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+header.top{display:flex;flex-direction:column;gap:10px;max-width:720px}
+.lede{color:var(--fg2);font-size:16px;max-width:56ch}
+
+/* thanh điều khiển */
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;position:sticky;top:env(safe-area-inset-top,0px);z-index:5;padding-block:10px;background:var(--bg)}
+.seg{display:inline-flex;background:var(--a-fill);border-radius:10px;padding:2px;gap:2px;max-width:100%;overflow-x:auto;scrollbar-width:none}
+.seg::-webkit-scrollbar{display:none}
+.seg button{font:600 14px/1 var(--font);color:var(--fg);background:transparent;border:0;border-radius:8px;padding:0 16px;height:34px;cursor:pointer;white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.12),0 0 0 .5px rgba(0,0,0,.05)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* sân khấu */
+.stage{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(410px,100%),1fr));gap:40px 32px;justify-items:center;margin-top:8px}
+.col{display:flex;flex-direction:column;align-items:center;gap:16px;width:100%;min-width:0}
+.tag{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:700;height:30px;padding:0 12px;border-radius:999px;background:var(--surface);border:1px solid var(--line)}
+.tag i{width:8px;height:8px;border-radius:50%}
+.tag.old i{background:var(--muted)} .tag.new i{background:var(--accent)}
+.pts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;width:min(410px,100%)}
+.pts li{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--fg2)}
+.pts svg{width:18px;height:18px;stroke-width:2.4}
+.pts.bad svg{color:var(--bad)} .pts.good svg{color:var(--ok)}
+
+/* khung máy: thiết kế ở 390×844, co theo cột bằng JS */
+.ph-hold{width:min(410px,100%);position:relative}
+.phone{width:410px;height:864px;border:10px solid var(--frame);border-radius:58px;overflow:hidden;position:absolute;top:0;left:0;transform-origin:0 0;
+  background:var(--a-canvas);color:var(--a-ink);font-size:16px;line-height:1.4;box-shadow:0 24px 60px rgba(11,26,51,.20)}
+.scr{position:absolute;inset:0;display:flex;flex-direction:column}
+.island{position:absolute;top:11px;left:50%;width:124px;height:36px;margin-left:-62px;border-radius:20px;background:var(--island);z-index:20}
+.home{position:absolute;bottom:8px;left:50%;width:136px;height:5px;margin-left:-68px;border-radius:3px;background:var(--a-ink);z-index:20;opacity:.9}
+.sb{height:54px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:4px 30px 0 44px;font-weight:600;font-size:16px;position:relative;z-index:1}
+.sb svg{height:12px;width:auto}
+.scroll{flex:1;overflow-y:auto;padding:0 16px 132px;scrollbar-width:none}
+.scroll::-webkit-scrollbar{display:none}
+
+/* ===== HIỆN TẠI ===== */
+.o .hdr{display:flex;align-items:center;justify-content:space-between;padding:6px 0 8px}
+.o .brand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:22px;letter-spacing:-.01em}
+.o .brand b{color:var(--a-blue)}
+.o .gbtn{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--o-glassbtn);border:1px solid var(--a-glass-edge);
+  background-image:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,.08));box-shadow:0 6px 14px rgba(11,26,51,.16),0 9px 0 -2px rgba(11,26,51,.07)}
+.o .search{display:flex;align-items:center;gap:14px;padding:12px 8px;color:var(--a-muted);font-style:italic}
+.o .gseg{display:flex;padding:4px;border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,.4),rgba(118,128,150,.08));border:1px solid var(--a-glass-edge);
+  box-shadow:0 6px 0 -1px rgba(11,26,51,.06),0 4px 12px rgba(11,26,51,.08);margin:6px 0 12px}
+.o .gseg span{flex:1;text-align:center;padding:9px 4px;border-radius:999px;color:var(--a-muted);font-weight:600;white-space:nowrap}
+.o .gseg span.on{background:var(--o-glassbtn);color:var(--a-blue);box-shadow:0 4px 10px rgba(11,26,51,.14),0 3px 0 rgba(11,26,51,.05);border:1px solid var(--a-glass-edge)}
+.o .card{background:var(--a-card);border-radius:20px;overflow:hidden}
+.o .sum{display:flex;justify-content:space-between;align-items:center;padding:16px}
+.o .sum .v{color:var(--a-muted)}
+.o .sec{font-size:14px;font-weight:600;color:var(--a-muted);padding:14px 8px 8px;display:flex;justify-content:space-between}
+.o .row{display:flex;gap:10px;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--a-sep)}
+.o .row:first-child{border-top:0}
+.o .row .l{min-width:0}
+.o .row .n{font-size:16px;font-weight:500}
+.o .row .s{font-size:14px;color:var(--a-muted)}
+.o .row .r{text-align:right;flex:none}
+.o .st{font-size:14px}
+.o .st.blue{color:var(--a-blue)} .o .st.amb{color:var(--a-amber-ink)} .o .st.gray{color:var(--a-muted)}
+.o .fab{position:absolute;right:20px;bottom:104px;width:58px;height:58px;border-radius:50%;display:grid;place-items:center;color:var(--a-blue);
+  background:var(--o-glassbtn);border:1px solid var(--a-glass-edge);background-image:linear-gradient(180deg,rgba(255,255,255,.6),rgba(118,128,150,.12));
+  box-shadow:0 12px 0 -2px rgba(11,26,51,.12),0 8px 18px rgba(11,26,51,.18)}
+.o .fab::after{content:"";position:absolute;bottom:4px;width:22px;height:8px;border-radius:50%;background:var(--a-blue);opacity:.25;filter:blur(4px)}
+.o .fab svg{width:28px;height:28px;stroke-width:2.2}
+.o .tabs{position:absolute;left:14px;right:14px;bottom:24px;height:64px;border-radius:999px;display:flex;align-items:center;padding:6px;
+  background:var(--a-glass);border:1px solid var(--a-glass-edge);backdrop-filter:blur(18px) saturate(1.6);-webkit-backdrop-filter:blur(18px) saturate(1.6);box-shadow:0 8px 24px rgba(11,26,51,.12)}
+.o .tabs span{flex:1;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10px;color:var(--a-muted);border-radius:999px;white-space:nowrap}
+.o .tabs span.on{background:var(--o-glassbtn);color:var(--a-blue);box-shadow:0 3px 8px rgba(11,26,51,.12)}
+.o .stats{display:grid;grid-template-columns:1fr 1.5fr 1fr;padding:14px 10px 10px}
+.o .stats div{padding:0 8px;border-left:1px solid var(--a-sep);min-width:0} .o .stats div:first-child{border-left:0}
+.o .stats b{display:block;font-size:15px;white-space:nowrap} .o .stats span{font-size:13px;color:var(--a-muted)}
+.o .serial{text-decoration:underline dotted;text-underline-offset:3px}
+.o .link{color:var(--a-blue);font-weight:600;font-size:15px}
+.o .scrim{position:absolute;inset:0;background:var(--o-scrim)}
+.o .sheet{position:absolute;left:8px;right:8px;bottom:8px;border-radius:38px;background:var(--o-sheet);padding:10px 16px 18px;display:flex;flex-direction:column;gap:12px;
+  border:1px solid var(--a-glass-edge);box-shadow:0 10px 0 -2px rgba(0,0,0,.25)}
+.grab{width:36px;height:5px;border-radius:3px;background:var(--a-fill2);margin:0 auto;flex:none}
+.o .sheet .t{font-size:18px;font-weight:600;padding:4px 8px 0}
+.o .sheet .t small{display:block;font-size:14px;font-weight:400;color:var(--a-muted)}
+.o .big{text-align:center;font-size:34px;font-weight:700;letter-spacing:-.01em}
+.o .big small{display:block;font-size:14px;font-weight:400;color:var(--a-muted);letter-spacing:0}
+.o .chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.o .chips span{padding:8px 14px;border-radius:999px;background:var(--a-fill);color:var(--a-muted);font-weight:500}
+.o .chips span.on{background:var(--o-glassbtn);color:var(--a-ink);font-weight:600;border:1px solid var(--a-glass-edge);box-shadow:0 4px 0 -1px rgba(11,26,51,.1),0 4px 10px rgba(11,26,51,.12)}
+.o .cta{height:52px;border-radius:999px;display:grid;place-items:center;background:var(--o-cta);color:var(--a-blue);font-weight:600;font-size:16px}
+.o .kv{display:flex;justify-content:space-between;padding:14px 16px;border-top:1px solid var(--a-sep)} .o .kv:first-child{border-top:0}
+.o .kv span:last-child{color:var(--a-muted)}
+
+/* ===== ĐỀ XUẤT ===== */
+.p .hdr{display:flex;align-items:center;justify-content:space-between;height:52px;margin:2px 0 8px}
+.p .brand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:22px;letter-spacing:-.01em}
+.p .brand b{color:var(--a-blue)}
+.p .brand svg{width:30px;height:24px;color:var(--a-blue)}
+.p .ttl2{font-size:28px;font-weight:800;letter-spacing:-.02em;line-height:1.2;white-space:nowrap}
+/* màn Ứng dụng */
+.c-home{--c1:#38BDF8;--c2:#0159DB} .c-sales{--c1:#34D399;--c2:#059669} .c-stock{--c1:#FBBF24;--c2:#EA580C} .c-work{--c1:#818CF8;--c2:#4F46E5}
+.c-fin{--c1:#2DD4BF;--c2:#0D9488} .c-hr{--c1:#F472B6;--c2:#DB2777} .c-sys{--c1:#94A3B8;--c2:#475569}
+.cnt{position:absolute;top:-6px;right:-7px;min-width:21px;height:21px;padding:0 6px;border-radius:999px;background:#E5484D;color:#fff;font-size:12px;font-weight:700;display:grid;place-items:center;border:2px solid var(--a-card);font-variant-numeric:tabular-nums;line-height:1}
+.o .atop{display:flex;align-items:center;justify-content:space-between;height:56px;gap:10px}
+.o .comp{display:flex;align-items:center;gap:10px;min-width:0}
+.o .comp .bdg{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;background:var(--o-glassbtn);border:1px solid var(--a-sep);box-shadow:0 2px 8px rgba(11,26,51,.06)}
+.o .comp .bdg svg{width:22px;height:18px;color:var(--a-blue)}
+.o .comp small{display:block;font-size:12px;font-weight:600;color:var(--a-blue);line-height:1.15}
+.o .comp b{display:block;font-size:16px;font-weight:600;line-height:1.2;white-space:nowrap}
+.o .acts{display:flex;gap:8px}
+.o .av{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:var(--a-blue);background:var(--o-glassbtn);border:1px solid var(--a-glass-edge);box-shadow:0 6px 14px rgba(11,26,51,.16),0 9px 0 -2px rgba(11,26,51,.07)}
+.o .greet{padding:10px 2px 16px}
+.o .greet b{display:block;font-size:22px;font-weight:600}
+.o .greet span{font-size:14px;color:var(--a-muted)}
+.o .agrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.o .atile{background:var(--a-card);border:1px solid var(--a-sep);border-radius:22px;padding:16px;box-shadow:0 4px 14px rgba(11,26,51,.05);min-width:0;
+  background-image:linear-gradient(135deg,transparent 40%,color-mix(in srgb,var(--c2) 5%,transparent))}
+.o .aico{width:52px;height:52px;border-radius:15px;display:grid;place-items:center;color:#fff;position:relative;background:linear-gradient(135deg,var(--c1),var(--c2));
+  border:1px solid rgba(255,255,255,.35);box-shadow:0 4px 12px color-mix(in srgb,var(--c2) 30%,transparent)}
+.o .aico svg{width:26px;height:26px}
+.o .atile b{display:block;font-size:16px;font-weight:600;margin-top:14px}
+.o .atile .sub{display:block;font-size:12px;color:var(--a-muted);line-height:1.3;height:32px;overflow:hidden}
+.p .atop{display:flex;align-items:center;justify-content:space-between;height:48px;gap:8px;margin-right:-6px}
+.p .comp{display:flex;align-items:center;gap:4px;font-size:15px;font-weight:600;color:var(--a-ink2);white-space:nowrap;min-width:0;height:44px}
+.p .comp svg{width:15px;height:15px;color:var(--a-muted)}
+.p .acts{display:flex;align-items:center}
+.p .acts .ibtn{margin-right:0}
+.p .av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--a-blue-tint);color:var(--a-blue-ink);font-weight:700;font-size:14px;margin:0 5px}
+.p .hi{font-size:28px;font-weight:800;letter-spacing:-.02em;line-height:1.2;margin:2px 0 16px;white-space:nowrap}
+.sq{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;color:#fff;background:var(--c2);position:relative;flex:none}
+.sq svg{width:24px;height:24px;stroke-width:2}
+.p .desk{display:flex;align-items:center;gap:14px;padding:14px 12px 14px 16px}
+.p .desk .l{flex:1;min-width:0}
+.p .desk .l b{display:block;font-size:17px;font-weight:700}
+.p .desk .l span{font-size:14px;color:var(--a-muted)}
+.p .desk .chev{width:18px;height:18px;color:var(--a-muted);opacity:.6}
+.p .desk .cnt{position:static;border:0}
+.p .apgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));row-gap:22px;padding:20px 8px 18px}
+.p .ap{display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;transition:transform .12s cubic-bezier(.23,1,.32,1)}
+.p .ap:active{transform:scale(.95)}
+.p .ap .sq{width:62px;height:62px;border-radius:16px}
+.p .ap .sq svg{width:30px;height:30px;stroke-width:1.9}
+.p .ap > span:last-child{font-size:13px;font-weight:600;white-space:nowrap}
+.p .todo .r{grid-template-columns:auto minmax(0,1fr) auto;align-items:center;column-gap:12px}
+.p .todo .r::before{left:60px!important}
+.p .todo .sq{width:32px;height:32px;border-radius:9px}
+.p .todo .sq svg{width:18px;height:18px}
+.p .todo .t b{display:block;font-size:16px;font-weight:600;line-height:1.3}
+.p .todo .t span{font-size:13px;color:var(--a-muted)}
+.p .todo .cnt{position:static;border:0;height:24px;min-width:24px;font-size:13px}
+/* màn chi tiết (màn con) */
+.navd{display:grid;grid-template-columns:44px minmax(0,1fr) 44px;align-items:center;height:56px}
+.o .navd .t{text-align:center;font-size:18px;font-weight:600;white-space:nowrap}
+.o .navd .gbtn svg{width:22px;height:22px;stroke-width:2.2}
+.prog{display:flex;gap:3px;margin-top:12px}
+.prog span{flex:1;height:6px;border-radius:2px}
+.prog .g1{background:#56637A}.prog .g2{background:#12B886}.prog .g3{background:#A32720}.prog .g4{background:#0159DB}.prog .g5{background:var(--a-fill2)}
+.o .dsum{padding:16px}
+.o .dsum .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.o .dsum b{font-size:18px;font-weight:600}
+.o .dsum .c{color:var(--a-muted);white-space:nowrap}
+.o .dsum small{display:block;font-size:14px;color:var(--a-muted)}
+.o .drow{display:flex;align-items:center;gap:12px;padding:12px 16px}
+.o .drow .l{flex:1;min-width:0}
+.o .drow .n{font-size:16px;font-weight:500;white-space:nowrap}
+.o .drow .s{font-size:14px;color:var(--a-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.o .drow .sc{font-size:15px}
+.o .alert{color:var(--a-red-ink)}
+.p .navd{height:44px;margin:0 -10px 6px}
+.p .navd .back{width:44px;height:44px;display:grid;place-items:center;color:var(--a-blue)}
+.p .navd .back svg{width:26px;height:26px;stroke-width:2.4;transform:scaleX(-1)}
+.p .navd .t{text-align:center;font-size:17px;font-weight:700;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.p .navd .t small{display:block;font-size:12px;font-weight:500;color:var(--a-muted)}
+.p .dstat{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--a-sep)}
+.p .dstat b{display:block;font-size:15px;font-weight:700;white-space:nowrap}
+.p .dstat span{font-size:12px;color:var(--a-muted)}
+.p .r .lead{display:flex;align-items:center;gap:10px;min-width:0}
+.p .r .lead svg{width:20px;height:20px;color:var(--a-red-ink);flex:none}
+.p .ibtn{width:44px;height:44px;display:grid;place-items:center;color:var(--a-ink);position:relative;margin-right:-10px}
+.p .ibtn svg{width:23px;height:23px}
+.p .ibtn .dot{position:absolute;top:10px;right:10px;width:9px;height:9px;border-radius:50%;background:var(--a-dot);border:2px solid var(--a-canvas)}
+.p .lt{font-size:32px;font-weight:800;letter-spacing:-.025em;line-height:1.2;margin:0 0 10px}
+.p .sf{display:flex;align-items:center;gap:8px;height:38px;border-radius:10px;background:var(--a-fill);padding:0 10px;color:var(--a-muted);font-size:16px}
+.p .sf svg{width:18px;height:18px}
+.p .sf .sp{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.p .sf .flt{color:var(--a-blue);width:20px;height:20px}
+.p .seg2{display:flex;background:var(--a-fill);border-radius:10px;padding:2px;margin:14px 0 18px;height:34px;gap:2px}
+.p .seg2 span{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;gap:5px;font-size:14px;font-weight:500;color:var(--a-ink);border-radius:8px;white-space:nowrap}
+.p .seg2 span.on{background:var(--a-thumb);font-weight:700;box-shadow:0 3px 8px rgba(0,0,0,.12),0 0 0 .5px rgba(0,0,0,.04)}
+.p .seg2 em{font-style:normal;font-weight:600;font-size:12px;color:var(--a-muted);font-variant-numeric:tabular-nums}
+.p .seg2 span.on em{color:var(--a-blue)}
+.p .hero{background:var(--a-card);border-radius:16px;padding:14px 16px 16px;display:flex;flex-direction:column}
+.p .hero .lb{font-size:13px;color:var(--a-muted);font-weight:500;display:flex;justify-content:space-between;gap:12px;white-space:nowrap}
+.p .hero .v{font-size:30px;font-weight:800;letter-spacing:-.025em;line-height:1.25;white-space:nowrap}
+.p .hero .meta{font-size:13px;color:var(--a-muted);margin-top:2px}
+.p .hdr2{font-size:13px;font-weight:600;color:var(--a-muted);text-transform:uppercase;letter-spacing:.03em;padding:22px 16px 7px;display:flex;justify-content:space-between;align-items:baseline;gap:12px;white-space:nowrap}
+.p .hdr2 .act{color:var(--a-blue);text-transform:none;letter-spacing:0;font-size:15px;font-weight:600}
+.p .grp{background:var(--a-card);border-radius:16px;overflow:hidden}
+.p .r{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:12px;row-gap:3px;align-items:center;padding:12px 16px;position:relative}
+.p .r + .r::before{content:"";position:absolute;top:0;left:16px;right:0;height:1px;background:var(--a-sep)}
+.p .r .n{font-size:16px;font-weight:600;line-height:1.4;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;align-self:start}
+.p .r .amt{font-size:16px;font-weight:700;white-space:nowrap;text-align:right;line-height:1.4;align-self:start}
+.p .r .s{font-size:14px;color:var(--a-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.p .r .pill{justify-self:end}
+.pill{display:inline-flex;align-items:center;height:22px;font-size:12px;font-weight:600;padding:0 8px;border-radius:6px;white-space:nowrap}
+.pill.blue{background:var(--a-blue-tint);color:var(--a-blue-ink)}
+.pill.amb{background:var(--a-amber-tint);color:var(--a-amber-ink)}
+.pill.red{background:var(--a-red-tint);color:var(--a-red-ink)}
+.pill.gray{background:var(--a-fill);color:var(--a-ink2)}
+.warn{color:var(--a-amber-ink);font-weight:600}
+.p .fab{position:absolute;right:20px;bottom:104px;width:56px;height:56px;z-index:2;border-radius:50%;display:grid;place-items:center;background:var(--a-blue);color:var(--a-on-blue);
+  box-shadow:0 6px 16px rgba(1,89,219,.30),0 1px 3px rgba(11,26,51,.14)}
+.p .fab svg{width:26px;height:26px;stroke-width:2.4}
+.p .tabs{position:absolute;left:16px;right:16px;bottom:26px;height:66px;border-radius:999px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;z-index:1;
+  background:var(--a-glass);border:1px solid var(--a-glass-edge);backdrop-filter:blur(20px) saturate(1.8);-webkit-backdrop-filter:blur(20px) saturate(1.8);box-shadow:0 8px 24px rgba(11,26,51,.12)}
+.p .tabs span{flex:none;width:52px;height:46px;display:grid;place-items:center;color:var(--a-muted);border-radius:999px}
+.p .tabs span svg{width:26px;height:26px;stroke-width:1.8}
+.p .tabs span.on{color:var(--a-blue);background:var(--a-blue-tint)}
+.p .tabs span.on svg{stroke-width:2.2}
+/* mép cuộn kiểu iOS 26: nội dung mờ dần dưới thanh tab */
+.p .scr:not([data-s="thu"]):not([data-s="ct"]):not([data-s="apps"])::after,.p .under::after{content:"";position:absolute;left:0;right:0;bottom:0;height:118px;pointer-events:none;z-index:0;
+  background:linear-gradient(to bottom,color-mix(in srgb,var(--a-canvas) 0%,transparent),var(--a-canvas) 72%)}
+.p .seg2{margin:10px 0 12px}
+.p .hero{padding:12px 16px 14px}
+.p .hdr2{padding-top:16px}
+.p .hdr{height:48px;margin:0 0 6px}
+.p .r{padding-block:10px}
+.p .stat3{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--a-sep)}
+.p .stat3 div{min-width:0}
+.p .stat3 b{display:block;font-size:15px;font-weight:700;white-space:nowrap}
+.p .stat3 span{font-size:12px;color:var(--a-muted);white-space:nowrap}
+/* sheet mới */
+.p .under{position:absolute;inset:0;display:flex;flex-direction:column;pointer-events:none;z-index:0}
+.p .dim{position:absolute;inset:0;background:var(--a-scrim);z-index:3}
+.p .sheet{z-index:4}
+.p .sheet{position:absolute;left:0;right:0;bottom:0;border-radius:32px 32px 0 0;background:var(--a-sheet);padding:8px 16px 44px;display:flex;flex-direction:column;gap:16px;
+  box-shadow:0 -8px 30px rgba(0,0,0,.10)}
+.p .shd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:2px 0 0 4px}
+.p .shd .ttl{font-weight:700;font-size:20px;line-height:1.3;white-space:nowrap}
+.p .shd .ttl small{display:block;font-weight:500;font-size:14px;color:var(--a-muted)}
+.p .shd .close{all:unset;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--a-fill);color:var(--a-ink2);cursor:pointer;position:relative}
+.p .shd .close::after{content:"";position:absolute;inset:-6px}
+.p .shd .close svg{width:16px;height:16px;stroke-width:2.4}
+.p .pm{display:flex;gap:8px}
+.p .pm button{all:unset;box-sizing:border-box;flex:1 1 auto;height:44px;padding:0 10px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:var(--a-card);
+  font-size:14px;font-weight:600;color:var(--a-ink2);white-space:nowrap;cursor:pointer}
+.p .pm button[aria-pressed="true"]{background:var(--a-blue-tint);color:var(--a-blue-ink);box-shadow:inset 0 0 0 1.5px var(--a-blue)}
+.p .pm button:focus-visible,.p .shd .close:focus-visible{outline:2px solid var(--a-blue);outline-offset:2px}
+.p .amtbox{display:flex;flex-direction:column;align-items:center;gap:6px;padding:4px 0}
+.p .amtbox .v{font-size:40px;font-weight:800;letter-spacing:-.025em;line-height:1.2;white-space:nowrap}
+.p .amtbox small{font-size:13px;color:var(--a-muted)}
+.p .kv{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 14px 0 16px;height:52px;position:relative;font-size:16px;white-space:nowrap}
+.p .kv + .kv::before{content:"";position:absolute;top:0;left:16px;right:0;height:1px;background:var(--a-sep)}
+.p .kv .val{display:flex;align-items:center;gap:4px;color:var(--a-muted)}
+.p .kv .val svg{width:15px;height:15px;opacity:.6}
+.p .bigbtn{all:unset;box-sizing:border-box;height:52px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:var(--a-blue);color:var(--a-on-blue);font-weight:700;font-size:17px;cursor:pointer;
+  box-shadow:0 4px 12px rgba(1,89,219,.24);transition:transform .12s cubic-bezier(.23,1,.32,1)}
+.p .bigbtn:active{transform:scale(.97)}
+.p .menu{display:none;position:absolute;right:30px;width:220px;border-radius:16px;background:var(--a-glass);border:1px solid var(--a-glass-edge);z-index:4;
+  backdrop-filter:blur(24px) saturate(1.8);-webkit-backdrop-filter:blur(24px) saturate(1.8);box-shadow:0 14px 36px rgba(11,26,51,.24);overflow:hidden;font-size:16px;
+  transform-origin:top right;animation:pop .18s cubic-bezier(.23,1,.32,1)}
+@keyframes pop{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:none}}
+.p .menu button{all:unset;box-sizing:border-box;width:100%;display:flex;align-items:center;gap:8px;height:44px;padding:0 14px;position:relative;cursor:pointer;color:var(--a-ink)}
+.p .menu button + button::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;background:var(--a-sep)}
+.p .menu button:hover,.p .menu button:focus-visible{background:var(--a-fill)}
+.p .menu .ck{width:18px;height:18px;color:var(--a-blue);stroke-width:2.4}
+
+/* ===== phần dưới ===== */
+section{display:flex;flex-direction:column;gap:16px}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:16px}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.box h3{display:flex;gap:8px;align-items:center}
+.box h3 i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border-radius:999px;background:var(--a-fill);font-size:14px;font-weight:500;white-space:nowrap}
+.chip svg{width:17px;height:17px;color:var(--muted)}
+.kit{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr));gap:16px}
+.kit .box{background:var(--a-canvas);color:var(--a-ink)}
+.lbl{font-size:12px;color:var(--muted);font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.stack{display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+.b{font:600 15px/1 var(--font);border:0;border-radius:999px;padding:0 18px;height:44px;display:inline-flex;align-items:center;cursor:pointer;white-space:nowrap;transition:transform .12s cubic-bezier(.23,1,.32,1)}
+.b:active{transform:scale(.97)}
+.b.fill{background:var(--a-blue);color:var(--a-on-blue)}
+.b.tint{background:var(--a-blue-tint);color:var(--a-blue-ink)}
+.b.gray{background:var(--a-fill);color:var(--a-ink)}
+.b.plain{background:transparent;color:var(--a-blue);padding:0 4px}
+.b.danger{background:transparent;color:var(--a-red-ink);padding:0 4px}
+.brow{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%}
+.brow small{font-size:12px;color:var(--a-muted);white-space:nowrap}
+.shapes{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.shapes div{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11.5px;color:var(--a-muted);text-align:center;white-space:nowrap}
+.shapes span{display:block;width:100%;max-width:48px;height:34px;background:var(--a-card);border:1.5px solid var(--a-blue)}
+.types{display:flex;flex-direction:column;gap:8px}
+.types div{display:flex;justify-content:space-between;align-items:baseline;gap:10px;white-space:nowrap}
+.types code{font:500 12px/1 var(--font);color:var(--a-muted)}
+.swatch{display:flex;align-items:center;gap:10px;font-size:14px}
+.swatch i{width:28px;height:28px;border-radius:8px;flex:none}
+.decide{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr));gap:16px}
+.decide .box{gap:6px}
+.decide .num{width:26px;height:26px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-weight:700;font-size:13px;display:grid;place-items:center;margin-bottom:4px}
+.decide p{font-size:14px;color:var(--muted)}
+details{background:var(--surface);border:1px solid var(--line);border-radius:16px}
+summary{cursor:pointer;padding:16px 18px;font-weight:700;list-style-position:inside}
+.tbl{overflow-x:auto;padding:0 18px 12px}
+table{border-collapse:collapse;width:100%;min-width:520px;font-size:14px}
+th,td{text-align:left;padding:10px 12px 10px 0;border-top:1px solid var(--line);vertical-align:top}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-top:0}
+td code{font-size:12.5px;background:var(--accent-soft);padding:2px 6px;border-radius:5px;white-space:nowrap}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+  <symbol id="i-updown" viewBox="0 0 24 24"><path d="m8 9 4-4 4 4M8 15l4 4 4-4"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 5 5L20 7"/></symbol>
+  <symbol id="i-house" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-bag" viewBox="0 0 24 24"><path d="M5 7h14l-1 13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1z"/><path d="M9 10V6a3 3 0 0 1 6 0v4"/></symbol>
+  <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h13v4"/><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M16 13.5h2"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18.5 14.5A6.5 6.5 0 0 1 21.5 20"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M7.86 2h8.28L22 7.86v8.28L16.14 22H7.86L2 16.14V7.86z"/><path d="M12 8v4M12 16h.01"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></symbol>
+  <symbol id="i-order" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></symbol>
+  <symbol id="i-box" viewBox="0 0 24 24"><path d="m21 8-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8M12 13v8"/></symbol>
+  <symbol id="i-task" viewBox="0 0 24 24"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M8 10h8M8 14h5"/></symbol>
+  <symbol id="i-top" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18"/></symbol>
+  <symbol id="i-sel" viewBox="0 0 24 24"><rect x="3" y="15" width="18" height="6" rx="3"/><path d="m7 8 3 3 6-6"/></symbol>
+  <symbol id="i-btn" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="5"/></symbol>
+  <symbol id="i-seg" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="3"/><path d="M9 7v10M15 7v10"/></symbol>
+  <symbol id="i-sheet" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 11h18M10 14h4"/></symbol>
+  <symbol id="i-v" viewBox="0 0 32 24"><path d="M3 4l11 17L27 3" stroke-width="4.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="16" cy="12" rx="14" ry="5.5" transform="rotate(-18 16 12)" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-status" viewBox="0 0 66 12"><g fill="currentColor"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="5" y="5" width="3" height="7" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/><path d="M30 3.2a10 10 0 0 1 13 0l-1.6 1.7a7.6 7.6 0 0 0-9.8 0zM33 6.3a5.6 5.6 0 0 1 7 0L36.5 10z"/><rect x="41" y="0.5" width="22" height="11" rx="3.2" fill="none" stroke="currentColor" opacity=".45"/><rect x="43" y="2.5" width="16" height="7" rx="1.6"/><rect x="64" y="4" width="1.6" height="4" rx=".8" opacity=".45"/></g></symbol>
+</svg>
+
+<div class="wrap">
+  <header class="top">
+    <span class="eyebrow">Viomni · App mobile</span>
+    <h1>Kính cho thanh điều hướng, nền đặc cho nội dung</h1>
+    <p class="lede">Giữ hiệu ứng kính ở đúng một chỗ trên mỗi màn. Nút chính quay lại xanh đặc. Các bộ phận dùng đúng kiểu iOS.</p>
+  </header>
+
+  <section aria-label="So sánh">
+    <div class="bar">
+      <div class="seg" role="group" aria-label="Chọn màn">
+        <button type="button" data-screen="apps" aria-pressed="false">Ứng dụng</button>
+        <button type="button" data-screen="don" aria-pressed="true">Đơn hàng</button>
+        <button type="button" data-screen="thu" aria-pressed="false">Ghi thu</button>
+        <button type="button" data-screen="kho" aria-pressed="false">Kho</button>
+        <button type="button" data-screen="ct" aria-pressed="false">Chi tiết đơn</button>
+      </div>
+      <div class="seg" role="group" aria-label="Chế độ màu">
+        <button type="button" data-th="light" aria-pressed="false">Sáng</button>
+        <button type="button" data-th="dark" aria-pressed="false">Tối</button>
+      </div>
+    </div>
+
+    <div class="stage">
+      <!-- ============ HIỆN TẠI ============ -->
+      <div class="col">
+        <span class="tag old"><i></i>Hiện tại</span>
+        <div class="ph-hold"><div class="phone o">
+          <div class="island"></div><div class="home"></div>
+          <!-- Đơn hàng -->
+          <div class="scr" data-s="don">
+            <div class="sb"><span>9:41</span><svg viewBox="0 0 66 12"><use href="#i-status"/></svg></div>
+            <div class="scroll">
+              <div class="hdr"><div class="brand"><svg class="i" style="width:30px;height:24px;color:var(--a-blue)"><use href="#i-v"/></svg><span>Vi<b>omni</b></span></div><div class="gbtn"><svg class="i"><use href="#i-bell"/></svg></div></div>
+              <div class="search"><svg class="i"><use href="#i-search"/></svg>Tìm khách, mã đơn</div>
+              <div class="gseg"><span class="on">Cần thu 4</span><span>Đang xử lý</span><span>Tất cả</span></div>
+              <div class="card sum"><span>Còn phải thu</span><span class="v tnum">512.000.000đ</span></div>
+              <div class="sec">Tuần này</div>
+              <div class="card">
+                <div class="row"><div class="l"><div class="n">Phạm Minh Đức</div><div class="s">DH-2611-014 · 5 cây: KAWAI BL-71, YAMAHA W106…</div></div><div class="r"><div class="tnum">203.500.000đ</div><div class="st blue">Thu một phần</div></div></div>
+                <div class="row"><div class="l"><div class="n">Lê Thu Hà</div><div class="s">DH-2611-012 · 1 cây: YAMAHA U2H · 2455019</div></div><div class="r"><div class="tnum">58.000.000đ</div><div class="st amb">Chưa thu</div></div></div>
+                <div class="row"><div class="l"><div class="n">Trường Mầm non Hoa Sen</div><div class="s">DH-2611-010 · 3 cây</div></div><div class="r"><div class="tnum">186.000.000đ</div><div class="st blue">Thu một phần</div></div></div>
+              </div>
+              <div class="sec">Trước đó</div>
+              <div class="card"><div class="row"><div class="l"><div class="n">Nguyễn Hoàng Long</div><div class="s">DH-2610-087 · 2 cây</div></div><div class="r"><div class="tnum">64.500.000đ</div><div class="st amb">Chưa thu</div></div></div></div>
+            </div>
+            <div class="fab"><svg class="i"><use href="#i-plus"/></svg></div>
+            <div class="tabs"><span><svg class="i"><use href="#i-inbox"/></svg>Hộp thư</span><span class="on"><svg class="i"><use href="#i-order"/></svg>Đơn hàng</span><span><svg class="i"><use href="#i-box"/></svg>Kho</span><span><svg class="i"><use href="#i-task"/></svg>Việc</span><span><svg class="i"><use href="#i-grid"/></svg>Thêm</span></div>
+          </div>
+          <!-- Ghi thu -->
+          <div class="scr" data-s="thu" hidden>
+            <div class="scrim"></div>
+            <div class="sheet">
+              <div class="grab"></div>
+              <div class="t">Ghi thu<small>DH-2611-014</small></div>
+              <div class="big tnum">203.500.000đ<small>còn phải thu 203.500.000đ</small></div>
+              <div class="chips"><span>Tiền mặt</span><span class="on">Chuyển khoản</span><span>Thẻ</span><span>Khác</span></div>
+              <div class="card"><div class="kv"><span>Ngày thu</span><span>Hôm nay, 12/11 ›</span></div><div class="kv"><span>Ghi chú</span><span>Thêm ›</span></div></div>
+              <div class="cta">Ghi thu</div>
+            </div>
+          </div>
+          <!-- Kho -->
+          <div class="scr" data-s="kho" hidden>
+            <div class="sb"><span>9:41</span><svg viewBox="0 0 66 12"><use href="#i-status"/></svg></div>
+            <div class="scroll">
+              <div class="hdr"><div class="brand"><svg class="i" style="width:30px;height:24px;color:var(--a-blue)"><use href="#i-v"/></svg><span>Vi<b>omni</b></span></div><div class="gbtn"><svg class="i"><use href="#i-bell"/></svg></div></div>
+              <div class="search"><svg class="i"><use href="#i-search"/></svg><span style="flex:1">Tìm serial, model</span><svg class="i" style="color:var(--a-ink)"><use href="#i-filter"/></svg></div>
+              <div class="card"><div class="stats tnum"><div><b>4 cây</b><span>Còn bán</span></div><div><b>102.900.000đ</b><span>Niêm yết</span></div><div><b>1 cây</b><span>Tồn lâu</span></div></div><div class="kv"><span>Vốn</span><span class="tnum" style="color:var(--a-ink);font-weight:600">69.223.643đ</span></div></div>
+              <div class="gseg"><span class="on">Còn bán 4</span><span>Đã có khách 0</span></div>
+              <div class="sec"><span>Piano Upright cũ · 2 cây</span><span class="link">Chọn</span></div>
+              <div class="card">
+                <div class="row"><div class="l"><div class="n" style="font-weight:600">YAMAHA U3H</div><div class="s"><span class="serial">2076942</span> · Ep 61 · 87 ngày</div></div><div class="r"><div class="tnum" style="font-weight:600">35.500.000đ</div><div class="st gray">Chưa kiểm</div></div></div>
+                <div class="row"><div class="l"><div class="n" style="font-weight:600">YAMAHA U1H</div><div class="s"><span class="serial">4410023</span> · Ep 61 · <span style="color:var(--a-amber-ink)">194 ngày</span></div></div><div class="r"><div class="tnum" style="font-weight:600">28.900.000đ</div><div class="st gray">Chưa kiểm</div></div></div>
+              </div>
+              <div class="sec">Piano điện cũ · 2 cây</div>
+              <div class="card">
+                <div class="row"><div class="l"><div class="n" style="font-weight:600">KAWAI CA48A</div><div class="s"><span class="serial">K880102</span> · Hmn 12 · 23 ngày</div></div><div class="r"><div class="tnum" style="font-weight:600">17.500.000đ</div><div class="st amb">Lỗi</div></div></div>
+                <div class="row"><div class="l"><div class="n" style="font-weight:600">ROLAND HP704</div><div class="s"><span class="serial">R2230981</span> · Hmn 12 · 23 ngày</div></div><div class="r"><div class="tnum" style="font-weight:600">21.000.000đ</div><div class="st gray">Chưa kiểm</div></div></div>
+              </div>
+            </div>
+            <div class="tabs"><span><svg class="i"><use href="#i-inbox"/></svg>Hộp thư</span><span><svg class="i"><use href="#i-order"/></svg>Đơn hàng</span><span class="on"><svg class="i"><use href="#i-box"/></svg>Kho</span><span><svg class="i"><use href="#i-task"/></svg>Việc</span><span><svg class="i"><use href="#i-grid"/></svg>Thêm</span></div>
+          </div>
+          <!-- Ứng dụng -->
+          <div class="scr" data-s="apps" hidden>
+            <div class="sb"><span>9:41</span><svg viewBox="0 0 66 12"><use href="#i-status"/></svg></div>
+            <div class="scroll" style="padding-bottom:40px">
+              <div class="atop">
+                <div class="comp"><span class="bdg"><svg class="i"><use href="#i-v"/></svg></span><div><small>Viomni</small><b>Công ty TNP</b></div><svg class="i" style="width:16px;height:16px;color:var(--a-muted)"><use href="#i-updown"/></svg></div>
+                <div class="acts"><span class="gbtn"><svg class="i"><use href="#i-bell"/></svg></span><span class="av">Đ</span></div>
+              </div>
+              <div class="greet"><b>Xin chào, Đức</b><span>Chọn không gian làm việc để bắt đầu</span></div>
+              <div class="agrid">
+                <div class="atile c-home"><div class="aico"><svg class="i"><use href="#i-house"/></svg></div><b>Bàn làm việc</b><span class="sub">Tổng quan · Việc bán hàng · Nhắc việc</span></div>
+                <div class="atile c-sales"><div class="aico"><svg class="i"><use href="#i-bag"/></svg><span class="cnt">5</span></div><b>Bán hàng</b><span class="sub">Hộp thư · Khách hàng · Tiềm năng</span></div>
+                <div class="atile c-stock"><div class="aico"><svg class="i"><use href="#i-box"/></svg></div><b>Kho</b><span class="sub">Hàng sắp về · Tồn kho · Giữ hàng</span></div>
+                <div class="atile c-work"><div class="aico"><svg class="i"><use href="#i-task"/></svg><span class="cnt">3</span></div><b>Công việc</b><span class="sub">Dự án · Việc lưu trữ · Tài liệu</span></div>
+                <div class="atile c-fin"><div class="aico"><svg class="i"><use href="#i-wallet"/></svg></div><b>Tài chính</b><span class="sub">Sổ chi phí · Tổng hợp · Hàng sắp về</span></div>
+                <div class="atile c-hr"><div class="aico"><svg class="i"><use href="#i-users"/></svg></div><b>Nhân sự</b><span class="sub">Bảng công · Đơn từ · KPI</span></div>
+                <div class="atile c-sys"><div class="aico"><svg class="i"><use href="#i-gear"/></svg></div><b>Hệ thống</b><span class="sub">Cài đặt · Nhật ký · Nhân viên</span></div>
+              </div>
+            </div>
+          </div>
+          <!-- Chi tiết đơn -->
+          <div class="scr" data-s="ct" hidden>
+            <div class="sb"><span>9:41</span><svg viewBox="0 0 66 12"><use href="#i-status"/></svg></div>
+            <div class="scroll" style="padding-bottom:40px">
+              <div class="navd"><span class="gbtn"><svg class="i" style="transform:scaleX(-1)"><use href="#i-chev"/></svg></span><span class="t">Phạm Minh Đức</span><span></span></div>
+              <div class="card dsum" style="margin-top:6px"><div class="top"><b>2/5 cây xong</b><span class="c tnum">còn 203.500.000đ</span></div><small>DH-2611-014</small>
+                <div class="prog"><span class="g1"></span><span class="g2"></span><span class="g3"></span><span class="g4"></span><span class="g5"></span></div></div>
+              <div class="sec">Cần xem</div>
+              <div class="card"><div class="drow"><svg class="i alert"><use href="#i-alert"/></svg><div class="l"><div class="n">KAWAI BL-71 1452098</div><div class="s">Nứt bảng cộng hưởng góc trái — Bảo</div></div><span class="sc tnum" style="color:var(--a-amber-ink)">6/10</span></div></div>
+              <div class="sec">Ở xưởng</div>
+              <div class="card"><div class="drow"><div class="l"><div class="n">YAMAHA W106 W3006104</div><div class="s">Bộ phím · Hoàng · hạn 15/11</div></div><span class="sc tnum" style="color:var(--a-amber-ink)">8/10</span></div></div>
+              <div class="sec">Sẵn sàng giao</div>
+              <div class="card"><div class="drow"><div class="l"><div class="n">YAMAHA U3H 2810452</div><div class="s">Kho chính · Dãy B</div></div><span class="sc tnum" style="color:var(--a-blue)">10/10</span></div></div>
+              <div class="sec">Chưa vào xưởng</div>
+              <div class="card"><div class="drow"><div class="l"><div class="n">YAMAHA U1H 1873311</div><div class="s">Nguyên thùng · JP-2610</div></div></div></div>
+              <div class="sec">Đã giao</div>
+              <div class="card"><div class="drow"><div class="l"><div class="n">KAWAI KS-2F 2210744</div><div class="s">05/11</div></div></div></div>
+              <div class="card" style="margin-top:14px"><div class="kv"><span>Tổng đơn</span><span class="tnum">303.500.000đ</span></div><div class="kv"><span>Đã thu</span><span class="tnum">100.000.000đ</span></div></div>
+            </div>
+          </div>
+        </div></div>
+        <ul class="pts bad" data-pts="o"></ul>
+      </div>
+
+      <!-- ============ ĐỀ XUẤT ============ -->
+      <div class="col">
+        <span class="tag new"><i></i>Đề xuất</span>
+        <div class="ph-hold"><div class="phone p">
+          <div class="island"></div><div class="home"></div>
+          <!-- Đơn hàng -->
+          <div class="scr" data-s="don" id="p-don">
+            <div class="sb"><span>9:41</span><svg viewBox="0 0 66 12"><use href="#i-status"/></svg></div>
+            <div class="scroll">
+              <div class="hdr"><span class="ttl2">Đơn hàng</span><span class="ibtn" aria-label="Thông báo"><svg class="i"><use href="#i-bell"/></svg><span class="dot"></span></span></div>
+              <div class="sf"><svg class="i"><use href="#i-search"/></svg><span class="sp">Tìm khách, mã đơn</span></div>
+              <div class="seg2"><span class="on">Cần thu<em>4</em></span><span>Đang xử lý</span><span>Tất cả</span></div>
+              <div class="hero"><span class="lb"><span>Còn phải thu</span><span>4 đơn</span></span><span class="v tnum">512.000.000đ</span></div>
+              <div class="hdr2">Tuần này</div>
+              <div class="grp">
+                <div class="r"><span class="n">Phạm Minh Đức</span><span class="amt tnum">203.500.000đ</span><span class="s">DH-2611-014 · 5 cây</span><span class="pill blue">Thu một phần</span></div>
+                <div class="r"><span class="n">Lê Thu Hà</span><span class="amt tnum">58.000.000đ</span><span class="s">DH-2611-012 · 1 cây</span><span class="pill amb">Chưa thu</span></div>
+                <div class="r"><span class="n">Trường Mầm non Hoa Sen</span><span class="amt tnum">186.000.000đ</span><span class="s">DH-2611-010 · 3 cây</span><span class="pill blue">Thu một phần</span></div>
+              </div>
+              <div class="hdr2">Trước đó</div>
+              <div class="grp">
+                <div class="r"><span class="n">Nguyễn Hoàng Long</span><span class="amt tnum">64.500.000đ</span><span class="s">DH-2610-087 · 2 cây</span><span class="pill amb">Chưa thu</span></div>
+              </div>
+            </div>
+            <div class="fab" aria-label="Tạo đơn"><svg class="i"><use href="#i-plus"/></svg></div>
+            <div class="tabs"><span aria-label="Hộp thư"><svg class="i"><use href="#i-inbox"/></svg></span><span class="on" aria-label="Đơn hàng"><svg class="i"><use href="#i-order"/></svg></span><span aria-label="Kho"><svg class="i"><use href="#i-box"/></svg></span><span aria-label="Việc"><svg class="i"><use href="#i-task"/></svg></span><span aria-label="Thêm"><svg class="i"><use href="#i-grid"/></svg></span></div>
+          </div>
+          <!-- Ghi thu -->
+          <div class="scr" data-s="thu" hidden>
+            <div class="under" id="p-under"></div>
+            <div class="dim"></div>
+            <div class="sheet" id="p-sheet">
+              <div class="grab"></div>
+              <div class="shd"><div class="ttl">Ghi thu<small>DH-2611-014</small></div><button type="button" class="close" aria-label="Đóng"><svg class="i"><use href="#i-x"/></svg></button></div>
+              <div class="amtbox"><span class="v tnum">203.500.000đ</span><small class="tnum">còn phải thu 203.500.000đ</small></div>
+              <div class="pm" role="group" aria-label="Hình thức">
+                <button type="button" aria-pressed="false">Tiền mặt</button><button type="button" aria-pressed="true">Chuyển khoản</button><button type="button" aria-pressed="false">Thẻ</button><button type="button" aria-pressed="false">Khác</button>
+              </div>
+              <div class="grp">
+                <div class="kv"><span>Ngày thu</span><span class="val">Hôm nay, 12/11<svg class="i"><use href="#i-chev"/></svg></span></div>
+                <div class="kv"><span>Ghi chú</span><span class="val">Thêm<svg class="i"><use href="#i-chev"/></svg></span></div>
+              </div>
+              <button type="button" class="bigbtn">Ghi thu</button>
+            </div>
+          </div>
+          <!-- Kho -->
+          <div class="scr" data-s="kho" hidden>
+            <div class="sb"><span>9:41</span><svg viewBox="0 0 66 12"><use href="#i-status"/></svg></div>
+            <div class="scroll">
+              <div class="hdr"><span class="ttl2">Kho</span><span class="ibtn" aria-label="Thông báo"><svg class="i"><use href="#i-bell"/></svg></span></div>
+              <div class="sf"><svg class="i"><use href="#i-search"/></svg><span class="sp">Tìm serial, model</span><svg class="i flt"><use href="#i-filter"/></svg></div>
+              <div class="hero" style="margin-top:14px">
+                <span class="lb">Niêm yết</span><span class="v tnum">102.900.000đ</span>
+                <div class="stat3 tnum"><div><b>69.223.643đ</b><span>Vốn</span></div><div><b>4 cây</b><span>Còn bán</span></div><div><b class="warn">1 cây</b><span>Tồn lâu</span></div></div>
+              </div>
+              <div class="seg2"><span class="on">Còn bán<em>4</em></span><span>Đã có khách<em>0</em></span></div>
+              <div class="hdr2" style="padding-top:4px"><span>Piano Upright cũ · 2</span><span class="act">Chọn</span></div>
+              <div class="grp">
+                <div class="r"><span class="n">YAMAHA U3H</span><span class="amt tnum">35.500.000đ</span><span class="s tnum">2076942 · 87 ngày</span><span class="pill gray">Chưa kiểm</span></div>
+                <div class="r"><span class="n">YAMAHA U1H</span><span class="amt tnum">28.900.000đ</span><span class="s tnum">4410023 · <span class="warn">194 ngày</span></span><span class="pill gray">Chưa kiểm</span></div>
+              </div>
+              <div class="hdr2"><span>Piano điện cũ · 2</span></div>
+              <div class="grp">
+                <div class="r"><span class="n">KAWAI CA48A</span><span class="amt tnum">17.500.000đ</span><span class="s tnum">K880102 · 23 ngày</span><span class="pill red">Lỗi</span></div>
+                <div class="r"><span class="n">ROLAND HP704</span><span class="amt tnum">21.000.000đ</span><span class="s tnum">R2230981 · 23 ngày</span><span class="pill gray">Chưa kiểm</span></div>
+              </div>
+            </div>
+            <div class="tabs"><span aria-label="Hộp thư"><svg class="i"><use href="#i-inbox"/></svg></span><span aria-label="Đơn hàng"><svg class="i"><use href="#i-order"/></svg></span><span class="on" aria-label="Kho"><svg class="i"><use href="#i-box"/></svg></span><span aria-label="Việc"><svg class="i"><use href="#i-task"/></svg></span><span aria-label="Thêm"><svg class="i"><use href="#i-grid"/></svg></span></div>
+          </div>
+          <!-- Ứng dụng -->
+          <div class="scr" data-s="apps" hidden>
+            <div class="sb"><span>9:41</span><svg viewBox="0 0 66 12"><use href="#i-status"/></svg></div>
+            <div class="scroll" style="padding-bottom:44px">
+              <div class="atop">
+                <span class="comp" role="button" aria-label="Đổi công ty">Công ty TNP<svg class="i"><use href="#i-updown"/></svg></span>
+                <div class="acts"><span class="ibtn" aria-label="Thông báo"><svg class="i"><use href="#i-bell"/></svg><span class="dot"></span></span><span class="av" aria-label="Tài khoản">Đ</span></div>
+              </div>
+              <div class="hi">Xin chào, Đức</div>
+              <div class="grp desk c-home"><span class="sq"><svg class="i"><use href="#i-house"/></svg></span><div class="l"><b>Bàn làm việc</b><span>Tổng quan · Nhắc việc</span></div><svg class="i chev"><use href="#i-chev"/></svg></div>
+              <div class="hdr2">Ứng dụng</div>
+              <div class="grp apgrid">
+                <div class="ap c-sales"><span class="sq"><svg class="i"><use href="#i-bag"/></svg><span class="cnt">5</span></span><span>Bán hàng</span></div>
+                <div class="ap c-stock"><span class="sq"><svg class="i"><use href="#i-box"/></svg></span><span>Kho</span></div>
+                <div class="ap c-work"><span class="sq"><svg class="i"><use href="#i-task"/></svg><span class="cnt">3</span></span><span>Công việc</span></div>
+                <div class="ap c-fin"><span class="sq"><svg class="i"><use href="#i-wallet"/></svg></span><span>Tài chính</span></div>
+                <div class="ap c-hr"><span class="sq"><svg class="i"><use href="#i-users"/></svg></span><span>Nhân sự</span></div>
+                <div class="ap c-sys"><span class="sq"><svg class="i"><use href="#i-gear"/></svg></span><span>Hệ thống</span></div>
+              </div>
+              <div class="hdr2">Cần xử lý</div>
+              <div class="grp todo">
+                <div class="r c-sales"><span class="sq"><svg class="i"><use href="#i-inbox"/></svg></span><span class="t"><b>Hộp thư</b><span>Bán hàng</span></span><span class="cnt">5</span></div>
+                <div class="r c-work"><span class="sq"><svg class="i"><use href="#i-task"/></svg></span><span class="t"><b>Dự án</b><span>Công việc</span></span><span class="cnt">3</span></div>
+              </div>
+            </div>
+          </div>
+          <!-- Chi tiết đơn -->
+          <div class="scr" data-s="ct" hidden>
+            <div class="sb"><span>9:41</span><svg viewBox="0 0 66 12"><use href="#i-status"/></svg></div>
+            <div class="scroll" style="padding-bottom:44px">
+              <div class="navd"><span class="back" aria-label="Quay lại"><svg class="i"><use href="#i-chev"/></svg></span><span class="t">Phạm Minh Đức<small>DH-2611-014</small></span><span></span></div>
+              <div class="hero">
+                <span class="lb"><span>Còn phải thu</span><span>2/5 cây xong</span></span><span class="v tnum">203.500.000đ</span>
+                <div class="prog"><span class="g1"></span><span class="g2"></span><span class="g3"></span><span class="g4"></span><span class="g5"></span></div>
+                <div class="dstat tnum"><div><b>303.500.000đ</b><span>Tổng đơn</span></div><div><b>100.000.000đ</b><span>Đã thu</span></div></div>
+              </div>
+              <div class="hdr2">Cần xem</div>
+              <div class="grp"><div class="r"><span class="n"><span class="lead"><svg class="i"><use href="#i-alert"/></svg>KAWAI BL-71</span></span><span class="pill amb tnum">6/10</span><span class="s tnum" style="grid-column:1/-1">1452098 · Nứt bảng cộng hưởng</span></div></div>
+              <div class="hdr2">Ở xưởng</div>
+              <div class="grp"><div class="r"><span class="n">YAMAHA W106</span><span class="pill amb tnum">8/10</span><span class="s tnum" style="grid-column:1/-1">W3006104 · Bộ phím · hạn 15/11</span></div></div>
+              <div class="hdr2">Sẵn sàng giao</div>
+              <div class="grp"><div class="r"><span class="n">YAMAHA U3H</span><span class="pill blue tnum">10/10</span><span class="s tnum" style="grid-column:1/-1">2810452 · Kho chính · Dãy B</span></div></div>
+              <div class="hdr2">Chưa vào xưởng</div>
+              <div class="grp"><div class="r"><span class="n">YAMAHA U1H</span><span></span><span class="s tnum" style="grid-column:1/-1">1873311 · Nguyên thùng</span></div></div>
+              <div class="hdr2">Đã giao</div>
+              <div class="grp"><div class="r"><span class="n">KAWAI KS-2F</span><span class="pill gray tnum">05/11</span><span class="s tnum" style="grid-column:1/-1">2210744</span></div></div>
+            </div>
+          </div>
+        </div></div>
+        <ul class="pts good" data-pts="p"></ul>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-glass">
+    <h2 id="h-glass">Kính dùng ở đâu</h2>
+    <div class="two">
+      <div class="box">
+        <h3><i style="background:var(--ok)"></i>Giữ kính</h3>
+        <div class="chips">
+          <span class="chip"><svg class="i"><use href="#i-grid"/></svg>Thanh tab</span>
+          <span class="chip"><svg class="i"><use href="#i-top"/></svg>Thanh trên khi cuộn</span>
+          <span class="chip"><svg class="i"><use href="#i-menu"/></svg>Menu bật lên</span>
+          <span class="chip"><svg class="i"><use href="#i-sel"/></svg>Thanh chọn nhiều</span>
+        </div>
+      </div>
+      <div class="box">
+        <h3><i style="background:var(--bad)"></i>Đổi sang nền đặc</h3>
+        <div class="chips">
+          <span class="chip"><svg class="i"><use href="#i-btn"/></svg>Nút chính</span>
+          <span class="chip"><svg class="i"><use href="#i-plus"/></svg>Nút +</span>
+          <span class="chip"><svg class="i"><use href="#i-seg"/></svg>Thanh chọn</span>
+          <span class="chip"><svg class="i"><use href="#i-search"/></svg>Ô tìm</span>
+          <span class="chip"><svg class="i"><use href="#i-bell"/></svg>Chuông</span>
+          <span class="chip"><svg class="i"><use href="#i-sheet"/></svg>Sheet</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-sys">
+    <h2 id="h-sys">Hệ thống</h2>
+    <div class="kit">
+      <div class="box">
+        <span class="lbl">Nút</span>
+        <div class="stack">
+          <div class="brow"><button type="button" class="b fill">Ghi thu</button><small>1 nút / màn</small></div>
+          <div class="brow"><button type="button" class="b tint">Gửi báo giá</button><small>Phụ</small></div>
+          <div class="brow"><button type="button" class="b gray">Lưu nháp</button><small>Nhẹ</small></div>
+          <div class="brow"><button type="button" class="b plain">Xem tất cả</button><button type="button" class="b danger">Xóa đơn</button></div>
+        </div>
+      </div>
+      <div class="box">
+        <span class="lbl">Bo góc</span>
+        <div class="shapes">
+          <div><span style="border-radius:999px"></span>Nút</div>
+          <div><span style="border-radius:14px"></span>Nhóm</div>
+          <div><span style="border-radius:9px"></span>Ô nhập</div>
+          <div><span style="border-radius:6px;height:22px;margin-block:6px"></span>Nhãn</div>
+          <div><span style="border-radius:16px 16px 0 0;border-bottom:0"></span>Sheet</div>
+        </div>
+        <span class="lbl" style="margin-top:4px">Màu</span>
+        <div class="stack" style="gap:8px">
+          <div class="swatch"><i style="background:var(--a-blue)"></i>Xanh Viomni: màu nhấn duy nhất</div>
+          <div class="chips" style="gap:6px"><span class="pill blue">Thu một phần</span><span class="pill amb">Chưa thu</span><span class="pill red">Lỗi</span><span class="pill gray">Chưa kiểm</span></div>
+        </div>
+      </div>
+      <div class="box">
+        <span class="lbl">Cỡ chữ</span>
+        <div class="types">
+          <div><span class="tnum" style="font-size:26px;font-weight:800;letter-spacing:-.02em">512.000.000đ</span><code>30–40</code></div>
+          <div><span style="font-size:22px;font-weight:800;letter-spacing:-.01em">Vi<b style="color:var(--a-blue)">omni</b></span><code>22</code></div>
+          <div><span style="font-size:20px;font-weight:700">Ghi thu</span><code>20</code></div>
+          <div><span style="font-size:16px;font-weight:600">Phạm Minh Đức</span><code>16</code></div>
+          <div><span style="font-size:14px;color:var(--a-muted)">DH-2611-014 · 5 cây</span><code>14</code></div>
+          <div><span style="font-size:13px;font-weight:600;color:var(--a-muted);letter-spacing:.03em">TUẦN NÀY</span><code>13</code></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-dec">
+    <h2 id="h-dec">Cần chốt</h2>
+    <div class="decide">
+      <div class="box"><span class="num">1</span><h3>Nút chính xanh đặc</h3><p>Bỏ quyết định ngày 08/11 "nút kính không viền màu".</p></div>
+      <div class="box"><span class="num">2</span><h3>Thanh tab chỉ icon</h3><p>Bỏ nhãn chữ. Nhấn giữ icon để hiện tên tab.</p></div>
+      <div class="box"><span class="num">3</span><h3>Logo chỉ ở đăng nhập</h3><p>Các tab ghi tên màn. Màn con có ‹ và tên.</p></div>
+    </div>
+    <details>
+      <summary>Sửa ở đâu trong code</summary>
+      <div class="tbl"><table>
+        <thead><tr><th>Đợt</th><th>File</th><th>Đổi</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><code>omni_theme.dart</code></td><td>Nút chính đặc, nút phụ nền xanh nhạt, segmented iOS, sheet nền đặc</td></tr>
+          <tr><td>1</td><td><code>omni_glass.dart</code></td><td>Kính chỉ cho thanh tab, thanh trên, menu</td></tr>
+          <tr><td>1</td><td><code>omni_liquid_fab.dart</code></td><td>Nút + xanh đặc</td></tr>
+          <tr><td>2</td><td>Khung app</td><td>Thanh tab chỉ icon, tên màn thay logo, chuông và ‹ là icon trơn</td></tr>
+          <tr><td>3</td><td>Từng màn</td><td>Bỏ kính tự vẽ, trạng thái thành nhãn</td></tr>
+        </tbody>
+      </table></div>
+    </details>
+  </section>
+</div>
+
+<script>
+(function(){
+  const X='<svg class="i"><use href="#i-x"/></svg>', V='<svg class="i"><use href="#i-check"/></svg>';
+  const pts={
+    don:{o:["Kính ở chuông, thanh chọn, nút +","Tổng tiền xám, nhỏ","Trạng thái chỉ là chữ màu"],
+         p:["Tên màn thay logo","Thanh tab chỉ icon, nút + nằm trên","Tổng tiền là số lớn nhất"]},
+    apps:{o:["Thẻ to, nhiều chữ phụ, đổ bóng","Biểu tượng chuyển màu + bóng màu","Chuông, tài khoản là vòng kính"],
+          p:["Lưới 3 cột như màn hình iPhone","Chỉ tên ứng dụng, không chữ phụ","Số huy hiệu thành mục Cần xử lý"]},
+    ct:{o:["Nút quay lại là kính đổ bóng","Còn phải thu chữ xám, nhỏ","Tổng đơn tách xuống cuối màn"],
+        p:["‹ xanh trơn, tên khách + mã đơn","Còn phải thu là số chính","Tổng đơn, đã thu ngay dưới"]},
+    thu:{o:["Sheet nền kính xám","Nút Ghi thu nhạt nhất","Chip chọn chỉ khác bóng"],
+         p:["Sheet nền đặc, có nút đóng","Nút Ghi thu xanh đặc","Chip chọn có viền xanh rõ"]},
+    kho:{o:["Số tiền chen cột hẹp","Thanh chọn kính dày","Serial gạch chấm"],
+         p:["Tên màn thay logo","Niêm yết là số chính","Lỗi đỏ, tồn lâu vàng"]}
+  };
+  const ulO=document.querySelector('[data-pts="o"]'), ulP=document.querySelector('[data-pts="p"]');
+  const segBtns=document.querySelectorAll('[data-screen]');
+  function show(s){
+    if(!pts[s]) s='don';
+    document.querySelectorAll('.scr').forEach(el=>{el.hidden=el.dataset.s!==s});
+    segBtns.forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.screen===s)));
+    ulO.innerHTML=pts[s].o.map(t=>'<li>'+X+t+'</li>').join('');
+    ulP.innerHTML=pts[s].p.map(t=>'<li>'+V+t+'</li>').join('');
+  }
+  segBtns.forEach(b=>b.addEventListener('click',()=>show(b.dataset.screen)));
+
+  const root=document.documentElement, thBtns=document.querySelectorAll('[data-th]');
+  function syncTh(){
+    const cur=root.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+    thBtns.forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.th===cur)));
+  }
+  thBtns.forEach(b=>b.addEventListener('click',()=>{root.dataset.theme=b.dataset.th;syncTh()}));
+  try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',syncTh)}catch(e){}
+
+  /* màn dưới sheet: dùng lại màn Đơn hàng đề xuất */
+  const under=document.getElementById('p-under'), src=document.getElementById('p-don');
+  [...src.children].forEach(c=>under.appendChild(c.cloneNode(true)));
+
+  /* chip Hình thức */
+  const pm=document.querySelectorAll('.p .pm button');
+  pm.forEach(b=>b.addEventListener('click',()=>pm.forEach(x=>x.setAttribute('aria-pressed',String(x===b)))));
+  /* tab: chạm để đổi mục chọn */
+  document.querySelectorAll('.p .tabs').forEach(t=>{
+    const items=t.querySelectorAll('span');
+    items.forEach(s=>s.addEventListener('click',()=>items.forEach(x=>x.classList.toggle('on',x===s))));
+  });
+
+  /* co máy theo cột */
+  function fit(){
+    document.querySelectorAll('.ph-hold').forEach(h=>{
+      const s=Math.min(1,h.clientWidth/410), ph=h.querySelector('.phone');
+      ph.style.transform=s<1?'scale('+s+')':''; h.style.height=(864*s)+'px';
+    });
+  }
+  try{new ResizeObserver(fit).observe(document.querySelector('.stage'))}catch(e){addEventListener('resize',fit)}
+  fit();
+
+  /* #don / #thu / #kho, thêm -dark hoặc -light */
+  function fromHash(){
+    const h=(location.hash||'').slice(1).split('-');
+    if(h[1]==='dark'||h[1]==='light') root.dataset.theme=h[1];
+    show(h[0]||'don'); syncTh();
+  }
+  addEventListener('hashchange',fromHash);
+  fromHash();
+})();
+</script>

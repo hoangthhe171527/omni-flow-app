@@ -7,8 +7,9 @@ import '../platform/omni_performance.dart';
 /// Viên kính nổi kiểu "liquid glass" (`liquid-glass-uiux.html`, duyệt 07/11).
 ///
 /// Mờ 22 + tăng bão hoà màu nền phía sau, viền sáng 1px, vệt sáng ở nửa trên,
-/// bóng mềm. Chỉ dành cho phần NỔI (thanh tab, thanh trên): làm mờ cả danh
-/// sách thì máy yếu ở xưởng giật.
+/// bóng mềm. Từ 25/11/2026 (spec phong cách iOS) CHỈ dùng cho lớp điều hướng:
+/// thanh tab, thanh trên khi đã cuộn, menu bật lên, khay đáy. Nút, thẻ, sheet,
+/// chip, thanh chọn là nền đặc.
 ///
 /// Flutter chưa có Liquid Glass thật của iOS 26 (khúc xạ) — đây là bản dựng
 /// lại chạy được cả Android. Chế độ tương phản cao: nền đặc, không mờ.
@@ -35,22 +36,25 @@ class OmniGlass extends StatelessWidget {
   /// định 48, bóng blur 16 dễ bị cắt thành khung mờ chữ nhật).
   final bool shadow;
 
-  /// Màu viên chọn bên trong kính (mục đang chọn của thanh tab): trắng mờ.
-  static Color selectionOf(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark
-      ? Colors.white.withValues(alpha: 0.16)
-      : Colors.white.withValues(alpha: 0.92);
+  /// Màu mục đang chọn (phong cách iOS 25/11/2026): nền xanh nhạt của màu
+  /// chính, không còn viên trắng mờ.
+  static Color selectionOf(BuildContext context) {
+    final theme = Theme.of(context);
+    return theme.colorScheme.primary.withValues(
+      alpha: theme.brightness == Brightness.dark ? 0.16 : 0.10,
+    );
+  }
 
-  /// Mặt "nút kính" (liquid-buttons-uiux.html phương án B) cho nút tự vẽ:
-  /// trắng mờ + vệt sáng nửa trên, mép sáng mảnh, bóng mềm — không viền
-  /// màu. Cùng công thức với theme FilledButton/OutlinedButton.
+  /// Mặt nút tự vẽ bậc "nhẹ" (spec phong cách iOS 25/11/2026 §3.2): nền xám
+  /// đặc nhạt, không vệt sáng, không viền, không bóng. Kính chỉ còn dành cho
+  /// lớp điều hướng (thanh tab, thanh trên khi cuộn, menu).
   static BoxDecoration buttonDecoration(
     BuildContext context, {
     double radius = 999,
   }) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     if (MediaQuery.highContrastOf(context)) {
-      final scheme = Theme.of(context).colorScheme;
       return BoxDecoration(
         color: scheme.surface,
         borderRadius: BorderRadius.circular(radius),
@@ -58,28 +62,10 @@ class OmniGlass extends StatelessWidget {
       );
     }
     return BoxDecoration(
-      color: Colors.white.withValues(alpha: dark ? .12 : .82),
+      color: scheme.onSurface.withValues(
+        alpha: theme.brightness == Brightness.dark ? .12 : .06,
+      ),
       borderRadius: BorderRadius.circular(radius),
-      border: Border.all(
-        color: Colors.white.withValues(alpha: dark ? .16 : .9),
-      ),
-      gradient: LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        stops: const [0, .5, 1],
-        colors: [
-          Colors.white.withValues(alpha: dark ? .14 : .7),
-          Colors.white.withValues(alpha: dark ? .06 : .55),
-          Colors.white.withValues(alpha: dark ? .08 : .78),
-        ],
-      ),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withValues(alpha: dark ? .35 : .10),
-          blurRadius: 10,
-          offset: const Offset(0, 3),
-        ),
-      ],
     );
   }
 
