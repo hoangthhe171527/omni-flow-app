@@ -43,7 +43,8 @@ void main() {
         final barTop =
             844 - (ShellBarInset.pillHeight + (safe > 12 ? safe : 12));
         final fab = t.getRect(find.byKey(const Key('channels-connect')));
-        expect(fab.bottom, lessThanOrEqualTo(barTop - 32));
+        // Khe chuẩn [OmniFabLayer.gap] = 20 (chọn 25/11/2026).
+        expect(fab.bottom, lessThanOrEqualTo(barTop - 20));
       },
     );
   }

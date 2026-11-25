@@ -3,13 +3,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:omni_app/core/nav/shell_bar_inset.dart';
 import 'package:omni_app/design/components/components.dart';
 
-/// Nút + kính phải cách RÕ thanh tab kính (rà soát 12/11: "dấu cộng sát menu,
-/// bị menu đè"). Thanh thật: viên kính 66 + đáy = vùng an toàn (tối thiểu 12),
-/// thêm dải mờ lan lên 12 trên viên kính. Mọi màn có nút + đều đặt qua
-/// [OmniFabLayer] / [ShellBarInset.floatingBottom], nên ghim ở đây là đủ.
+/// Nút + phải cách RÕ thanh tab (rà soát 12/11: "dấu cộng sát menu, bị menu
+/// đè"). Thanh thật: viên kính 66 + đáy = vùng an toàn (tối thiểu 12). Khe 20
+/// do người dùng chọn 25/11 trên ảnh app thật (12 / 20 / 32) sau khi nút + đổi
+/// sang nền đặc, bóng mảnh. Mọi màn có nút + đều đặt qua [OmniFabLayer] /
+/// [ShellBarInset.floatingBottom], nên ghim ở đây là đủ.
 void main() {
   for (final safe in const [0.0, 34.0, 48.0]) {
-    testWidgets('nút + cách thanh tab ≥ 32 (đáy an toàn $safe)', (t) async {
+    testWidgets('nút + cách thanh tab 20 (đáy an toàn $safe)', (t) async {
       t.view.physicalSize = const Size(390, 844);
       t.view.devicePixelRatio = 1;
       t.view.viewPadding = FakeViewPadding(bottom: safe);
@@ -39,10 +40,10 @@ void main() {
           844 - (ShellBarInset.pillHeight + (safe > 12 ? safe : 12));
       final fab = t.getRect(find.byKey(const Key('fab')));
       final clearance = pillTop - fab.bottom;
-      // 12 dải mờ của thanh + ≥ 20 khoảng trống thật.
-      expect(clearance, greaterThanOrEqualTo(32));
-      // Không bay quá cao khỏi vùng ngón cái.
-      expect(clearance, lessThanOrEqualTo(40));
+      // Không sát thanh (12 bị chê bóng chạm thanh)…
+      expect(clearance, greaterThanOrEqualTo(20));
+      // …và không bay quá cao khỏi vùng ngón cái.
+      expect(clearance, lessThanOrEqualTo(28));
     });
   }
 
