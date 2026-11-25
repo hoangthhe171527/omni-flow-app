@@ -203,13 +203,13 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
             OmniGroupSection(
               dividerIndent: 14,
               children: [
-                _FormRow(
+                OmniGroupField(
                   label: 'Tên cơ hội',
                   required: true,
                   child: TextFormField(
                     controller: _title,
                     textCapitalization: TextCapitalization.sentences,
-                    decoration: _bare(
+                    decoration: omniBareDecoration(
                       const InputDecoration(
                         hintText: 'VD: Mua iPhone 15 Pro Max 256GB',
                       ),
@@ -230,7 +230,7 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
                 ),
                 ValueListenableBuilder<TextEditingValue>(
                   valueListenable: _value,
-                  builder: (context, val, fieldChild) => _FormRow(
+                  builder: (context, val, fieldChild) => OmniGroupField(
                     label: 'Giá trị (VNĐ)',
                     required: true,
                     hint: val.text.isEmpty
@@ -247,7 +247,7 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
                     keyboardType: TextInputType.number,
                     // Kiểu tiền có sẵn, không đặt cỡ chữ ngoài lib/design.
                     style: OmniType.money.copyWith(color: scheme.onSurface),
-                    decoration: _bare(
+                    decoration: omniBareDecoration(
                       InputDecoration(
                         hintText: '0',
                         suffixText: '₫',
@@ -273,11 +273,11 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
             OmniGroupSection(
               dividerIndent: 14,
               children: [
-                _FormRow(
+                OmniGroupField(
                   label: 'Sản phẩm / dịch vụ',
                   child: TextFormField(
                     controller: _product,
-                    decoration: _bare(
+                    decoration: omniBareDecoration(
                       const InputDecoration(hintText: 'VD: iPhone 15 Pro Max'),
                     ),
                   ),
@@ -356,75 +356,6 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// Ô nhập nằm TRONG một dòng nhóm: bỏ nền và viền của theme (dòng đã là thẻ).
-InputDecoration _bare(InputDecoration base) => base.copyWith(
-  filled: false,
-  isDense: true,
-  border: InputBorder.none,
-  enabledBorder: InputBorder.none,
-  focusedBorder: InputBorder.none,
-  errorBorder: InputBorder.none,
-  focusedErrorBorder: InputBorder.none,
-  disabledBorder: InputBorder.none,
-  contentPadding: const EdgeInsets.symmetric(vertical: 6),
-);
-
-/// Một ô của form trong nhóm lồng: nhãn nhỏ phía trên, giá trị bên dưới.
-class _FormRow extends StatelessWidget {
-  const _FormRow({
-    required this.label,
-    required this.child,
-    this.required = false,
-    this.hint,
-  });
-
-  final String label;
-  final Widget child;
-  final bool required;
-  final String? hint;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text.rich(
-            TextSpan(
-              text: label,
-              children: [
-                if (required)
-                  TextSpan(
-                    text: ' *',
-                    style: TextStyle(color: scheme.error),
-                  ),
-              ],
-            ),
-            style: OmniType.caption.copyWith(
-              fontWeight: FontWeight.w600,
-              color: scheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 2),
-          child,
-          if (hint != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Text(
-                hint!,
-                style: OmniType.caption.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
-              ),
-            ),
-        ],
       ),
     );
   }

@@ -94,19 +94,16 @@ Widget _groupField({
   );
 }
 
-InputDecoration _bareDecoration(BuildContext context, String hint) {
-  final scheme = Theme.of(context).colorScheme;
-  return InputDecoration(
-    hintText: hint,
-    hintStyle: OmniType.body.copyWith(color: scheme.onSurfaceVariant),
-    isDense: true,
-    contentPadding: EdgeInsets.zero,
-    filled: false,
-    border: InputBorder.none,
-    enabledBorder: InputBorder.none,
-    focusedBorder: InputBorder.none,
-  );
-}
+InputDecoration _bareDecoration(BuildContext context, String hint) =>
+    omniBareDecoration(
+      InputDecoration(
+        hintText: hint,
+        hintStyle: OmniType.body.copyWith(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+        contentPadding: EdgeInsets.zero,
+      ),
+    );
 
 Widget _errorText(BuildContext context, String? error) => error == null
     ? const SizedBox.shrink()
@@ -314,11 +311,7 @@ class _QuickCreatePlanFormState extends ConsumerState<QuickCreatePlanForm> {
             ),
             child: Row(
               children: [
-                Icon(
-                  LucideIcons.circleCheck,
-                  size: 20,
-                  color: scheme.primary,
-                ),
+                Icon(LucideIcons.circleCheck, size: 20, color: scheme.primary),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(

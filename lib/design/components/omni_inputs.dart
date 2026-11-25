@@ -677,3 +677,85 @@ class _OmniFocusGlowState extends State<OmniFocusGlow> {
     );
   }
 }
+
+/// Ô nhập nằm TRONG một dòng của [OmniGroupSection] (Chuẩn Mobile UI —
+/// FormField kiểu "trong nhóm thẻ"): bỏ nền và viền của theme — dòng đã là
+/// thẻ, ranh giới ô do vạch chia của nhóm đảm nhiệm. Giữ mọi thứ khác của
+/// [base] (gợi ý, hậu tố…); đệm dọc mặc định 6.
+InputDecoration omniBareDecoration([
+  InputDecoration base = const InputDecoration(),
+]) => base.copyWith(
+  filled: false,
+  isDense: true,
+  border: InputBorder.none,
+  enabledBorder: InputBorder.none,
+  focusedBorder: InputBorder.none,
+  errorBorder: InputBorder.none,
+  focusedErrorBorder: InputBorder.none,
+  disabledBorder: InputBorder.none,
+  contentPadding:
+      base.contentPadding ?? const EdgeInsets.symmetric(vertical: 6),
+);
+
+/// Một ô của form trong nhóm thẻ (Chuẩn Mobile UI — FormField): nhãn nhỏ
+/// 13/600 phía trên (dấu * đỏ khi bắt buộc), ô nhập [child] (dùng
+/// [omniBareDecoration]), rồi lỗi đỏ ([error]) hoặc gợi ý xám ([hint]) ngay
+/// dưới ô. Đặt trong [OmniGroupSection] với `dividerIndent: 14`.
+class OmniGroupField extends StatelessWidget {
+  const OmniGroupField({
+    super.key,
+    required this.label,
+    required this.child,
+    this.required = false,
+    this.error,
+    this.hint,
+  });
+
+  final String label;
+  final Widget child;
+  final bool required;
+  final String? error;
+  final String? hint;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final note = error ?? hint;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text.rich(
+            TextSpan(
+              text: label,
+              children: [
+                if (required)
+                  TextSpan(
+                    text: ' *',
+                    style: TextStyle(color: scheme.error),
+                  ),
+              ],
+            ),
+            style: OmniType.caption.copyWith(
+              fontWeight: FontWeight.w600,
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 2),
+          child,
+          if (note != null)
+            Padding(
+              padding: EdgeInsets.only(top: error != null ? 4 : 2),
+              child: Text(
+                note,
+                style: OmniType.caption.copyWith(
+                  color: error != null ? scheme.error : scheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
