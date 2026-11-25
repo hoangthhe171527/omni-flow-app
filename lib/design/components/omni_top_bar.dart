@@ -12,7 +12,6 @@ import '../tokens/tokens.dart';
 import 'brand_anchor.dart';
 import 'omni_app_bar.dart';
 import 'omni_brand.dart';
-import 'omni_glass.dart';
 
 /// Chỗ cắm cho phần của [OmniTopBar] thuộc về `modules/`: số thông báo chưa đọc
 /// và nơi nút chuông dẫn tới. Cùng lý do với [OmniAccountSlot] — `design/` chỉ
@@ -234,6 +233,7 @@ class _OmniTopBarState extends State<OmniTopBar> {
       child: Row(
         children: [
           if (showBack) ...[
+            // ‹ xanh trơn (spec phong cách iOS 25/11/2026 §3.3).
             OmniTopBarAction(
               icon:
                   widget.backIcon ??
@@ -241,6 +241,7 @@ class _OmniTopBarState extends State<OmniTopBar> {
                       ? Icons.arrow_back_ios_new_rounded
                       : Icons.arrow_back_rounded),
               tooltip: 'Quay lại',
+              color: scheme.primary,
               onPressed: onBack ?? () => Navigator.of(context).maybePop(),
             ),
             const SizedBox(width: 10),
@@ -248,10 +249,34 @@ class _OmniTopBarState extends State<OmniTopBar> {
           Expanded(
             child: leading != null
                 ? leading.builder(context, title)
+                : !subPage && title != null
+                // Màn gốc có tên (spec phong cách iOS 25/11/2026 Q4): tên màn
+                // 28 đậm bên trái thay logo — thanh tab chỉ còn icon nên đây
+                // là chỗ người dùng đọc mình đang ở đâu.
+                ? Align(
+                    alignment: Alignment.centerLeft,
+                    child: Semantics(
+                      key: const ValueKey('omni-top-bar-title'),
+                      container: true,
+                      header: true,
+                      child: Text(
+                        title,
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.fade,
+                        style: OmniType.body.copyWith(
+                          color: scheme.onSurface,
+                          fontSize: 28,
+                          height: 1.2,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.4,
+                        ),
+                      ),
+                    ),
+                  )
                 : !subPage
-                // Màn gốc: logo + chữ Viomni thay cho tiêu đề lớn (người dùng
-                // chọn 2026-11-08). Tên màn vẫn đọc cho trình đọc màn hình.
-                // BrandAnchor là đích bay của logo ở màn mở app.
+                // Màn gốc chưa khai tên: logo như cũ. BrandAnchor là đích bay
+                // của logo ở màn mở app.
                 ? Align(
                     alignment: Alignment.centerLeft,
                     child: Semantics(
@@ -360,8 +385,19 @@ class _OmniTopBarState extends State<OmniTopBar> {
               canRequestFocus: false,
               skipTraversal: true,
               onFocusChange: _onFocus,
-              child: OmniGlass(
-                radius: bottom.preferredSize.height / 2,
+              // Ô tìm nền xám đặc bo 10 (spec §3.4) — không còn viên kính.
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: scheme.onSurface.withValues(
+                    alpha: Theme.of(context).brightness == Brightness.dark
+                        ? .12
+                        : .06,
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                  border: MediaQuery.highContrastOf(context)
+                      ? Border.all(color: scheme.outline)
+                      : null,
+                ),
                 child: SizedBox(
                   height: bottom.preferredSize.height,
                   child: bottom,
@@ -484,11 +520,15 @@ class OmniTopBarAction extends StatelessWidget {
     required this.icon,
     required this.tooltip,
     required this.onPressed,
+    this.color,
   });
 
   final IconData icon;
   final String tooltip;
   final VoidCallback onPressed;
+
+  /// Màu icon; null = màu mực. Nút quay lại dùng màu chính.
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
@@ -505,7 +545,7 @@ class OmniTopBarAction extends StatelessWidget {
         icon: Icon(
           icon,
           size: OmniIconSize.md,
-          color: Theme.of(context).colorScheme.onSurface,
+          color: color ?? Theme.of(context).colorScheme.onSurface,
         ),
       ),
     );
