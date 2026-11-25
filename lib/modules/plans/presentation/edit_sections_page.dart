@@ -248,12 +248,8 @@ class _SectionRowState extends State<_SectionRow> {
           title: widget.section.name.trim().isEmpty
               ? 'Nhóm việc'
               : widget.section.name.trim(),
-          trailing: OmniGlassCircle(
-            child: IconButton(
-              tooltip: 'Đóng',
-              onPressed: () => Navigator.of(sheet).maybePop(),
-              icon: const Icon(Icons.close_rounded),
-            ),
+          trailing: OmniSheetCloseButton(
+            onPressed: () => Navigator.of(sheet).maybePop(),
           ),
         ),
         children: [

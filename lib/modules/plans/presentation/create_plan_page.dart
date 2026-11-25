@@ -235,12 +235,8 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
       builder: (sheet) => OmniSheetBody(
         header: OmniSheetHeader(
           title: 'Thuộc team',
-          trailing: OmniGlassCircle(
-            child: IconButton(
-              tooltip: 'Đóng',
-              onPressed: () => Navigator.of(sheet).maybePop(),
-              icon: const Icon(Icons.close_rounded),
-            ),
+          trailing: OmniSheetCloseButton(
+            onPressed: () => Navigator.of(sheet).maybePop(),
           ),
         ),
         children: [

@@ -168,8 +168,8 @@ void main() {
     expect(find.text('Phạm Minh Đức'), findsOneWidget);
     expect(find.text('203.500.000đ'), findsOneWidget);
     expect(find.text('Thu một phần'), findsOneWidget);
-    expect(find.text('Tuần này'), findsOneWidget);
-    expect(find.text('Trước đó'), findsOneWidget);
+    expect(find.text('TUẦN NÀY'), findsOneWidget);
+    expect(find.text('TRƯỚC ĐÓ'), findsOneWidget);
     expect(api.orderCalls.last['status'], isNull);
 
     await t.tap(find.text('Đang xử lý'));

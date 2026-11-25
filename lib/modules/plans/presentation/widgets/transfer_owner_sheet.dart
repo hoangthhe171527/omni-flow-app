@@ -41,12 +41,8 @@ class _TransferOwnerSheetState extends ConsumerState<_TransferOwnerSheet> {
       header: OmniSheetHeader(
         title: 'Chuyển chủ kế hoạch',
         subtitle: 'Chọn thành viên đang làm việc để nhận quyền chủ',
-        trailing: OmniGlassCircle(
-          child: IconButton(
-            tooltip: 'Đóng',
-            onPressed: () => Navigator.of(context).maybePop(),
-            icon: const Icon(Icons.close_rounded),
-          ),
+        trailing: OmniSheetCloseButton(
+          onPressed: () => Navigator.of(context).maybePop(),
         ),
       ),
       children: [

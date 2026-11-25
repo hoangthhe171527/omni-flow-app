@@ -54,12 +54,8 @@ class _CopyPlanSheetState extends State<_CopyPlanSheet> {
     return OmniSheetBody(
       header: OmniSheetHeader(
         title: 'Sao chép kế hoạch',
-        trailing: OmniGlassCircle(
-          child: IconButton(
-            tooltip: 'Đóng',
-            onPressed: () => Navigator.of(context).maybePop(),
-            icon: const Icon(Icons.close_rounded),
-          ),
+        trailing: OmniSheetCloseButton(
+          onPressed: () => Navigator.of(context).maybePop(),
         ),
       ),
       footer: FilledButton(
@@ -193,12 +189,8 @@ Future<PlanTeamTarget?> showMoveTeamSheet(
     return OmniSheetBody(
       header: OmniSheetHeader(
         title: 'Chuyển sang team khác',
-        trailing: OmniGlassCircle(
-          child: IconButton(
-            tooltip: 'Đóng',
-            onPressed: () => Navigator.of(ctx).maybePop(),
-            icon: const Icon(Icons.close_rounded),
-          ),
+        trailing: OmniSheetCloseButton(
+          onPressed: () => Navigator.of(ctx).maybePop(),
         ),
       ),
       children: [

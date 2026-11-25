@@ -235,12 +235,8 @@ class _AddTaskSheetState extends ConsumerState<_AddTaskSheet> {
       header: OmniSheetHeader(
         title: 'Thêm việc',
         subtitle: 'vào ${widget.sectionName}',
-        trailing: OmniGlassCircle(
-          child: IconButton(
-            tooltip: 'Đóng',
-            onPressed: () => Navigator.of(context).maybePop(),
-            icon: const Icon(Icons.close_rounded),
-          ),
+        trailing: OmniSheetCloseButton(
+          onPressed: () => Navigator.of(context).maybePop(),
         ),
       ),
       footer: footer,

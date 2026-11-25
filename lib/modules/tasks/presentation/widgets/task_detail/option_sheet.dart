@@ -37,12 +37,8 @@ Future<int?> showOptionSheet(
     semanticsLabel: title,
     header: OmniSheetHeader(
       title: title,
-      trailing: OmniGlassCircle(
-        child: IconButton(
-          tooltip: 'Đóng',
-          onPressed: () => Navigator.of(ctx).maybePop(),
-          icon: const Icon(Icons.close_rounded, size: OmniIconSize.lg),
-        ),
+      trailing: OmniSheetCloseButton(
+        onPressed: () => Navigator.of(ctx).maybePop(),
       ),
     ),
     children: [

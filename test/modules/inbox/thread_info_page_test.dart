@@ -183,10 +183,10 @@ void main() {
   ) async {
     await pump(tester, const {'opportunities': true}, permissions: withOpp);
     expect(find.text('Tạo cơ hội'), findsOneWidget);
-    expect(find.text('Bán hàng'), findsOneWidget);
+    expect(find.text('BÁN HÀNG'), findsOneWidget);
     await pump(tester, const {'opportunities': false});
     expect(find.text('Tạo cơ hội'), findsNothing);
-    expect(find.text('Bán hàng'), findsNothing);
+    expect(find.text('BÁN HÀNG'), findsNothing);
   });
 
   testWidgets('chưa gắn khách: không Gọi, có Chuyển KH', (tester) async {
@@ -333,7 +333,7 @@ void main() {
   ) async {
     await pump(tester, const {'opportunities': true});
     expect(find.text('Tạo cơ hội'), findsNothing);
-    expect(find.text('Bán hàng'), findsNothing);
+    expect(find.text('BÁN HÀNG'), findsNothing);
     await pump(tester, const {'opportunities': true}, permissions: withOpp);
     expect(find.text('Tạo cơ hội'), findsOneWidget);
   });

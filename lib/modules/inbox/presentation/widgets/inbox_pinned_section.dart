@@ -127,17 +127,24 @@ class _SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    // Đầu nhóm chữ HOA (spec phong cách iOS §3.4); trình đọc màn hình đọc
+    // chữ gốc.
     return Semantics(
       header: true,
+      label: title,
+      excludeSemantics: true,
       child: Container(
         constraints: const BoxConstraints(minHeight: 32),
         alignment: Alignment.centerLeft,
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Text(
-          title,
+          title.toUpperCase(),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: OmniType.overline.copyWith(color: scheme.onSurfaceVariant),
+          style: OmniType.overline.copyWith(
+            color: scheme.onSurfaceVariant,
+            letterSpacing: 0.4,
+          ),
         ),
       ),
     );

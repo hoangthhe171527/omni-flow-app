@@ -35,7 +35,7 @@ void main() {
 
     expect(find.text('Đang giữ'), findsOneWidget);
     expect(find.text('1 quyền'), findsOneWidget);
-    expect(find.text('Hộp thư'), findsOneWidget);
+    expect(find.text('HỘP THƯ'), findsOneWidget);
     // Tên tiếng Việt thay mã thô.
     expect(find.text('Xem hộp thư'), findsOneWidget);
     expect(find.text('inbox.read'), findsNothing);

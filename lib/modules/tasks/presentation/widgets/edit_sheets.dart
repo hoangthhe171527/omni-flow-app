@@ -31,12 +31,8 @@ Future<String?> showPrioritySheet({
     semanticsLabel: 'Mức ưu tiên',
     header: OmniSheetHeader(
       title: 'Mức ưu tiên',
-      trailing: OmniGlassCircle(
-        child: IconButton(
-          tooltip: 'Đóng',
-          onPressed: () => Navigator.of(context).maybePop(),
-          icon: const Icon(Icons.close_rounded, size: OmniIconSize.lg),
-        ),
+      trailing: OmniSheetCloseButton(
+        onPressed: () => Navigator.of(context).maybePop(),
       ),
     ),
     children: [
@@ -98,12 +94,8 @@ Future<DueDateChoice?> showDueDateSheet({
       semanticsLabel: 'Hạn',
       header: OmniSheetHeader(
         title: 'Hạn hoàn thành',
-        trailing: OmniGlassCircle(
-          child: IconButton(
-            tooltip: 'Đóng',
-            onPressed: () => Navigator.of(context).maybePop(),
-            icon: const Icon(Icons.close_rounded, size: OmniIconSize.lg),
-          ),
+        trailing: OmniSheetCloseButton(
+          onPressed: () => Navigator.of(context).maybePop(),
         ),
       ),
       children: [
@@ -221,12 +213,8 @@ class _TextEditSheetState extends State<_TextEditSheet> {
         children: [
           OmniSheetHeader(
             title: widget.title,
-            trailing: OmniGlassCircle(
-              child: IconButton(
-                tooltip: 'Đóng',
-                onPressed: () => Navigator.of(context).maybePop(),
-                icon: const Icon(Icons.close_rounded, size: OmniIconSize.lg),
-              ),
+            trailing: OmniSheetCloseButton(
+              onPressed: () => Navigator.of(context).maybePop(),
             ),
           ),
           // Màn nhỏ + bàn phím: mô tả tám dòng cao hơn chỗ còn lại. Ô nhập co

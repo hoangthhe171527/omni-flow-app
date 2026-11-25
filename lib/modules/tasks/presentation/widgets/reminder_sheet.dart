@@ -149,12 +149,8 @@ class _ReminderSheetState extends ConsumerState<ReminderSheet> {
       child: OmniSheetBody(
         header: OmniSheetHeader(
           title: 'Nhắc việc',
-          trailing: OmniGlassCircle(
-            child: IconButton(
-              tooltip: 'Đóng',
-              onPressed: () => Navigator.of(context).maybePop(),
-              icon: const Icon(Icons.close_rounded, size: OmniIconSize.lg),
-            ),
+          trailing: OmniSheetCloseButton(
+            onPressed: () => Navigator.of(context).maybePop(),
           ),
         ),
         children: [

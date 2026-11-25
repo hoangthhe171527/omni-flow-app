@@ -469,6 +469,10 @@ Mỗi chỗ còn lại đã được rà bằng mắt và có lý do giữ.
 - **Mục 4:** đổi sang ✕ chung ở đợt sau.
 - **Mục 5–9:** để lại như ghi ở trên.
 
+**Đợt 4 (25/11):**
+- **Mục 2 — đã làm:** `OmniGroupHeader` chung, chữ HOA 13/600, giãn chữ 0.4, thụt 16. Trình đọc màn hình đọc chữ gốc. Áp vào `OmniGroupSection`, Tồn kho, nhóm ghim Hộp thư và sheet sửa thanh tab.
+- **Mục 4 — đã làm:** 29 nút ✕ tự dựng ở Việc / Dòng việc đổi sang `OmniSheetCloseButton`, giữ `onPressed` (kể cả trả giá trị khi đóng). Nút đóng trên trình xem ảnh toàn màn và màn chi tiết việc giữ nguyên. ✕ tự động của `OmniSheetHeader` chỉ hiện trong sheet (`ModalBottomSheetRoute`), không hiện trong menu bật lên.
+
 ### 6.5 Kiểm
 
 - `flutter analyze lib`: sạch.

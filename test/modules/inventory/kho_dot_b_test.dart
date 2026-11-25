@@ -139,7 +139,7 @@ void main() {
       await t.pumpWidget(app(api, all, const CatalogPage()));
       await t.pumpAndSettle();
 
-      expect(find.text('2 mã hàng'), findsOneWidget);
+      expect(find.text('2 MÃ HÀNG'), findsOneWidget);
       expect(
         find.text('Giá sỉ 1.200.000đ · Giá lẻ 1.500.000đ'),
         findsOneWidget,
@@ -153,7 +153,7 @@ void main() {
       await t.tap(find.text('Ghế').last);
       await t.pumpAndSettle();
       expect(api.productQueries.last['category_id'], 'c-ghe');
-      expect(find.text('1 mã hàng'), findsOneWidget);
+      expect(find.text('1 MÃ HÀNG'), findsOneWidget);
     });
 
     testWidgets('sửa giá sỉ trong sheet: gửi đúng bậc, dòng đọc lại giá mới', (

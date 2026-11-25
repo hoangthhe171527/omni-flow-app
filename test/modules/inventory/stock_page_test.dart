@@ -108,7 +108,7 @@ void main() {
     expect(find.text('36.177.607đ'), findsOneWidget);
     expect(find.text('35.500.000đ'), findsOneWidget);
     // Nhóm theo loại: loại ở tiêu đề nhóm, dòng phụ còn lô · tuổi tồn.
-    expect(find.text('Piano Upright cũ · 1 cây'), findsOneWidget);
+    expect(find.text('PIANO UPRIGHT CŨ · 1 CÂY'), findsOneWidget);
     expect(find.text('Ep 61 · 84 ngày'), findsOneWidget);
     expect(find.text('Lỗi'), findsOneWidget);
     expect(find.byKey(const ValueKey('inv-stock-multi')), findsOneWidget);
@@ -170,7 +170,7 @@ void main() {
     await t.tap(find.byKey(const ValueKey('inv-stock-sell-picked')));
     await t.pumpAndSettle();
     expect(find.text('2 cây'), findsWidgets);
-    expect(find.text('Giá chốt'), findsOneWidget);
+    expect(find.text('GIÁ CHỐT'), findsOneWidget);
     expect(find.text('Tổng 2 cây'), findsOneWidget);
   });
 

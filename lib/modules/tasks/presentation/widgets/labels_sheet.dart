@@ -97,14 +97,8 @@ class _LabelsSheetState extends ConsumerState<LabelsSheet> {
       child: OmniSheetBody(
         header: OmniSheetHeader(
           title: 'Nhãn màu',
-          trailing: OmniGlassCircle(
-            child: IconButton(
-              tooltip: 'Đóng',
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-              onPressed: () => Navigator.of(context).maybePop(),
-              icon: const Icon(Icons.close_rounded, size: OmniIconSize.lg),
-            ),
+          trailing: OmniSheetCloseButton(
+            onPressed: () => Navigator.of(context).maybePop(),
           ),
         ),
         children: [
@@ -338,14 +332,8 @@ class _EditLabelPaneState extends State<_EditLabelPane> {
               ),
             ),
           ),
-          trailing: OmniGlassCircle(
-            child: IconButton(
-              tooltip: 'Đóng',
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-              onPressed: () => Navigator.of(context).maybePop(),
-              icon: const Icon(Icons.close_rounded, size: OmniIconSize.lg),
-            ),
+          trailing: OmniSheetCloseButton(
+            onPressed: () => Navigator.of(context).maybePop(),
           ),
         ),
         footer: FilledButton(

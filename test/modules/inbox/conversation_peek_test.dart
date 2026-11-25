@@ -371,23 +371,23 @@ void main() {
         _conversation('c2', 'Minh Tú'),
       ];
       await open(tester);
-      expect(find.text('Đã ghim'), findsNothing);
+      expect(find.text('ĐÃ GHIM'), findsNothing);
       await holdRow(tester, 'Lan Anh');
       await tester.tap(find.text('Ghim'));
       await tester.pumpAndSettle(const Duration(milliseconds: 50));
 
       expect(api.pinCalls, [('c1', true)]);
       expect(find.text('Đã ghim hội thoại.'), findsOneWidget);
-      expect(find.text('Đã ghim'), findsOneWidget);
+      expect(find.text('ĐÃ GHIM'), findsOneWidget);
       expect(find.text('Lan Anh'), findsOneWidget, reason: 'không hiện 2 lần');
       final y = tester.getTopLeft;
       expect(
         y(find.text('Lan Anh')).dy,
-        lessThan(y(find.text('Hội thoại')).dy),
+        lessThan(y(find.text('HỘI THOẠI')).dy),
       );
       expect(
         y(find.text('Minh Tú')).dy,
-        greaterThan(y(find.text('Hội thoại')).dy),
+        greaterThan(y(find.text('HỘI THOẠI')).dy),
       );
 
       // Menu lần sau: "Bỏ ghim" → DELETE, dòng về danh sách chính.
@@ -399,7 +399,7 @@ void main() {
       await tester.pumpAndSettle(const Duration(milliseconds: 50));
       expect(api.pinCalls, [('c1', true), ('c1', false)]);
       expect(find.text('Đã bỏ ghim.'), findsOneWidget);
-      expect(find.text('Đã ghim'), findsNothing);
+      expect(find.text('ĐÃ GHIM'), findsNothing);
       expect(find.text('Lan Anh'), findsOneWidget);
       await closePage(tester);
     });
@@ -415,7 +415,7 @@ void main() {
       await tester.pumpAndSettle(const Duration(milliseconds: 50));
       expect(find.text(_pinLimitMessage), findsOneWidget);
       expect(find.text('Đã ghim hội thoại.'), findsNothing);
-      expect(find.text('Đã ghim'), findsNothing);
+      expect(find.text('ĐÃ GHIM'), findsNothing);
       expect(find.text('Lan Anh'), findsOneWidget);
       await closePage(tester);
     });
@@ -518,7 +518,7 @@ void main() {
         ).removeCurrentSnackBar();
         await tester.pumpAndSettle(const Duration(milliseconds: 50));
       }
-      expect(find.text('Đã ghim'), findsNothing);
+      expect(find.text('ĐÃ GHIM'), findsNothing);
       await closePage(tester);
     });
 

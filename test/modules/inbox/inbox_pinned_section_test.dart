@@ -77,16 +77,16 @@ void main() {
       api.pinned = [_c('p1', 'Lan Anh', pinned: true)];
       await open(tester);
 
-      expect(find.text('Đã ghim'), findsOneWidget);
-      expect(find.text('Hội thoại'), findsOneWidget);
+      expect(find.text('ĐÃ GHIM'), findsOneWidget);
+      expect(find.text('HỘI THOẠI'), findsOneWidget);
       final y = tester.getTopLeft;
-      expect(y(find.text('Đã ghim')).dy, lessThan(y(find.text('Lan Anh')).dy));
+      expect(y(find.text('ĐÃ GHIM')).dy, lessThan(y(find.text('Lan Anh')).dy));
       expect(
         y(find.text('Lan Anh')).dy,
-        lessThan(y(find.text('Hội thoại')).dy),
+        lessThan(y(find.text('HỘI THOẠI')).dy),
       );
       expect(
-        y(find.text('Hội thoại')).dy,
+        y(find.text('HỘI THOẠI')).dy,
         lessThan(y(find.text('Minh Trần')).dy),
       );
 
@@ -174,8 +174,8 @@ void main() {
     api.main = [_c('c1', 'Minh Trần')];
     await open(tester);
     expect(find.text('Minh Trần'), findsOneWidget);
-    expect(find.text('Đã ghim'), findsNothing);
-    expect(find.text('Hội thoại'), findsNothing);
+    expect(find.text('ĐÃ GHIM'), findsNothing);
+    expect(find.text('HỘI THOẠI'), findsNothing);
     await closePage(tester);
   });
 
@@ -186,7 +186,7 @@ void main() {
     api.failPinned = true;
     await open(tester);
     expect(find.text('Minh Trần'), findsOneWidget);
-    expect(find.text('Đã ghim'), findsNothing);
+    expect(find.text('ĐÃ GHIM'), findsNothing);
     expect(find.byType(OmniErrorView), findsNothing);
     await closePage(tester);
   });
@@ -215,7 +215,7 @@ void main() {
     api.ignorePinned = true;
     await open(tester);
     expect(find.text('Minh Trần'), findsOneWidget);
-    expect(find.text('Đã ghim'), findsNothing);
+    expect(find.text('ĐÃ GHIM'), findsNothing);
     await closePage(tester);
   });
 
@@ -233,7 +233,7 @@ void main() {
     await tester.pump();
     expect(api.calls, isNotEmpty);
     expect(api.calls.where((c) => c.pinned == true), isEmpty);
-    expect(find.text('Đã ghim'), findsNothing);
+    expect(find.text('ĐÃ GHIM'), findsNothing);
     await closePage(tester);
   });
 
@@ -247,7 +247,7 @@ void main() {
     ];
     await open(tester);
     expect(tester.takeException(), isNull);
-    expect(find.text('Đã ghim'), findsOneWidget);
+    expect(find.text('ĐÃ GHIM'), findsOneWidget);
     await closePage(tester);
   });
 

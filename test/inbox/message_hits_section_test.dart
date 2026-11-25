@@ -65,7 +65,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Tin nhắn · 1'), findsOneWidget);
+    expect(find.text('TIN NHẮN · 1'), findsOneWidget);
     expect(find.text('Minh Đức'), findsOneWidget);
     expect(find.textContaining('TN Piano'), findsOneWidget);
     await tester.tap(find.text('Minh Đức'));
