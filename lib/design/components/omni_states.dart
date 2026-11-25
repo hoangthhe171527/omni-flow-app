@@ -59,6 +59,20 @@ class OmniAsyncView<T> extends StatelessWidget {
   }
 }
 
+/// Tông của [OmniEmptyState]: [accent] cho trống thật (mời tạo cái đầu tiên),
+/// [neutral] cho lỗi / không quyền (không mời gọi, chỉ báo).
+enum OmniEmptyTone { accent, neutral }
+
+/// Trạng thái trống (Chuẩn Mobile UI — EmptyState), ba kiểu:
+///
+/// - **Trống thật** (mặc định): ô icon 64 bo 16 nền nhấn nhạt + một câu
+///   17/600 + (mô tả ≤ 2 dòng) + MỘT nút động từ ("Thêm khoản chi").
+/// - **Trống trong khối** ([compact]): cùng hình, đệm nhỏ — đặt đúng chỗ nội
+///   dung sẽ hiện (trong thẻ, dưới biểu đồ), không chiếm cả màn.
+/// - **Trống do lọc / tìm** ([OmniEmptyState.filtered]): một câu + nút chữ
+///   "Bỏ lọc", không icon lớn — người dùng không cần được an ủi.
+///
+/// Không: đoạn giải thích tính năng, hình minh hoạ lớn, một dòng chữ trơn.
 class OmniEmptyState extends StatelessWidget {
   const OmniEmptyState({
     super.key,
@@ -67,45 +81,99 @@ class OmniEmptyState extends StatelessWidget {
     this.icon = LucideIcons.inbox,
     this.actionLabel,
     this.onAction,
-  });
+    this.tone = OmniEmptyTone.accent,
+    this.compact = false,
+  }) : _filtered = false;
+
+  /// Trống vì bộ lọc / từ khoá: một câu + nút chữ [actionLabel] (mặc định
+  /// "Bỏ lọc") gọi [onAction].
+  const OmniEmptyState.filtered({
+    super.key,
+    required this.title,
+    this.actionLabel = 'Bỏ lọc',
+    this.onAction,
+  }) : message = null,
+       icon = LucideIcons.searchX,
+       tone = OmniEmptyTone.neutral,
+       compact = true,
+       _filtered = true;
 
   final String title;
   final String? message;
   final IconData icon;
   final String? actionLabel;
   final VoidCallback? onAction;
+  final OmniEmptyTone tone;
+  final bool compact;
+  final bool _filtered;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
+    if (_filtered) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: OmniSpacing.lg,
+            vertical: OmniSpacing.xxl,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: OmniType.body.copyWith(color: scheme.onSurfaceVariant),
+              ),
+              if (actionLabel != null && onAction != null) ...[
+                const SizedBox(height: OmniSpacing.xs),
+                TextButton(onPressed: onAction, child: Text(actionLabel!)),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
+
+    final accent = tone == OmniEmptyTone.accent;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(OmniSpacing.section),
+        padding: EdgeInsets.all(compact ? OmniSpacing.xl : OmniSpacing.section),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 72,
-              height: 72,
+              width: 64,
+              height: 64,
               decoration: BoxDecoration(
-                color: scheme.surfaceContainerHighest,
-                shape: BoxShape.circle,
+                color: accent
+                    ? scheme.primaryContainer
+                    : scheme.surfaceContainerHighest,
+                borderRadius: OmniRadius.xlAll,
               ),
               child: Icon(
                 icon,
-                size: OmniIconSize.hero,
-                color: scheme.onSurfaceVariant,
+                size: 28,
+                color: accent
+                    ? scheme.onPrimaryContainer
+                    : scheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: OmniSpacing.lg),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: OmniType.section.copyWith(color: scheme.onSurface),
+            Semantics(
+              header: !compact,
+              child: Text(
+                title,
+                textAlign: TextAlign.center,
+                style: OmniType.section.copyWith(
+                  fontSize: 17,
+                  color: scheme.onSurface,
+                ),
+              ),
             ),
             if (message != null) ...[
-              const SizedBox(height: OmniSpacing.sm),
+              const SizedBox(height: OmniSpacing.xs),
               Text(
                 message!,
                 textAlign: TextAlign.center,
@@ -113,8 +181,13 @@ class OmniEmptyState extends StatelessWidget {
               ),
             ],
             if (actionLabel != null) ...[
-              const SizedBox(height: OmniSpacing.xl),
-              FilledButton(onPressed: onAction, child: Text(actionLabel!)),
+              SizedBox(height: compact ? OmniSpacing.md : OmniSpacing.xl),
+              accent
+                  ? FilledButton(onPressed: onAction, child: Text(actionLabel!))
+                  : OutlinedButton(
+                      onPressed: onAction,
+                      child: Text(actionLabel!),
+                    ),
             ],
           ],
         ),
@@ -135,10 +208,13 @@ class OmniErrorView extends StatelessWidget {
   Widget build(BuildContext context) {
     final (icon, title, message, retryable) = _describe(error);
 
+    // Lỗi / không quyền: tông trung tính (không mời gọi), "Thử lại" là nút
+    // phụ — Chuẩn Mobile UI: câu nói chuyện gì + cách sửa + Thử lại.
     return OmniEmptyState(
       icon: icon,
       title: title,
       message: message,
+      tone: OmniEmptyTone.neutral,
       actionLabel: retryable && onRetry != null ? 'Thử lại' : null,
       onAction: onRetry,
     );
@@ -163,12 +239,7 @@ class OmniErrorView extends StatelessWidget {
       );
     }
     if (error is RequestBlockedException) {
-      return (
-        LucideIcons.boxes,
-        'Chưa chọn workspace',
-        error.message,
-        false,
-      );
+      return (LucideIcons.boxes, 'Chưa chọn workspace', error.message, false);
     }
     if (error is AppException) {
       return (LucideIcons.circleAlert, 'Đã có lỗi', error.message, true);

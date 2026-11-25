@@ -114,19 +114,15 @@ class OmniTotalCard extends StatelessWidget {
                 ],
               ],
             ),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(
-                amount,
-                key: amountKey,
-                maxLines: 1,
-                softWrap: false,
-                // `money-hero` 32/700 (Chuẩn Mobile UI, Đợt 0).
-                style: OmniType.moneyHero.copyWith(
-                  height: 1.25,
-                  color: scheme.onSurface,
-                ),
+            // `money-hero` 32/700, KHÔNG thu nhỏ (Chuẩn Mobile UI: số đủ, không
+            // cắt, không FittedBox). Vừa một dòng thì một dòng; không vừa (chữ
+            // hệ thống phóng to) thì xuống dòng ở dấu ngăn nghìn — số vẫn đủ.
+            _HeroAmount(
+              amount: amount,
+              amountKey: amountKey,
+              style: OmniType.moneyHero.copyWith(
+                height: 1.25,
+                color: scheme.onSurface,
               ),
             ),
             if (child case final c?) ...[const SizedBox(height: 12), c],
@@ -156,6 +152,56 @@ class OmniTotalCard extends StatelessWidget {
       );
 }
 
+/// Số của [OmniTotalCard] (số chính và số phụ): giữ nguyên cỡ; chỉ khi một
+/// dòng không đủ chỗ mới xuống dòng giữa các cụm ngăn nghìn ("128." "450."
+/// "000đ" là các ô của một [Wrap]) — thay `FittedBox` từng thu số nhỏ lại.
+/// Trình đọc màn hình đọc số gốc.
+class _HeroAmount extends StatelessWidget {
+  const _HeroAmount({
+    required this.amount,
+    required this.style,
+    this.amountKey,
+  });
+
+  final String amount;
+  final TextStyle style;
+  final Key? amountKey;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, box) {
+        final painter = TextPainter(
+          text: TextSpan(text: amount, style: style),
+          textDirection: Directionality.of(context),
+          textScaler: MediaQuery.textScalerOf(context),
+          maxLines: 1,
+        )..layout();
+        final fits = painter.width <= box.maxWidth;
+        painter.dispose();
+        if (fits) {
+          return Text(
+            amount,
+            key: amountKey,
+            maxLines: 1,
+            softWrap: false,
+            style: style,
+          );
+        }
+        final chunks = RegExp(r'[^.]+\.?').allMatches(amount).map((m) => m[0]!);
+        return Semantics(
+          key: amountKey,
+          label: amount,
+          excludeSemantics: true,
+          child: Wrap(
+            children: [for (final c in chunks) Text(c, style: style)],
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _Stat extends StatelessWidget {
   const _Stat({required this.stat});
   final OmniTotalStat stat;
@@ -172,16 +218,10 @@ class _Stat extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: Text(
-            stat.value,
-            maxLines: 1,
-            softWrap: false,
-            // `stat` 15/600.
-            style: OmniType.money.copyWith(height: 1.4, color: color),
-          ),
+        // `stat` 15/600 — không thu nhỏ, hẹp thì xuống dòng ở dấu ngăn nghìn.
+        _HeroAmount(
+          amount: stat.value,
+          style: OmniType.money.copyWith(height: 1.4, color: color),
         ),
         Text(
           stat.label,

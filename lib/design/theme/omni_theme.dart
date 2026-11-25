@@ -320,27 +320,22 @@ abstract final class OmniTheme {
         ),
         padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.sm),
       ),
-      // Thông báo nhỏ là viên kính nổi (đợt 1 liquid, 08/11/2026): nền trắng
-      // gần đặc (SnackBar không làm mờ được nền sau), chữ mực, nút "Hoàn tác"
-      // chữ màu chính, bo viên thuốc, cách mép 16.
+      // Toast (Chuẩn Mobile UI): nền MỰC đảo màu theo chế độ (sáng: mực, tối:
+      // chữ sáng), chữ màu nền trang, nút "Hoàn tác" cùng màu chữ, đậm — tách
+      // khỏi nội dung bằng độ tương phản chứ không bằng kính. Bo 14, cách mép
+      // 16. Gọi qua `showOmniToast` để có thời lượng chuẩn và không chồng.
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: brightness == Brightness.dark
-            ? Color.alphaBlend(Colors.white.withValues(alpha: .10), surface)
-            : Colors.white.withValues(alpha: .97),
+        backgroundColor: onSurface,
         contentTextStyle: OmniType.body.copyWith(
-          color: onSurface,
+          color: background,
           fontWeight: FontWeight.w500,
         ),
-        actionTextColor: primary,
+        actionTextColor: background,
         elevation: 8,
         insetPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        shape: StadiumBorder(
-          side: BorderSide(
-            color: Colors.white.withValues(
-              alpha: brightness == Brightness.dark ? .12 : .9,
-            ),
-          ),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(14)),
         ),
       ),
       // Tiến độ: 4px màu chính trên rãnh xám, đầu bo 2. Không bao giờ màu
