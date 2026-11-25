@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/core/config/app_config.dart';
 import 'package:omni_app/core/network/api_client.dart';
 import 'package:omni_app/core/module/extra_segment.dart';
@@ -195,7 +196,7 @@ void main() {
   testWidgets('nút lọc và "Thêm khách" có vùng chạm 44 dù hình 36', (t) async {
     await t.pumpWidget(host());
     await t.pumpAndSettle();
-    final icon = t.getCenter(find.byIcon(Icons.tune_rounded));
+    final icon = t.getCenter(find.byIcon(LucideIcons.slidersHorizontal));
     // 20px lệch tâm: ngoài hình 36 (bán kính 18), trong vùng chạm 44.
     await t.tapAt(icon + const Offset(20, 0));
     await t.pumpAndSettle();
@@ -203,7 +204,7 @@ void main() {
     // "Thêm khách" giờ là nút + kính góc phải dưới (rà soát 12/11).
     final add = t.getSize(
       find.ancestor(
-        of: find.byIcon(Icons.person_add_alt_1_rounded),
+        of: find.byIcon(LucideIcons.userPlus),
         matching: find.byType(OmniLiquidFab),
       ),
     );

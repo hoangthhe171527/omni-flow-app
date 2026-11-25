@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
@@ -96,56 +97,56 @@ int planMemberCount(Plan plan) => {
 ({IconData icon, String label}) _planMenuMeta(PlanMenuAction action) =>
     switch (action) {
       PlanMenuAction.edit => (
-        icon: Icons.edit_outlined,
+        icon: LucideIcons.pencil,
         label: 'Sửa tên, mô tả, nền',
       ),
       PlanMenuAction.members => (
-        icon: Icons.person_add_alt_outlined,
+        icon: LucideIcons.userPlus,
         label: 'Thành viên',
       ),
-      PlanMenuAction.labels => (icon: Icons.sell_outlined, label: 'Nhãn màu'),
+      PlanMenuAction.labels => (icon: LucideIcons.tag, label: 'Nhãn màu'),
       PlanMenuAction.fields => (
-        icon: Icons.list_alt_outlined,
+        icon: LucideIcons.clipboardList,
         label: 'Trường tuỳ chỉnh',
       ),
       PlanMenuAction.copy => (
-        icon: Icons.copy_outlined,
+        icon: LucideIcons.copy,
         label: 'Sao chép kế hoạch',
       ),
       PlanMenuAction.moveTeam => (
-        icon: Icons.arrow_forward_rounded,
+        icon: LucideIcons.arrowRight,
         label: 'Chuyển sang team khác',
       ),
       PlanMenuAction.copyLink => (
-        icon: Icons.link_rounded,
+        icon: LucideIcons.link,
         label: 'Sao chép liên kết',
       ),
       PlanMenuAction.archived => (
-        icon: Icons.archive_outlined,
+        icon: LucideIcons.archive,
         label: 'Việc đã lưu trữ',
       ),
       PlanMenuAction.files => (
-        icon: Icons.attach_file_rounded,
+        icon: LucideIcons.paperclip,
         label: 'Tệp đính kèm',
       ),
       PlanMenuAction.report => (
-        icon: Icons.bar_chart_rounded,
+        icon: LucideIcons.chartColumn,
         label: 'Báo cáo kế hoạch',
       ),
       PlanMenuAction.transferOwner => (
-        icon: Icons.how_to_reg_outlined,
+        icon: LucideIcons.userCheck,
         label: 'Chuyển chủ kế hoạch',
       ),
       PlanMenuAction.close => (
-        icon: Icons.lock_outline_rounded,
+        icon: LucideIcons.lock,
         label: 'Đóng kế hoạch',
       ),
       PlanMenuAction.reopen => (
-        icon: Icons.lock_open_outlined,
+        icon: LucideIcons.lockOpen,
         label: 'Mở lại kế hoạch',
       ),
       PlanMenuAction.delete => (
-        icon: Icons.delete_outline,
+        icon: LucideIcons.trash2,
         label: 'Xoá kế hoạch',
       ),
     };

@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/domain/channel.dart';
 import '../../../core/error/app_exception.dart';
@@ -188,7 +189,7 @@ class _PairPageState extends ConsumerState<PairPage>
                       OutlinedButton.icon(
                         onPressed: () => _saveQr(state.snapshot.qr!),
                         icon: const Icon(
-                          Icons.download_rounded,
+                          LucideIcons.download,
                           size: OmniIconSize.md,
                         ),
                         label: const Text('Lưu ảnh QR'),
@@ -250,7 +251,7 @@ class _PairPageState extends ConsumerState<PairPage>
                 children: [
                   // Dấu tick ĐẶC + chữ "Đã kết nối!" — trạng thái đọc được qua hình dạng.
                   Icon(
-                    Icons.check_circle_rounded,
+                    LucideIcons.circleCheck,
                     size: OmniIconSize.hero,
                     color: scheme.primary,
                   ),
@@ -289,7 +290,7 @@ class _PairPageState extends ConsumerState<PairPage>
         child: Column(
           children: [
             Icon(
-              Icons.error_outline_rounded,
+              LucideIcons.circleAlert,
               size: OmniIconSize.hero,
               color: OmniColors.dangerTextOf(context),
             ),
@@ -419,7 +420,7 @@ class _Hint extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.timer_outlined, size: OmniIconSize.sm, color: foreground),
+          Icon(LucideIcons.timer, size: OmniIconSize.sm, color: foreground),
           const SizedBox(width: 8),
           Expanded(
             child: Text(

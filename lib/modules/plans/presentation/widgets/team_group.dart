@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../design/components/components.dart';
 import '../../../../design/platform/omni_motion_scope.dart';
@@ -221,7 +222,7 @@ class TeamGroup extends StatelessWidget {
                       children: [
                         ExcludeSemantics(
                           child: Icon(
-                            Icons.groups_2_outlined,
+                            LucideIcons.users,
                             key: const Key('team-group-icon'),
                             size: OmniIconSize.md,
                             color: scheme.primary,
@@ -256,7 +257,7 @@ class TeamGroup extends StatelessWidget {
                                 : Duration.zero,
                             curve: OmniCurves.standard,
                             child: Icon(
-                              Icons.keyboard_arrow_down_rounded,
+                              LucideIcons.chevronDown,
                               size: OmniIconSize.md,
                               color: scheme.onSurfaceVariant,
                             ),
@@ -339,7 +340,7 @@ class _ClosedToggle extends StatelessWidget {
           child: Row(
             children: [
               Icon(
-                Icons.lock_outline_rounded,
+                LucideIcons.lock,
                 size: OmniIconSize.sm,
                 color: scheme.onSurfaceVariant,
               ),
@@ -361,7 +362,7 @@ class _ClosedToggle extends StatelessWidget {
                       : Duration.zero,
                   curve: OmniCurves.standard,
                   child: Icon(
-                    Icons.keyboard_arrow_down_rounded,
+                    LucideIcons.chevronDown,
                     size: OmniIconSize.md,
                     color: scheme.onSurfaceVariant,
                   ),

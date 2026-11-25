@@ -3,6 +3,7 @@ import 'package:flutter/services.dart' show HapticFeedback, PlatformException;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../core/nav/account_extras_slot.dart';
@@ -77,7 +78,7 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                   title: 'Bảo mật',
                   children: [
                     OmniGroupRow(
-                      icon: Icons.key_outlined,
+                      icon: LucideIcons.key,
                       title: 'Đổi mật khẩu',
                       onTap: _changePassword,
                     ),
@@ -95,13 +96,13 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                 child: OmniGroupSection(
                   children: [
                     OmniGroupRow(
-                      icon: Icons.logout_rounded,
+                      icon: LucideIcons.logOut,
                       title: 'Đăng xuất',
                       destructive: true,
                       onTap: _confirmLogout,
                     ),
                     OmniGroupRow(
-                      icon: Icons.delete_outline_rounded,
+                      icon: LucideIcons.trash2,
                       title: 'Xoá tài khoản',
                       destructive: true,
                       onTap: () => requestAccountDeletion(context),
@@ -197,7 +198,7 @@ class _AccountPageState extends ConsumerState<AccountPage> {
           const SizedBox(width: OmniSpacing.sm),
           ExcludeSemantics(
             child: _SoftActionPill(
-              icon: Icons.photo_camera_outlined,
+              icon: LucideIcons.camera,
               label: 'Ảnh',
               onTap: _busy ? null : () => _openAvatarMenu(avatarUrl),
             ),
@@ -224,7 +225,7 @@ class _AccountPageState extends ConsumerState<AccountPage> {
       title: 'Tổ chức hiện tại',
       children: [
         OmniGroupRow(
-          icon: Icons.apartment_rounded,
+          icon: LucideIcons.building,
           title: (tenantName != null && tenantName.isNotEmpty)
               ? tenantName
               : 'Tổ chức',
@@ -242,7 +243,7 @@ class _AccountPageState extends ConsumerState<AccountPage> {
               : null,
         ),
         OmniGroupRow(
-          icon: Icons.shield_outlined,
+          icon: LucideIcons.shield,
           title: 'Quyền của tôi',
           onTap: () => context.pushNamed(SettingsModule.myPermissions),
         ),
@@ -265,13 +266,13 @@ class _AccountPageState extends ConsumerState<AccountPage> {
         mainAxisSize: MainAxisSize.min,
         children: [
           OmniAnchoredMenuItem(
-            icon: Icons.photo_library_outlined,
+            icon: LucideIcons.images,
             label: 'Đổi ảnh',
             onTap: () => Navigator.of(menuContext).pop(_AvatarAction.change),
           ),
           if (avatarUrl != null && avatarUrl.trim().isNotEmpty)
             OmniAnchoredMenuItem(
-              icon: Icons.delete_outline_rounded,
+              icon: LucideIcons.trash2,
               label: 'Xoá ảnh',
               divider: true,
               destructive: true,
@@ -432,7 +433,7 @@ class _CameraBadge extends StatelessWidget {
         shape: BoxShape.circle,
         border: Border.all(color: scheme.outlineVariant),
       ),
-      child: Icon(Icons.photo_camera_rounded, size: 11, color: scheme.primary),
+      child: Icon(LucideIcons.camera, size: 11, color: scheme.primary),
     );
   }
 }

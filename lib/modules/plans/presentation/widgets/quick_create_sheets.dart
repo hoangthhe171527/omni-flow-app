@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/error/app_exception.dart';
 import '../../../../design/components/components.dart';
@@ -53,7 +54,7 @@ Widget _chevron(BuildContext context, bool expanded) => AnimatedRotation(
   turns: expanded ? 0.25 : 0,
   duration: OmniMotion.of(context).fast,
   child: Icon(
-    Icons.chevron_right_rounded,
+    LucideIcons.chevronRight,
     size: 18,
     color: Theme.of(context).colorScheme.onSurfaceVariant,
   ),
@@ -314,7 +315,7 @@ class _QuickCreatePlanFormState extends ConsumerState<QuickCreatePlanForm> {
             child: Row(
               children: [
                 Icon(
-                  Icons.check_circle_rounded,
+                  LucideIcons.circleCheck,
                   size: 20,
                   color: scheme.primary,
                 ),
@@ -356,7 +357,7 @@ class _QuickCreatePlanFormState extends ConsumerState<QuickCreatePlanForm> {
               OmniGroupRow(
                 key: const Key('quick-plan-team'),
                 leading: OmniIconTile(
-                  Icons.groups_2_outlined,
+                  LucideIcons.users,
                   color: scheme.primary,
                   background: iconBg,
                 ),
@@ -384,7 +385,7 @@ class _QuickCreatePlanFormState extends ConsumerState<QuickCreatePlanForm> {
             OmniGroupRow(
               key: const Key('quick-plan-sections'),
               leading: OmniIconTile(
-                Icons.view_week_outlined,
+                LucideIcons.columns3,
                 color: scheme.primary,
                 background: iconBg,
               ),
@@ -411,7 +412,7 @@ class _QuickCreatePlanFormState extends ConsumerState<QuickCreatePlanForm> {
                               child: OmniChoicePill(
                                 label: _sections[i],
                                 selected: true,
-                                icon: Icons.close_rounded,
+                                icon: LucideIcons.x,
                                 onTap: () =>
                                     setState(() => _sections.removeAt(i)),
                               ),
@@ -445,7 +446,7 @@ class _QuickCreatePlanFormState extends ConsumerState<QuickCreatePlanForm> {
                         ),
                         IconButton(
                           tooltip: 'Thêm nhóm việc',
-                          icon: Icon(Icons.add_rounded, color: scheme.primary),
+                          icon: Icon(LucideIcons.plus, color: scheme.primary),
                           onPressed: _addSection,
                         ),
                       ],
@@ -456,7 +457,7 @@ class _QuickCreatePlanFormState extends ConsumerState<QuickCreatePlanForm> {
             OmniGroupRow(
               key: const Key('quick-plan-cover'),
               leading: OmniIconTile(
-                Icons.image_outlined,
+                LucideIcons.image,
                 color: scheme.primary,
                 background: iconBg,
               ),
@@ -598,7 +599,7 @@ class _QuickCreateTeamSheetState extends ConsumerState<_QuickCreateTeamSheet> {
             OmniGroupRow(
               key: const Key('quick-team-desc'),
               leading: OmniIconTile(
-                Icons.notes_rounded,
+                LucideIcons.notebookText,
                 color: scheme.primary,
                 background: iconBg,
               ),
@@ -627,7 +628,7 @@ class _QuickCreateTeamSheetState extends ConsumerState<_QuickCreateTeamSheet> {
             OmniGroupRow(
               key: const Key('quick-team-members'),
               leading: OmniIconTile(
-                Icons.person_add_alt_outlined,
+                LucideIcons.userPlus,
                 color: scheme.primary,
                 background: iconBg,
               ),

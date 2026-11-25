@@ -77,6 +77,7 @@ dependencies:
   crypto: 3.0.7
   # Mã QR nhận lương (VietQR) vẽ bằng CustomPainter — gói Dart thuần, không plugin.
   qr: 3.0.2
+  lucide_icons_flutter: ^4.0.3
 
 dev_dependencies:
   flutter_test:

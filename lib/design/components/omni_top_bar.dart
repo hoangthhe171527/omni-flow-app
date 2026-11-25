@@ -3,6 +3,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/nav/search_mode.dart';
 import '../platform/omni_motion_scope.dart';
@@ -242,8 +243,8 @@ class _OmniTopBarState extends State<OmniTopBar> {
               icon:
                   widget.backIcon ??
                   (isApple(context)
-                      ? Icons.arrow_back_ios_new_rounded
-                      : Icons.arrow_back_rounded),
+                      ? LucideIcons.chevronLeft
+                      : LucideIcons.arrowLeft),
               tooltip: 'Quay lại',
               color: scheme.primary,
               onPressed: onBack ?? () => Navigator.of(context).maybePop(),
@@ -654,7 +655,7 @@ class _BellButtonState extends State<_BellButton> {
                 alignment: Alignment.center,
                 children: [
                   Icon(
-                    Icons.notifications_none_rounded,
+                    LucideIcons.bell,
                     size: OmniIconSize.md,
                     color: scheme.onSurface,
                   ),

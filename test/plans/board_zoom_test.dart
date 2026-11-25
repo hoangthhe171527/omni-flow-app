@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/plans/application/plans_providers.dart';
@@ -117,12 +118,12 @@ void main() {
         tester.widget(find.byKey(const Key('board-zoom-fab'))),
         isA<OmniGlassCircle>(),
       );
-      expect(find.byIcon(Icons.zoom_out_rounded), findsOneWidget);
+      expect(find.byIcon(LucideIcons.zoomOut), findsOneWidget);
 
       await tester.tap(fab);
       await tester.pumpAndSettle();
       expect(find.bySemanticsLabel('Phóng to lại'), findsOneWidget);
-      expect(find.byIcon(Icons.zoom_in_rounded), findsOneWidget);
+      expect(find.byIcon(LucideIcons.zoomIn), findsOneWidget);
     },
   );
 

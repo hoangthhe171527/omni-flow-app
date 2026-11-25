@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../design/components/components.dart';
@@ -56,7 +57,7 @@ class FinanceCatalogPage extends ConsumerWidget {
         return Padding(
           padding: EdgeInsets.only(top: topInset),
           child: OmniEmptyState(
-            icon: Icons.sell_outlined,
+            icon: LucideIcons.tag,
             title: 'Chưa có danh mục',
             actionLabel: 'Thêm',
             onAction: () => _add(context, ref),
@@ -179,13 +180,13 @@ class FinanceCatalogPage extends ConsumerWidget {
             children: [
               OmniGroupRow(
                 key: const ValueKey('finance-catalog-add-group'),
-                icon: Icons.sell_outlined,
+                icon: LucideIcons.tag,
                 title: 'Nhóm chi',
                 onTap: () => Navigator.of(sheet).pop(_CatalogKind.group),
               ),
               OmniGroupRow(
                 key: const ValueKey('finance-catalog-add-account'),
-                icon: Icons.account_balance_wallet_outlined,
+                icon: LucideIcons.wallet,
                 title: 'Nguồn tiền',
                 onTap: () => Navigator.of(sheet).pop(_CatalogKind.account),
               ),
@@ -300,7 +301,7 @@ class _GroupRow extends StatelessWidget {
     final row = OmniGroupRow(
       key: ValueKey('finance-catalog-group-${group.id}'),
       leading: OmniIconTile(
-        group.archived ? Icons.archive_outlined : Icons.sell_outlined,
+        group.archived ? LucideIcons.archive : LucideIcons.tag,
       ),
       title: group.name,
       subtitle: group.countsAsExpense ? null : 'Không tính vào chi phí',
@@ -319,9 +320,9 @@ class _AccountRow extends StatelessWidget {
 
   static IconData _iconFor(MoneyAccountKind kind) => switch (kind) {
     MoneyAccountKind.bank ||
-    MoneyAccountKind.company => Icons.account_balance_outlined,
-    MoneyAccountKind.cash => Icons.payments_outlined,
-    MoneyAccountKind.advance => Icons.account_balance_wallet_outlined,
+    MoneyAccountKind.company => LucideIcons.landmark,
+    MoneyAccountKind.cash => LucideIcons.banknote,
+    MoneyAccountKind.advance => LucideIcons.wallet,
   };
 
   @override
@@ -508,8 +509,8 @@ class _CatalogEditSheetState extends State<_CatalogEditSheet> {
             OmniGroupRow(
               key: const ValueKey('finance-catalog-archive'),
               icon: widget.archived
-                  ? Icons.unarchive_outlined
-                  : Icons.archive_outlined,
+                  ? LucideIcons.archiveRestore
+                  : LucideIcons.archive,
               title: widget.archiveLabel,
               chevron: false,
               onTap: _busy ? null : () => _run(widget.onToggleArchive),
@@ -522,7 +523,7 @@ class _CatalogEditSheetState extends State<_CatalogEditSheet> {
               opacity: _canDelete ? 1 : 0.5,
               child: OmniGroupRow(
                 key: const ValueKey('finance-catalog-delete'),
-                icon: Icons.delete_outline_rounded,
+                icon: LucideIcons.trash2,
                 title: widget.deleteLabel,
                 subtitle: _canDelete
                     ? null

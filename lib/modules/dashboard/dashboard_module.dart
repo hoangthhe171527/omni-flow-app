@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/module/module_route.dart';
 import '../../core/module/nav_destination.dart';
@@ -37,8 +37,8 @@ class DashboardModule extends OmniModule {
       moduleId: id,
       label: 'Tổng quan',
       subtitle: 'Doanh thu và việc hôm nay',
-      icon: Icons.bar_chart_outlined,
-      selectedIcon: Icons.bar_chart_rounded,
+      icon: LucideIcons.chartColumn,
+      selectedIcon: LucideIcons.chartColumn,
       routeName: DashboardRoutes.home,
       area: NavArea.work,
       weight: NavWeight.primary,

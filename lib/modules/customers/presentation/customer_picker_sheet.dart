@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../design/components/components.dart';
 import '../data/customers_api.dart';
@@ -51,7 +52,7 @@ class _CustomerPickerSheetState extends ConsumerState<CustomerPickerSheet> {
           ),
           isEmpty: (list) => list.isEmpty,
           empty: const OmniEmptyState(
-            icon: Icons.person_search_outlined,
+            icon: LucideIcons.userSearch,
             title: 'Không tìm thấy khách hàng',
           ),
           data: (list) => OmniGroupSection(

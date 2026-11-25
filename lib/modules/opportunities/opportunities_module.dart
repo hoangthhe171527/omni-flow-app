@@ -1,5 +1,6 @@
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+
 import 'routes.dart';
-import 'package:flutter/material.dart';
 
 import '../../core/module/module_route.dart';
 import '../../core/module/nav_destination.dart';
@@ -76,8 +77,8 @@ class OpportunitiesModule extends OmniModule {
       moduleId: 'opportunities',
       label: 'Cơ hội',
       subtitle: 'Theo dõi cơ hội bán hàng',
-      icon: Icons.trending_up_outlined,
-      selectedIcon: Icons.trending_up_rounded,
+      icon: LucideIcons.trendingUp,
+      selectedIcon: LucideIcons.trendingUp,
       routeName: pipeline,
       area: NavArea.sales,
       // Người bán hàng sống ở đây cả ngày; người thợ thì không có quyền và

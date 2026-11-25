@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
@@ -69,7 +70,7 @@ class DashboardPage extends ConsumerWidget {
                 children: none
                     ? const [
                         OmniEmptyState(
-                          icon: Icons.dashboard_outlined,
+                          icon: LucideIcons.layoutDashboard,
                           title: emptyMessage,
                         ),
                       ]

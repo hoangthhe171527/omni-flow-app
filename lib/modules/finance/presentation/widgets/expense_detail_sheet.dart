@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
@@ -474,7 +475,7 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
               _buildCircleIconBtn(
                 p,
                 tooltip: 'Sao chép sang tháng sau',
-                icon: Icons.content_copy_rounded,
+                icon: LucideIcons.copy,
                 onTap: () {
                   Navigator.of(context).pop();
                   ref
@@ -544,7 +545,7 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                               ),
                             ),
                             const SizedBox(width: 5),
-                            Icon(Icons.edit_outlined, size: 14, color: p.muted),
+                            Icon(LucideIcons.pencil, size: 14, color: p.muted),
                           ],
                         ),
                       ),
@@ -591,7 +592,7 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                             if (!item.isRefund) ...[
                               const SizedBox(width: 5),
                               Icon(
-                                Icons.edit_outlined,
+                                LucideIcons.pencil,
                                 size: 15,
                                 color: p.muted,
                               ),
@@ -607,7 +608,7 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                   if (item.isRefund)
                     const OmniStatusLabel(
                       label: 'Khoản hoàn / giảm trừ',
-                      icon: Icons.replay_rounded,
+                      icon: LucideIcons.rotateCcw,
                     )
                   else if (isSingleFull)
                     InkWell(
@@ -620,7 +621,7 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                           widthFactor: 1,
                           child: OmniStatusLabel(
                             label: 'Đã trả đủ · $paidDateDm',
-                            icon: Icons.check_rounded,
+                            icon: LucideIcons.check,
                             tone: OmniTone.success,
                           ),
                         ),
@@ -634,8 +635,8 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                                 : 'Chưa thanh toán')
                           : 'Đã trả đủ (${item.payments.length} lần)',
                       icon: left > 0
-                          ? Icons.schedule_rounded
-                          : Icons.check_rounded,
+                          ? LucideIcons.clock
+                          : LucideIcons.check,
                       tone: left <= 0
                           ? OmniTone.success
                           : paid > 0
@@ -699,7 +700,7 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : Icon(
-                      Icons.add_rounded,
+                      LucideIcons.plus,
                       size: 20,
                       color: Theme.of(context).colorScheme.primary,
                     ),
@@ -775,7 +776,7 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                           label: left > 0
                               ? 'Còn ${FinanceMonthUtils.formatVndSpace(left)}'
                               : 'Đã trả đủ (${item.payments.length} lần)',
-                          icon: left > 0 ? null : Icons.check_rounded,
+                          icon: left > 0 ? null : LucideIcons.check,
                           tone: left > 0 ? OmniTone.warning : OmniTone.success,
                         ),
                       ],
@@ -816,7 +817,7 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                         ),
                         const SizedBox(width: 8),
                         // ✓ xanh lá + số tiền màu mực (spec §3.5).
-                        Icon(Icons.check_rounded, size: 14, color: p.ok),
+                        Icon(LucideIcons.check, size: 14, color: p.ok),
                         const SizedBox(width: 4),
                         Text(
                           FinanceMonthUtils.formatVndSpace(
@@ -877,7 +878,7 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                           height: 50,
                         ),
                         icon: Icon(
-                          Icons.check_rounded,
+                          LucideIcons.check,
                           size: OmniIconSize.md,
                           color: Theme.of(context).colorScheme.primary,
                         ),
@@ -902,7 +903,7 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
               message: 'Xoá khoản chi',
               child: OmniGroupRow(
                 title: 'Xoá khoản chi',
-                icon: Icons.delete_outline_rounded,
+                icon: LucideIcons.trash2,
                 destructive: true,
                 onTap: () async {
                   final ok = await showFinanceDeleteConfirmSheet(

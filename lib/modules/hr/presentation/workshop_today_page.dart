@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/error/app_exception.dart';
@@ -160,7 +161,7 @@ class _WorkshopTodayPageState extends ConsumerState<WorkshopTodayPage> {
                   );
                   if (saved == true) ref.invalidate(hrWorkshopProvider);
                 },
-                icon: const Icon(Icons.add_rounded, size: 18),
+                icon: const Icon(LucideIcons.plus, size: 18),
                 label: const Text('Ghi lượt'),
               )
             : null,
@@ -169,7 +170,7 @@ class _WorkshopTodayPageState extends ConsumerState<WorkshopTodayPage> {
             : [
                 for (final c in w.contLoads)
                   OmniGroupRow(
-                    icon: Icons.inventory_2_outlined,
+                    icon: LucideIcons.package,
                     title: prices[c.type] == null
                         ? 'Loại ${c.type}'
                         : 'Loại ${c.type} · ${HrFormat.money(prices[c.type]!)}',
@@ -183,7 +184,7 @@ class _WorkshopTodayPageState extends ConsumerState<WorkshopTodayPage> {
         OmniGroupSection(
           children: [
             OmniGroupRow(
-              icon: Icons.wifi_rounded,
+              icon: LucideIcons.wifi,
               title: 'Thêm WiFi đang kết nối',
               onTap: () => showWifiCaptureSheet(context),
             ),

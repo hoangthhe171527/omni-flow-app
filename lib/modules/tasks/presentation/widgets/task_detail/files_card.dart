@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../core/error/app_exception.dart';
 import '../../../../../design/components/components.dart';
@@ -58,7 +59,7 @@ class _FilesCardState extends ConsumerState<FilesCard> {
       flat: true,
       children: [
         DetailCardHeader(
-          icon: Icons.attach_file_rounded,
+          icon: LucideIcons.paperclip,
           title: 'Tệp đính kèm',
           count: '${files.length}',
           actions: [
@@ -76,7 +77,7 @@ class _FilesCardState extends ConsumerState<FilesCard> {
                   : Builder(
                       builder: (buttonContext) => DetailHeaderButton(
                         tooltip: 'Tải tệp lên',
-                        icon: Icons.file_upload_outlined,
+                        icon: LucideIcons.upload,
                         onPressed: () {
                           final box =
                               buttonContext.findRenderObject() as RenderBox?;
@@ -133,12 +134,12 @@ class _FilesCardState extends ConsumerState<FilesCard> {
           // Chụp đứng trước: ở xưởng phần lớn là chụp ngay tại chỗ.
           DetailMenuItem(
             value: ImageSource.camera,
-            icon: Icons.photo_camera_outlined,
+            icon: LucideIcons.camera,
             label: 'Chụp ảnh',
           ),
           DetailMenuItem(
             value: ImageSource.gallery,
-            icon: Icons.photo_library_outlined,
+            icon: LucideIcons.images,
             label: 'Chọn ảnh có sẵn',
           ),
         ],
@@ -183,7 +184,7 @@ class _FilesCardState extends ConsumerState<FilesCard> {
         [
           DetailMenuItem(
             value: true,
-            icon: Icons.delete_outline,
+            icon: LucideIcons.trash2,
             label: 'Xoá tệp',
             danger: true,
           ),

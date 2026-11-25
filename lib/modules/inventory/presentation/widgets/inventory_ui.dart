@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/error/app_exception.dart';
 import '../../../../core/utils/formatters.dart';
@@ -218,7 +219,7 @@ class InvWorkRow extends StatelessWidget {
             if (onTap != null) ...[
               const SizedBox(width: 6),
               Icon(
-                Icons.chevron_right_rounded,
+                LucideIcons.chevronRight,
                 size: 18,
                 color: OmniTaskTones.of(context).chevron,
               ),
@@ -336,7 +337,7 @@ class InvDropPill extends StatelessWidget {
                 ),
                 const SizedBox(width: 4),
                 Icon(
-                  Icons.expand_more_rounded,
+                  LucideIcons.chevronDown,
                   size: 16,
                   color: scheme.onSurfaceVariant,
                 ),
@@ -397,7 +398,7 @@ class InvStepper extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          btn(Icons.remove_rounded, 'Bớt', value - 1, value > min),
+          btn(LucideIcons.minus, 'Bớt', value - 1, value > min),
           ConstrainedBox(
             constraints: const BoxConstraints(minWidth: 32),
             child: Text(
@@ -409,7 +410,7 @@ class InvStepper extends StatelessWidget {
               ),
             ),
           ),
-          btn(Icons.add_rounded, 'Thêm', value + 1, value < max),
+          btn(LucideIcons.plus, 'Thêm', value + 1, value < max),
         ],
       ),
     );

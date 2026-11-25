@@ -38,7 +38,7 @@ void main() {
       isEmpty,
       reason:
           'Ký tự không có trong Be Vietnam Pro:\n${missing.join('\n')}\n'
-          'Dùng icon Material (vd. Icons.arrow_forward_rounded) hoặc ký tự có '
+          'Dùng icon Lucide (vd. LucideIcons.arrowRight) hoặc ký tự có '
           'sẵn trong font (›, ·, —).',
     );
   });

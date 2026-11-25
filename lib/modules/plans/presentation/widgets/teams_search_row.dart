@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../design/components/components.dart';
 import '../../../../design/platform/omni_motion_scope.dart';
@@ -91,7 +92,7 @@ class _TeamsSearchRowState extends State<TeamsSearchRow> {
                   child: Row(
                     children: [
                       Icon(
-                        Icons.search_rounded,
+                        LucideIcons.search,
                         size: 17,
                         color: scheme.onSurfaceVariant,
                       ),
@@ -196,7 +197,7 @@ class _AddButtonState extends State<_AddButton> {
                   curve: OmniCurves.standard,
                   child: Icon(
                     key: const Key('teams-add-icon'),
-                    Icons.add_rounded,
+                    LucideIcons.plus,
                     size: 24,
                     color: scheme.onSurface,
                   ),

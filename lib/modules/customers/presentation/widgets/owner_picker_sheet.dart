@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
@@ -73,7 +74,7 @@ class _OwnerPickerSheetState extends ConsumerState<_OwnerPickerSheet> {
               children: [
                 if (hasCurrent)
                   OmniGroupRow(
-                    icon: Icons.person_off_outlined,
+                    icon: LucideIcons.userX,
                     title: 'Bỏ gán',
                     chevron: false,
                     onTap: () =>

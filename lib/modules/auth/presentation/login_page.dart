@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
@@ -100,7 +101,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                     controller: _email,
                     label: 'Email làm việc',
                     hint: 'ten@congty.vn',
-                    icon: Icons.mail_outline_rounded,
+                    icon: LucideIcons.mail,
                     shake: _shake,
                     serverError: state.errorFor('email'),
                     keyboardType: TextInputType.emailAddress,
@@ -120,7 +121,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                     controller: _password,
                     label: 'Mật khẩu',
                     hint: 'Nhập mật khẩu',
-                    icon: Icons.lock_outline_rounded,
+                    icon: LucideIcons.lock,
                     shake: _shake,
                     serverError: state.errorFor('password'),
                     obscure: _obscure,

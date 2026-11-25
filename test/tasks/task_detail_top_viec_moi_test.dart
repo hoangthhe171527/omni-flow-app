@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/core/error/app_exception.dart';
 import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
@@ -503,7 +504,7 @@ void main() {
       );
       expect(find.bySemanticsLabel('Người làm: Khánh'), findsOneWidget);
       // Nhóm 1: không vẽ người giao và mũi tên.
-      expect(find.byIcon(Icons.arrow_forward_rounded), findsNothing);
+      expect(find.byIcon(LucideIcons.arrowRight), findsNothing);
       final add = find.bySemanticsLabel('Thêm người làm');
       expect(t.getSize(add), const Size(44, 44));
       await t.tap(add);
@@ -700,7 +701,7 @@ void main() {
     );
     await t.tap(find.text('mở'));
     await t.pumpAndSettle();
-    expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+    expect(find.byIcon(LucideIcons.check), findsOneWidget);
     expect(
       t
           .getSize(
@@ -845,7 +846,7 @@ void main() {
 
     tw('mũi tên › giữa breadcrumb cỡ 14', (t) async {
       await pump(t, host(data: json()));
-      final chevron = t.widget<Icon>(find.byIcon(Icons.chevron_right_rounded));
+      final chevron = t.widget<Icon>(find.byIcon(LucideIcons.chevronRight));
       expect(chevron.size, 14);
     });
 

@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/core/error/app_exception.dart';
 import 'package:omni_app/core/storage/preferences_store.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
@@ -186,7 +187,7 @@ void main() {
       t.getSize(find.byKey(const Key('assigner-avatar'))),
       const Size(30, 30),
     );
-    expect(find.byIcon(Icons.arrow_forward_rounded), findsOneWidget);
+    expect(find.byIcon(LucideIcons.arrowRight), findsOneWidget);
     await openMenu(t);
     expect(find.text('Người theo dõi'), findsOneWidget);
     expect(

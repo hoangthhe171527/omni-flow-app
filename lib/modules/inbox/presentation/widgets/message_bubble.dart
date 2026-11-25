@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/gestures.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/utils/formatters.dart';
@@ -204,7 +205,7 @@ class MessageBubble extends StatelessWidget {
         ],
         if (message.pinned) ...[
           const SizedBox(width: 5),
-          Icon(Icons.push_pin_rounded, size: OmniIconSize.xs, color: color),
+          Icon(LucideIcons.pin, size: OmniIconSize.xs, color: color),
         ],
       ],
     );
@@ -737,31 +738,31 @@ class _ReplySwipeState extends State<_ReplySwipe>
         if (widget.onReply != null)
           MessageActionItem(
             label: 'Trả lời',
-            icon: Icons.reply_rounded,
+            icon: LucideIcons.reply,
             onTap: _guarded(widget.onReply),
           ),
         if (widget.onCopy != null)
           MessageActionItem(
             label: 'Sao chép',
-            icon: Icons.copy_rounded,
+            icon: LucideIcons.copy,
             onTap: _guarded(widget.onCopy),
           ),
         if (widget.onPin != null)
           MessageActionItem(
             label: widget.pinned ? 'Bỏ ghim' : 'Ghim tin',
-            icon: Icons.push_pin_outlined,
+            icon: LucideIcons.pin,
             onTap: _guarded(widget.onPin),
           ),
         if (widget.onCreateTask != null)
           MessageActionItem(
             label: 'Tạo việc từ tin này',
-            icon: Icons.task_alt_rounded,
+            icon: LucideIcons.circleCheckBig,
             onTap: _guarded(widget.onCreateTask),
           ),
         if (widget.onCreateOpportunity != null)
           MessageActionItem(
             label: 'Tạo cơ hội',
-            icon: Icons.trending_up_rounded,
+            icon: LucideIcons.trendingUp,
             onTap: _guarded(widget.onCreateOpportunity),
           ),
       ],
@@ -819,7 +820,7 @@ class _ReplySwipeState extends State<_ReplySwipe>
                 child: Opacity(
                   opacity: progress,
                   child: Icon(
-                    Icons.reply_rounded,
+                    LucideIcons.reply,
                     size: OmniIconSize.lg,
                     color: OmniColors.chatPrimary,
                   ),
@@ -931,7 +932,7 @@ class _MetaLine extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Icon(
-                Icons.error_outline_rounded,
+                LucideIcons.circleAlert,
                 size: OmniIconSize.sm,
                 color: scheme.error,
               ),
@@ -1016,11 +1017,11 @@ class _DeliveryReceipt extends StatelessWidget {
       _ => 'Đã gửi',
     };
     final icon = switch (status) {
-      DeliveryStatus.queued => Icons.schedule_rounded,
-      DeliveryStatus.sent => Icons.check_rounded,
-      DeliveryStatus.delivered || DeliveryStatus.read => Icons.done_all_rounded,
-      DeliveryStatus.failed => Icons.error_outline_rounded,
-      _ => Icons.check_rounded,
+      DeliveryStatus.queued => LucideIcons.clock,
+      DeliveryStatus.sent => LucideIcons.check,
+      DeliveryStatus.delivered || DeliveryStatus.read => LucideIcons.checkCheck,
+      DeliveryStatus.failed => LucideIcons.circleAlert,
+      _ => LucideIcons.check,
     };
 
     return Semantics(

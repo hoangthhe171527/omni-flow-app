@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/app/apps/app_manifest.dart';
 import 'package:omni_app/app/apps/app_shell_layout.dart';
 import 'package:omni_app/app/router/app_router.dart';
@@ -427,8 +428,8 @@ class _FakeModule extends OmniModule {
   }) => ModuleNavEntry(
     moduleId: id,
     label: label,
-    icon: Icons.circle_outlined,
-    selectedIcon: Icons.circle,
+    icon: LucideIcons.circle,
+    selectedIcon: LucideIcons.circle,
     routeName: route,
     area: area,
     weight: weight,

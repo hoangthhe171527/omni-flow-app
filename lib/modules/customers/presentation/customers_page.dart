@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/module/extra_segment.dart';
 import '../../../design/components/components.dart';
@@ -180,7 +181,7 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
           ? OmniLiquidFab(
               key: _addCustomerKey,
               tooltip: 'Thêm khách',
-              icon: Icons.person_add_alt_1_rounded,
+              icon: LucideIcons.userPlus,
               onPressed: (_) => _openQuickCreate(),
             )
           : null,
@@ -198,7 +199,7 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
                 onRetry: () => ref.invalidate(customerListProvider),
                 isEmpty: (state) => state.items.isEmpty,
                 empty: OmniEmptyState(
-                  icon: Icons.people_outline_rounded,
+                  icon: LucideIcons.users,
                   title: filter.search.isEmpty
                       ? 'Chưa có khách hàng'
                       : 'Không tìm thấy khách hàng',

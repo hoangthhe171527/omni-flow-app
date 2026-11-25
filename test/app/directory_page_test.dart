@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/app/perf/performance_controller.dart';
 import 'package:omni_app/app/shell/directory_page.dart';
 import 'package:omni_app/core/module/module_registry.dart';
@@ -38,8 +39,8 @@ ModuleNavEntry _entry(
   label: label,
   subtitle: subtitle,
   routeName: 'route.$label',
-  icon: Icons.circle_outlined,
-  selectedIcon: Icons.circle,
+  icon: LucideIcons.circle,
+  selectedIcon: LucideIcons.circle,
   area: area,
   badge: badge,
   badgeTone: tone,
@@ -167,8 +168,8 @@ void main() {
               moduleId: 'notifications',
               label: 'Thông báo',
               routeName: 'notifications.centre',
-              icon: Icons.circle_outlined,
-              selectedIcon: Icons.circle,
+              icon: LucideIcons.circle,
+              selectedIcon: LucideIcons.circle,
               area: NavArea.communication,
             ),
           ],
@@ -200,8 +201,8 @@ void main() {
             moduleId: label,
             label: label,
             routeName: route,
-            icon: Icons.circle_outlined,
-            selectedIcon: Icons.circle,
+            icon: LucideIcons.circle,
+            selectedIcon: LucideIcons.circle,
             area: area,
           );
       final sections = buildDirectorySections(
@@ -449,7 +450,7 @@ void main() {
                     .widget<Container>(
                       find
                           .ancestor(
-                            of: find.byIcon(Icons.circle_outlined).at(index),
+                            of: find.byIcon(LucideIcons.circle).at(index),
                             matching: find.byType(Container),
                           )
                           .first,

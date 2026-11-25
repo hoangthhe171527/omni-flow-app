@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/domain/channel.dart';
 import '../../../design/components/components.dart';
@@ -23,7 +24,7 @@ class UnsupportedPairPage extends StatelessWidget {
         fallbackBack: () => context.go('/channels'),
       ),
       body: OmniEmptyState(
-        icon: Icons.phonelink_off_rounded,
+        icon: LucideIcons.smartphone,
         title: 'Kênh này chưa hỗ trợ trên điện thoại',
         message: 'Kết nối kênh này từ Viomni trên máy tính.',
         actionLabel: 'Quay lại Kết nối kênh',

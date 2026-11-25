@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/error/app_exception.dart';
 import '../../../../core/utils/formatters.dart';
@@ -58,7 +59,7 @@ class CommentSection extends ConsumerWidget {
       flat: true,
       children: [
         const DetailCardHeader(
-          icon: Icons.chat_bubble_outline_rounded,
+          icon: LucideIcons.messageCircle,
           title: 'Bình luận',
         ),
         Padding(
@@ -72,7 +73,7 @@ class CommentSection extends ConsumerWidget {
                   padding: const EdgeInsets.only(bottom: 10),
                   child: Center(
                     child: OmniChoicePill(
-                      icon: Icons.history_rounded,
+                      icon: LucideIcons.history,
                       label: thread.loadingOlder
                           ? 'Đang tải…'
                           : 'Xem thêm ${thread.hiddenCount} bình luận cũ hơn',
@@ -144,7 +145,7 @@ class CommentSection extends ConsumerWidget {
         [
           DetailMenuItem(
             value: true,
-            icon: Icons.delete_outline,
+            icon: LucideIcons.trash2,
             label: 'Gỡ tệp',
             danger: true,
           ),
@@ -201,7 +202,7 @@ class CommentSection extends ConsumerWidget {
         [
           DetailMenuItem(
             value: true,
-            icon: Icons.delete_outline,
+            icon: LucideIcons.trash2,
             label: 'Xoá bình luận',
             danger: true,
           ),

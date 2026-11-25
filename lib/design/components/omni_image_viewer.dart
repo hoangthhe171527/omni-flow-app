@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/utils/save_image_to_gallery.dart';
 import '../tokens/tokens.dart';
@@ -160,7 +161,7 @@ class _OmniImageViewerState extends State<OmniImageViewer> {
                         ),
                         onPressed: () => Navigator.of(context).pop(),
                         icon: Icon(
-                          Icons.close_rounded,
+                          LucideIcons.x,
                           size: OmniIconSize.md,
                           color: scheme.onSurface,
                         ),
@@ -241,7 +242,7 @@ class _OmniImageViewerState extends State<OmniImageViewer> {
                                     strokeWidth: 2,
                                   ),
                                 )
-                              : const Icon(Icons.download_rounded, size: 18),
+                              : const Icon(LucideIcons.download, size: 18),
                           label: const Text('Lưu ảnh'),
                         ),
                       ),

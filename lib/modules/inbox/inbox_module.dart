@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/module/module_route.dart';
 import '../../core/module/nav_destination.dart';
@@ -62,8 +62,8 @@ class InboxModule extends OmniModule {
       moduleId: id,
       label: 'Hộp thư',
       subtitle: 'Tin nhắn khách hàng',
-      icon: Icons.forum_outlined,
-      selectedIcon: Icons.forum_rounded,
+      icon: LucideIcons.messagesSquare,
+      selectedIcon: LucideIcons.messagesSquare,
       routeName: InboxRoutes.list,
       area: NavArea.communication,
       weight: NavWeight.primary,

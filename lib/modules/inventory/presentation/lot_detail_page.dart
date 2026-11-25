@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
@@ -338,7 +339,7 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
                         children: [
                           OmniGroupRow(
                             key: const ValueKey('inv-lot-paste'),
-                            icon: Icons.content_paste_rounded,
+                            icon: LucideIcons.clipboardPaste,
                             accent: true,
                             title: 'Dán packing list',
                             subtitle: lot.units == 0
@@ -444,7 +445,7 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
         money.add(
           OmniGroupRow(
             key: const ValueKey('inv-lot-use-estimate'),
-            icon: Icons.auto_fix_high_rounded,
+            icon: LucideIcons.wandSparkles,
             accent: true,
             title: 'Dùng ước tính ${InventoryFormat.rate(lot.rateEstimate)}',
             onTap: _busy ? null : () => _useEstimate(lot),
@@ -509,8 +510,8 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
               subtitle: '$paid đã trả · ${costs.length - paid} dự kiến',
               trailing: Icon(
                 _payOpen
-                    ? Icons.expand_less_rounded
-                    : Icons.expand_more_rounded,
+                    ? LucideIcons.chevronUp
+                    : LucideIcons.chevronDown,
                 size: 20,
               ),
               onTap: () => setState(() {
@@ -525,7 +526,7 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
               if (costs.length > paid)
                 OmniGroupRow(
                   key: const ValueKey('inv-lot-pay-select'),
-                  icon: Icons.checklist_rounded,
+                  icon: LucideIcons.listChecks,
                   title: selecting
                       ? 'Đã chọn ${costs.where((c) => _pms.contains(c.id) && c.status == CostStatus.planned).length} khoản'
                       : 'Trả nhiều khoản',
@@ -656,7 +657,7 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
               InvValue(InvUi.vnd(u0.listPrice)),
               const SizedBox(width: 6),
               Icon(
-                open ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                open ? LucideIcons.chevronUp : LucideIcons.chevronDown,
                 size: 20,
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),

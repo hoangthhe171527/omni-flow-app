@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../core/utils/formatters.dart';
@@ -196,7 +197,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                     ? null
                     : IconButton(
                         onPressed: () => setState(() => _dueDate = null),
-                        icon: const Icon(Icons.close_rounded),
+                        icon: const Icon(LucideIcons.x),
                         iconSize: OmniIconSize.md,
                         tooltip: 'Xoá Hạn',
                       ),

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/module/module_route.dart';
 import '../../core/module/nav_destination.dart';
@@ -41,8 +41,8 @@ class TeamModule extends OmniModule {
       moduleId: 'team',
       label: 'Nhân viên',
       subtitle: 'Danh sách thành viên trong workspace',
-      icon: Icons.group_outlined,
-      selectedIcon: Icons.group_rounded,
+      icon: LucideIcons.users,
+      selectedIcon: LucideIcons.users,
       routeName: list,
       area: NavArea.admin,
       weight: NavWeight.secondary,

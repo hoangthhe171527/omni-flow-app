@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/config/web_links.dart';
 import '../../../core/error/app_exception.dart';
@@ -187,7 +188,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                   shape: const CircleBorder(),
                 ),
                 icon: Icon(
-                  Icons.visibility_outlined,
+                  LucideIcons.eye,
                   size: OmniIconSize.lg,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
@@ -207,7 +208,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                   shape: const CircleBorder(),
                 ),
                 icon: Icon(
-                  Icons.more_horiz_rounded,
+                  LucideIcons.ellipsis,
                   size: OmniIconSize.lg,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
@@ -605,7 +606,7 @@ class _Loaded extends ConsumerWidget {
             child: TaskPillChip.upcoming(
               'Đã khoá',
               key: Key('task-locked-chip'),
-              icon: Icons.lock_outline_rounded,
+              icon: LucideIcons.lock,
             ),
           ),
           _gap,
@@ -708,7 +709,7 @@ class _Loaded extends ConsumerWidget {
               OmniGroupRow(
                 key: const Key('task-report-issue'),
                 leading: const Icon(
-                  Icons.report_outlined,
+                  LucideIcons.octagonAlert,
                   size: OmniIconSize.lg,
                 ),
                 title: task.issue == null ? 'Báo vấn đề' : 'Báo lại vấn đề',
@@ -1080,7 +1081,7 @@ class _Loaded extends ConsumerWidget {
       menuKey: const Key('claim-task-menu'),
       semanticsLabel: 'Nhận việc',
       builder: (menuContext) => OmniAnchoredMenuItem(
-        icon: Icons.person_add_alt_1_outlined,
+        icon: LucideIcons.userPlus,
         label: 'Nhận việc này',
         onTap: () => Navigator.of(menuContext).pop(true),
       ),

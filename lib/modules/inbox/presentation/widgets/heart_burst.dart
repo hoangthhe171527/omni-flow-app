@@ -101,6 +101,8 @@ class _HeartBurstState extends State<HeartBurst>
             ),
           ),
           child: const Icon(
+            // Tim ĐẶC: hình động trang trí, không phải icon giao diện — ngoại lệ
+            // của luật một bộ icon Lucide (Lucide không có bản tô đặc).
             Icons.favorite,
             size: HeartBurst.size,
             color: OmniColors.heart,

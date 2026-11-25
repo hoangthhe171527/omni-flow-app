@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/utils/formatters.dart';
@@ -107,13 +108,13 @@ class _InfoBody extends ConsumerWidget {
                 actions: [
                   if (phone.isNotEmpty)
                     _QuickAction(
-                      icon: Icons.call_outlined,
+                      icon: LucideIcons.phone,
                       label: 'Gọi',
                       onTap: call,
                     ),
                   if (c.isLinkedToCustomer && canOpenCustomer)
                     _QuickAction(
-                      icon: Icons.person_outline_rounded,
+                      icon: LucideIcons.user,
                       label: 'Hồ sơ',
                       onTap: () => context.pushNamed(
                         CustomerRoutes.detail,
@@ -122,14 +123,14 @@ class _InfoBody extends ConsumerWidget {
                     )
                   else if (!c.isLinkedToCustomer && access.canConvert)
                     _QuickAction(
-                      icon: Icons.person_add_alt_rounded,
+                      icon: LucideIcons.userPlus,
                       label: 'Chuyển KH',
                       onTap: () => convertConversation(context, ref, c.id),
                     ),
                   // Chuyển từ đầu hội thoại về đây để tin nhắn có chỗ.
                   if (canCreateTask)
                     _QuickAction(
-                      icon: Icons.task_alt_rounded,
+                      icon: LucideIcons.circleCheckBig,
                       label: 'Việc',
                       onTap: () => context.pushNamed(
                         TaskRoutes.create,
@@ -141,7 +142,7 @@ class _InfoBody extends ConsumerWidget {
                   // Sở thích riêng, quyền đọc là đủ. Đổi theo phản hồi
                   // server (trang dựng lại từ `conversationProvider`).
                   _QuickAction(
-                    icon: Icons.notifications_off_outlined,
+                    icon: LucideIcons.bellOff,
                     label: c.isMuted ? 'Đã tắt' : 'Tắt TB',
                     active: c.isMuted,
                     onTap: () {
@@ -150,7 +151,7 @@ class _InfoBody extends ConsumerWidget {
                     },
                   ),
                   _QuickAction(
-                    icon: Icons.search_rounded,
+                    icon: LucideIcons.search,
                     label: 'Tìm tin',
                     onTap: () {
                       HapticFeedback.selectionClick();
@@ -167,7 +168,7 @@ class _InfoBody extends ConsumerWidget {
                 title: 'Khách hàng',
                 children: [
                   _InfoRow(
-                    icon: Icons.person_outline_rounded,
+                    icon: LucideIcons.user,
                     label: 'Phụ trách',
                     onTap: access.canAssign
                         ? () => ConversationActions(ref, context).assign(c)
@@ -176,7 +177,7 @@ class _InfoBody extends ConsumerWidget {
                   ),
                   if (phone.isNotEmpty)
                     _InfoRow(
-                      icon: Icons.call_outlined,
+                      icon: LucideIcons.phone,
                       label: 'Điện thoại',
                       onTap: call,
                       value: Text(
@@ -191,7 +192,7 @@ class _InfoBody extends ConsumerWidget {
                       ),
                     ),
                   _InfoRow(
-                    icon: Icons.label_outline_rounded,
+                    icon: LucideIcons.tag,
                     label: 'Nhãn',
                     onTap: access.canLabel
                         ? () => ConversationActions(ref, context).addLabel(c)
@@ -227,7 +228,7 @@ class _InfoBody extends ConsumerWidget {
                   // tắc, bật". Nhãn lấy từ chữ của dòng, công tắc không lặp.
                   MergeSemantics(
                     child: _InfoRow(
-                      icon: Icons.push_pin_outlined,
+                      icon: LucideIcons.pin,
                       label: 'Ghim hội thoại',
                       plainLabel: true,
                       onTap: () {
@@ -247,7 +248,7 @@ class _InfoBody extends ConsumerWidget {
                   // Đã chặn: API trả 422 `conversation_blocked` cho /unread.
                   if (access.canUpdate && !c.isUnread && !c.isBlocked)
                     _InfoRow(
-                      icon: Icons.mark_chat_unread_outlined,
+                      icon: LucideIcons.messageSquareDot,
                       label: 'Đánh dấu chưa đọc',
                       plainLabel: true,
                       // Ở lại hội thoại là đang đọc: dấu "chưa đọc" mất
@@ -260,8 +261,8 @@ class _InfoBody extends ConsumerWidget {
                   if (access.canUpdate)
                     _InfoRow(
                       icon: closed
-                          ? Icons.unarchive_outlined
-                          : Icons.archive_outlined,
+                          ? LucideIcons.archiveRestore
+                          : LucideIcons.archive,
                       label: closed ? 'Mở lại hội thoại' : 'Lưu trữ hội thoại',
                       plainLabel: true,
                       onTap: () => ConversationActions(
@@ -271,7 +272,7 @@ class _InfoBody extends ConsumerWidget {
                     ),
                   if (access.canBlock && c.isBlocked)
                     _InfoRow(
-                      icon: Icons.lock_open_outlined,
+                      icon: LucideIcons.lockOpen,
                       label: 'Bỏ chặn hội thoại',
                       plainLabel: true,
                       onTap: () => ConversationActions(
@@ -282,7 +283,7 @@ class _InfoBody extends ConsumerWidget {
                   // Chặn: dòng đỏ, cuối nhóm.
                   if (access.canBlock && !c.isBlocked)
                     _InfoRow(
-                      icon: Icons.block_outlined,
+                      icon: LucideIcons.ban,
                       label: 'Chặn hội thoại',
                       plainLabel: true,
                       destructive: true,
@@ -709,7 +710,7 @@ class _SalesCard extends ConsumerWidget {
       children: [
         if (failed)
           _InfoRow(
-            icon: Icons.refresh_rounded,
+            icon: LucideIcons.refreshCw,
             label: 'Không tải được cơ hội. Thử lại',
             plainLabel: true,
             onTap: () =>
@@ -717,7 +718,7 @@ class _SalesCard extends ConsumerWidget {
           ),
         for (final o in opportunities)
           OmniGroupRow(
-            icon: Icons.trending_up_rounded,
+            icon: LucideIcons.trendingUp,
             title: o.title,
             maxTitleLines: 1,
             subtitle: o.budget == null
@@ -734,7 +735,7 @@ class _SalesCard extends ConsumerWidget {
           ),
         if (bought > 0)
           OmniGroupRow(
-            icon: Icons.shopping_bag_outlined,
+            icon: LucideIcons.shoppingBag,
             title: 'Đã mua',
             value: Formatters.vnd(bought),
           ),

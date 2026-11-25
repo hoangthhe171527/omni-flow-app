@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../core/error/app_exception.dart';
 import '../../../../../design/components/components.dart';
@@ -240,17 +241,17 @@ class _CommentBarState extends ConsumerState<CommentBar> {
         [
           DetailMenuItem(
             value: CommentFileSource.camera,
-            icon: Icons.photo_camera_outlined,
+            icon: LucideIcons.camera,
             label: 'Chụp ảnh',
           ),
           DetailMenuItem(
             value: CommentFileSource.gallery,
-            icon: Icons.photo_library_outlined,
+            icon: LucideIcons.images,
             label: 'Chọn ảnh có sẵn',
           ),
           DetailMenuItem(
             value: CommentFileSource.files,
-            icon: Icons.insert_drive_file_outlined,
+            icon: LucideIcons.file,
             label: 'Chọn tệp',
           ),
         ],
@@ -429,7 +430,7 @@ class _CommentBarState extends ConsumerState<CommentBar> {
                           padding: EdgeInsets.zero,
                           foregroundColor: secondary,
                         ),
-                        icon: const Icon(Icons.image_outlined, size: 22),
+                        icon: const Icon(LucideIcons.image, size: 22),
                       ),
                     )
                   else
@@ -486,7 +487,7 @@ class _CommentBarState extends ConsumerState<CommentBar> {
                             IconButton(
                               onPressed: _sending ? null : _startMention,
                               icon: const Icon(
-                                Icons.alternate_email_rounded,
+                                LucideIcons.atSign,
                                 size: OmniIconSize.lg,
                               ),
                               color: secondary,
@@ -532,7 +533,7 @@ class _CommentBarState extends ConsumerState<CommentBar> {
                                   strokeWidth: 2,
                                 ),
                               )
-                            : const Icon(Icons.send_rounded, size: 22),
+                            : const Icon(LucideIcons.send, size: 22),
                       );
                     },
                   ),
@@ -562,7 +563,7 @@ class _Preview extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.insert_drive_file_outlined, size: 18, color: secondary),
+          Icon(LucideIcons.file, size: 18, color: secondary),
           Text(
             file.name,
             maxLines: 1,
@@ -622,7 +623,7 @@ class _Preview extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  Icons.close_rounded,
+                  LucideIcons.x,
                   size: 14,
                   color: scheme.surface,
                 ),

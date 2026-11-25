@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../design/components/components.dart';
@@ -83,7 +84,7 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
                       onRetry: () => ref.invalidate(tenantOptionsProvider),
                       isEmpty: (list) => list.isEmpty,
                       empty: const OmniEmptyState(
-                        icon: Icons.workspaces_outline,
+                        icon: LucideIcons.boxes,
                         title: 'Tài khoản chưa thuộc workspace nào',
                         message:
                             'Liên hệ quản trị viên để được thêm vào công ty của '
@@ -267,7 +268,7 @@ class _WorkspaceCard extends StatelessWidget {
                 )
               else
                 Icon(
-                  Icons.chevron_right_rounded,
+                  LucideIcons.chevronRight,
                   color: scheme.onSurfaceVariant,
                   size: OmniIconSize.lg,
                 ),

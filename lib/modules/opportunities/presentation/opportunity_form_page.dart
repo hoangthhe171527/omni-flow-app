@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../core/utils/formatters.dart';
@@ -220,7 +221,7 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
                 ),
                 OmniGroupRow(
                   leading: _customer == null
-                      ? OmniIconTile(Icons.person_outline_rounded)
+                      ? OmniIconTile(LucideIcons.user)
                       : OmniAvatar(name: _customer!.name, size: 28),
                   title: _customer?.name ?? 'Chọn khách hàng',
                   maxTitleLines: 1,
@@ -282,7 +283,7 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
                   ),
                 ),
                 OmniGroupRow(
-                  icon: Icons.event_outlined,
+                  icon: LucideIcons.calendarDays,
                   title: 'Dự kiến chốt',
                   value: _expectedClose == null
                       ? 'Chọn ngày'

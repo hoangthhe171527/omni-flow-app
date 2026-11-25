@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/core/error/app_exception.dart';
 import 'package:omni_app/design/components/omni_dashed_circle.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
@@ -144,7 +145,7 @@ void main() {
         );
         await t.pumpAndSettle();
         expect(countColor(), color, reason: '$done/10');
-        expect(find.byIcon(Icons.checklist_rounded), findsOneWidget);
+        expect(find.byIcon(LucideIcons.listChecks), findsOneWidget);
       }
 
       await t.pumpWidget(
@@ -153,7 +154,7 @@ void main() {
       await t.pumpAndSettle();
       // 10/10: nhãn xanh như 9/10, phân biệt bằng dấu tick (không chỉ màu).
       expect(countColor(), OmniColors.infoText);
-      expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
+      expect(find.byIcon(LucideIcons.circleCheck), findsOneWidget);
     },
   );
 
@@ -421,7 +422,7 @@ void main() {
       box.color,
       OmniTheme.light(TargetPlatform.android).colorScheme.primary,
     );
-    expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+    expect(find.byIcon(LucideIcons.check), findsOneWidget);
   });
 
   testWidgets('ghim: hiện khi API gửi pinned, vắng khoá thì không', (t) async {
@@ -489,7 +490,7 @@ void main() {
     final label = t.widget<Text>(find.text('Hạn 14/10'));
     // Dáng nhãn trạng thái 12/600 (phong cách iOS §3.4).
     expect(label.style?.fontWeight, FontWeight.w600);
-    final icon = t.widget<Icon>(find.byIcon(Icons.calendar_today_outlined));
+    final icon = t.widget<Icon>(find.byIcon(LucideIcons.calendar));
     expect(icon.size, 13);
   });
 

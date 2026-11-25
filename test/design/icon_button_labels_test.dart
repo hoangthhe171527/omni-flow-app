@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/design/components/components.dart';
 
 /// Một nút chỉ có icon mà không có tên thì screen reader đọc ra con số hoặc
@@ -91,8 +92,8 @@ class _PasswordProbeState extends State<_PasswordProbe> {
           onPressed: () => setState(() => _obscure = !_obscure),
           icon: Icon(
             _obscure
-                ? Icons.visibility_outlined
-                : Icons.visibility_off_outlined,
+                ? LucideIcons.eye
+                : LucideIcons.eyeOff,
           ),
         ),
       ),

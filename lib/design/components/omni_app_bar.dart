@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'omni_top_bar.dart';
 
@@ -97,7 +98,7 @@ class OmniAppBar extends StatelessWidget implements PreferredSizeWidget {
     semanticsTitle: title,
     subtitle: subtitle,
     onBack: canPop ? back : null,
-    backIcon: close ? Icons.close_rounded : null,
+    backIcon: close ? LucideIcons.x : null,
     showAccount: showAccount,
     searchBottom: false,
     bottom: bottom,

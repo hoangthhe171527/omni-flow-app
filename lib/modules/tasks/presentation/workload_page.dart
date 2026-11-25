@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
@@ -133,7 +134,7 @@ class _Summary extends StatelessWidget {
   Widget build(BuildContext context) {
     if (data.total == 0) {
       return const OmniEmptyState(
-        icon: Icons.beach_access_outlined,
+        icon: LucideIcons.umbrella,
         title: 'Không có việc nào đang mở',
         message: 'Người này đang rảnh — hoặc vừa xong hết phần của mình.',
       );

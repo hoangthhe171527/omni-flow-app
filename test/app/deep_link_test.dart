@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/app/router/app_router.dart';
 import 'package:omni_app/core/module/module_registry.dart';
 import 'package:omni_app/core/module/module_route.dart';
@@ -189,8 +190,8 @@ class _FakeModule extends OmniModule {
     const ModuleNavEntry(
       moduleId: 'tasks',
       label: 'Việc của tôi',
-      icon: Icons.checklist_outlined,
-      selectedIcon: Icons.checklist_rounded,
+      icon: LucideIcons.listChecks,
+      selectedIcon: LucideIcons.listChecks,
       routeName: 'plans.teams',
       area: NavArea.work,
       weight: NavWeight.primary,

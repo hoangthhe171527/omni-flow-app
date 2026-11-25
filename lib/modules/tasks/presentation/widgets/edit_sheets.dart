@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
@@ -102,13 +103,13 @@ Future<DueDateChoice?> showDueDateSheet({
         OmniGroupSection(
           children: [
             OmniGroupRow(
-              icon: Icons.event_outlined,
+              icon: LucideIcons.calendarDays,
               title: 'Chọn ngày khác',
               chevron: false,
               onTap: () => Navigator.of(context).pop('pick'),
             ),
             OmniGroupRow(
-              icon: Icons.event_busy_outlined,
+              icon: LucideIcons.calendarX,
               title: 'Xoá hạn',
               subtitle: 'Việc vẫn còn, chỉ là chưa hẹn ngày',
               chevron: false,

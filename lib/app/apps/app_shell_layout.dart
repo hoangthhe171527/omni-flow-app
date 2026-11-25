@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/module/module_registry.dart';
 import '../../core/module/module_route.dart';
@@ -66,36 +67,36 @@ const appItemSpecs = <String, AppItemSpec>{
   'inventory_suppliers': AppItemSpec(
     'inventory.suppliers',
     label: 'Nhà cung cấp',
-    icon: Icons.storefront_outlined,
-    selectedIcon: Icons.storefront_rounded,
+    icon: LucideIcons.store,
+    selectedIcon: LucideIcons.store,
     capabilities: [_inventory, 'inventory.suppliers'],
   ),
   'inventory_reservations': AppItemSpec(
     'inventory.reservations',
     label: 'Đang giữ',
-    icon: Icons.bookmark_border_rounded,
-    selectedIcon: Icons.bookmark_rounded,
+    icon: LucideIcons.bookmark,
+    selectedIcon: LucideIcons.bookmark,
     capabilities: [_inventory, 'inventory.reservations'],
   ),
   'inventory_catalog': AppItemSpec(
     'inventory.catalog',
     label: 'Danh mục hàng',
-    icon: Icons.category_outlined,
-    selectedIcon: Icons.category_rounded,
+    icon: LucideIcons.shapes,
+    selectedIcon: LucideIcons.shapes,
     capabilities: [_inventory, 'inventory.products'],
   ),
   'inventory_delivered': AppItemSpec(
     'inventory.delivered',
     label: 'Hàng đã giao',
-    icon: Icons.assignment_turned_in_outlined,
-    selectedIcon: Icons.assignment_turned_in_rounded,
+    icon: LucideIcons.clipboardCheck,
+    selectedIcon: LucideIcons.clipboardCheck,
     capabilities: [_inventory, 'inventory.returns'],
   ),
   'inventory_counts': AppItemSpec(
     'inventory.counts',
     label: 'Kiểm kê',
-    icon: Icons.fact_check_outlined,
-    selectedIcon: Icons.fact_check_rounded,
+    icon: LucideIcons.clipboardCheck,
+    selectedIcon: LucideIcons.clipboardCheck,
     capabilities: [_inventory, 'inventory.counts'],
   ),
   // Công việc
@@ -262,14 +263,14 @@ class AppShellLayout {
 ShellApp? _firstOrNull(List<ShellApp> list) => list.isEmpty ? null : list.first;
 
 IconData appIconOf(String key) => switch (key) {
-  homeAppKey => Icons.desktop_windows_rounded,
-  'sales' => Icons.shopping_bag_rounded,
-  'stock' => Icons.inventory_2_rounded,
-  'work' => Icons.view_kanban_rounded,
-  'finance' => Icons.account_balance_wallet_rounded,
-  'hr' => Icons.badge_rounded,
-  'system' => Icons.settings_rounded,
-  _ => Icons.apps_rounded,
+  homeAppKey => LucideIcons.monitor,
+  'sales' => LucideIcons.shoppingBag,
+  'stock' => LucideIcons.package,
+  'work' => LucideIcons.squareKanban,
+  'finance' => LucideIcons.wallet,
+  'hr' => LucideIcons.idCard,
+  'system' => LucideIcons.settings,
+  _ => LucideIcons.layoutGrid,
 };
 
 /// Dựng khung từ bản khai báo + mục điều hướng — hàm thuần để kiểm.
@@ -312,8 +313,8 @@ AppShellLayout buildAppShellLayout({
       entry: ModuleNavEntry(
         moduleId: 'apps',
         label: spec.label ?? key,
-        icon: spec.icon ?? Icons.circle_outlined,
-        selectedIcon: spec.selectedIcon ?? spec.icon ?? Icons.circle,
+        icon: spec.icon ?? LucideIcons.circle,
+        selectedIcon: spec.selectedIcon ?? spec.icon ?? LucideIcons.circle,
         routeName: spec.routeName,
         area: NavArea.work,
         access: route.access,

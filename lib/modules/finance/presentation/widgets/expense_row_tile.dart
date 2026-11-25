@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
@@ -134,30 +135,30 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
           const FinancePopoverItem<String>(
             value: 'pay_full',
             label: 'Đánh dấu Đã trả đủ',
-            icon: Icons.check_rounded,
+            icon: LucideIcons.check,
           ),
           const FinancePopoverItem<String>(
             value: 'pay_part',
             label: 'Trả một phần…',
-            icon: Icons.payments_outlined,
+            icon: LucideIcons.banknote,
           ),
         ],
         if (!item.isRefund) ...[
           const FinancePopoverItem<String>(
             value: 'edit_amount',
             label: 'Sửa số tiền…',
-            icon: Icons.edit_outlined,
+            icon: LucideIcons.pencil,
           ),
           const FinancePopoverItem<String>(
             value: 'dup_next',
             label: 'Sao chép sang tháng sau',
-            icon: Icons.content_copy_rounded,
+            icon: LucideIcons.copy,
           ),
         ],
         const FinancePopoverItem<String>(
           value: 'delete',
           label: 'Xoá khoản này',
-          icon: Icons.delete_outline_rounded,
+          icon: LucideIcons.trash2,
           destructive: true,
         ),
       ],
@@ -305,7 +306,7 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
                         children: [
                           _SwipeAction(
                             key: const ValueKey('swipe-pay'),
-                            icon: Icons.check_rounded,
+                            icon: LucideIcons.check,
                             label: 'Trả đủ',
                             color: p.ok,
                             onTap: () {
@@ -330,7 +331,7 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
                           if (_canDuplicate && !_armed)
                             _SwipeAction(
                               key: const ValueKey('swipe-dup'),
-                              icon: Icons.content_copy_rounded,
+                              icon: LucideIcons.copy,
                               label: 'Tháng sau',
                               color: p.primary,
                               onTap: () {
@@ -342,7 +343,7 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
                             ),
                           _SwipeAction(
                             key: const ValueKey('swipe-del'),
-                            icon: Icons.delete_outline_rounded,
+                            icon: LucideIcons.trash2,
                             label: 'Xoá',
                             color: p.danger,
                             solid: _armed,
@@ -378,7 +379,7 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
                           // tiền 16/700 không cắt / dòng phụ 14 + nhãn.
                           OmniMoneyRow(
                             leading: const OmniIconTile(
-                              Icons.receipt_long_outlined,
+                              LucideIcons.receiptText,
                             ),
                             title: item.title,
                             amount: FinanceMonthUtils.formatVndSpace(
@@ -422,7 +423,7 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
       return const OmniStatusLabel(label: 'Hoàn/giảm');
     }
     if (left <= 0) {
-      return Icon(Icons.check_rounded, size: 16, color: p.ok);
+      return Icon(LucideIcons.check, size: 16, color: p.ok);
     }
     if (paid > 0) {
       return OmniStatusLabel(

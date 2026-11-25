@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../design/components/components.dart';
 import '../../../../design/platform/omni_motion_scope.dart';
@@ -163,7 +164,7 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
           focusedBorder: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(vertical: 12),
           prefixIcon: Icon(
-            Icons.search_rounded,
+            LucideIcons.search,
             size: OmniIconSize.lg,
             color: meta,
           ),
@@ -189,7 +190,7 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
                   ),
                   iconSize: OmniIconSize.md,
                   color: meta,
-                  icon: const Icon(Icons.close_rounded),
+                  icon: const Icon(LucideIcons.x),
                 ),
         ),
       ),
@@ -236,7 +237,7 @@ class _FilterButton extends StatelessWidget {
                 clipBehavior: Clip.none,
                 children: [
                   Icon(
-                    Icons.tune_rounded,
+                    LucideIcons.slidersHorizontal,
                     size: OmniIconSize.md,
                     color: open ? scheme.primary : scheme.onSurface,
                   ),
@@ -317,7 +318,7 @@ class _InboxFilterMenuHeader extends ConsumerWidget {
       child: Row(
         children: [
           Icon(
-            Icons.tune_rounded,
+            LucideIcons.slidersHorizontal,
             size: OmniIconSize.md,
             color: scheme.onSurface,
           ),
@@ -343,7 +344,7 @@ class _InboxFilterMenuHeader extends ConsumerWidget {
             child: IconButton(
               tooltip: 'Đóng bộ lọc',
               onPressed: onClose,
-              icon: const Icon(Icons.close_rounded),
+              icon: const Icon(LucideIcons.x),
             ),
           ),
         ],

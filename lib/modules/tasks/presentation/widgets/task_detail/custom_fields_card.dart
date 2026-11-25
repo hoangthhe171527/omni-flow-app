@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../core/utils/formatters.dart';
 import '../../../application/tasks_providers.dart';
@@ -72,13 +73,13 @@ class CustomFieldsCard extends ConsumerWidget {
         flat: true,
         children: [
           DetailCardHeader(
-            icon: Icons.feed_outlined,
+            icon: LucideIcons.newspaper,
             title: 'Trường tuỳ chỉnh',
             actions: [
               if (manage != null)
                 DetailHeaderButton(
                   tooltip: 'Quản lý trường của kế hoạch',
-                  icon: Icons.add_rounded,
+                  icon: LucideIcons.plus,
                   onPressed: manage,
                 ),
             ],
@@ -103,7 +104,7 @@ class CustomFieldsCard extends ConsumerWidget {
           if (hasCustomer)
             DetailRow(
               label: 'Khách',
-              icon: Icons.person_outline_rounded,
+              icon: LucideIcons.user,
               divider: true,
               child: _Customer(name: task.customerName, onTap: onOpenCustomer),
             ),
@@ -115,10 +116,10 @@ class CustomFieldsCard extends ConsumerWidget {
 
 /// Biểu tượng của một kiểu trường; bốn kiểu, bốn biểu tượng khác nhau.
 IconData customFieldIcon(CustomFieldType type) => switch (type) {
-  CustomFieldType.select => Icons.arrow_drop_down_circle_outlined,
-  CustomFieldType.text => Icons.text_fields_rounded,
-  CustomFieldType.number => Icons.tag_rounded,
-  CustomFieldType.date => Icons.calendar_today_outlined,
+  CustomFieldType.select => LucideIcons.circleChevronDown,
+  CustomFieldType.text => LucideIcons.type,
+  CustomFieldType.number => LucideIcons.hash,
+  CustomFieldType.date => LucideIcons.calendar,
 };
 
 /// Chữ mờ khi trường chưa có giá trị: chọn trong danh sách / trên lịch thì
@@ -176,7 +177,7 @@ class _Empty extends StatelessWidget {
                     minimumSize: const Size(0, 44),
                     shape: const StadiumBorder(),
                   ),
-                  icon: const Icon(Icons.add_rounded, size: OmniIconSize.md),
+                  icon: const Icon(LucideIcons.plus, size: OmniIconSize.md),
                   label: const Text('Thêm trường'),
                 ),
               ],

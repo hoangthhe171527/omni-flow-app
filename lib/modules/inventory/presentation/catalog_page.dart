@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/nav/shell_bar_inset.dart';
 import '../../../core/nav/shell_tab_routes.dart';
@@ -55,7 +56,7 @@ class CatalogPage extends ConsumerWidget {
           fallbackBack: subPage ? back : null,
         ),
         body: const OmniEmptyState(
-          icon: Icons.lock_outline_rounded,
+          icon: LucideIcons.lock,
           title: 'Chưa có danh mục hàng',
         ),
       );
@@ -212,7 +213,7 @@ class ProductRow extends StatelessWidget {
                 InvValue(InventoryFormat.number(p.onHand), sub: p.unitLabel),
                 const SizedBox(width: 6),
                 Icon(
-                  Icons.chevron_right_rounded,
+                  LucideIcons.chevronRight,
                   size: 18,
                   color: OmniTaskTones.of(context).chevron,
                 ),

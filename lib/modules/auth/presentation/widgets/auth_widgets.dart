@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/config/app_config.dart';
@@ -107,7 +108,7 @@ class AuthSubBar extends StatelessWidget {
                 onBack();
               },
               icon: Icon(
-                Icons.arrow_back_ios_new_rounded,
+                LucideIcons.chevronLeft,
                 size: OmniIconSize.md,
                 color: scheme.primary,
               ),
@@ -510,7 +511,7 @@ class AuthPasswordToggle extends StatelessWidget {
       tooltip: obscure ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
       onPressed: onToggle,
       icon: Icon(
-        obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+        obscure ? LucideIcons.eye : LucideIcons.eyeOff,
         size: OmniIconSize.lg,
         color: Theme.of(context).colorScheme.onSurfaceVariant,
       ),
@@ -670,7 +671,7 @@ class AuthErrorBox extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(top: 1),
               child: Icon(
-                Icons.error_outline_rounded,
+                LucideIcons.circleAlert,
                 size: OmniIconSize.md,
                 color: fg,
               ),

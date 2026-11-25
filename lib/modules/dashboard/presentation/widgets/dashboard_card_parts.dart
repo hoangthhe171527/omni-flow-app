@@ -2,6 +2,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/core/error/app_exception.dart';
 import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/tokens/omni_colors.dart';
@@ -135,7 +136,7 @@ class _DashboardGroupState extends State<DashboardGroup> {
                         turns: _expanded ? .5 : 0,
                         duration: motion ? OmniDuration.base : Duration.zero,
                         child: Icon(
-                          Icons.keyboard_arrow_down_rounded,
+                          LucideIcons.chevronDown,
                           size: 20,
                           color: scheme.onSurfaceVariant,
                         ),
@@ -219,7 +220,7 @@ class DashboardCardError extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(14, 4, 6, 4),
       child: Row(
         children: [
-          Icon(Icons.error_outline_rounded, size: 18, color: color),
+          Icon(LucideIcons.circleAlert, size: 18, color: color),
           const SizedBox(width: 6),
           Expanded(
             child: Text(

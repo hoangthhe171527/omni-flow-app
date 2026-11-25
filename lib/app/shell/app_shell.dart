@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/module/module_registry.dart';
 import '../../security/session/session_controller.dart';
@@ -576,14 +577,14 @@ class _MoreSlot {
 
   static const directory = _MoreSlot(
     'Tất cả',
-    Icons.grid_view_outlined,
-    Icons.grid_view_rounded,
+    LucideIcons.layoutGrid,
+    LucideIcons.layoutGrid,
   );
 
   static const app = _MoreSlot(
     'Thêm',
-    Icons.more_horiz_rounded,
-    Icons.more_horiz_rounded,
+    LucideIcons.ellipsis,
+    LucideIcons.ellipsis,
   );
 
   final String label;

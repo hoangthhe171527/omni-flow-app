@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/design/tokens/omni_motion.dart';
 import 'package:omni_app/modules/plans/domain/feed_entry.dart';
@@ -80,7 +81,7 @@ void main() {
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
 
-    expect(find.byIcon(Icons.image_outlined), findsOneWidget);
+    expect(find.byIcon(LucideIcons.image), findsOneWidget);
     expect(
       tester.getSize(find.byKey(const ValueKey('photo:$photo'))),
       const Size(88, 88),
@@ -104,7 +105,7 @@ void main() {
       ),
     );
 
-    final icon = find.byIcon(Icons.broken_image_outlined);
+    final icon = find.byIcon(LucideIcons.imageOff);
     expect(icon, findsOneWidget);
     expect(
       tester.getSize(find.ancestor(of: icon, matching: find.byType(Container))),

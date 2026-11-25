@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/plans/application/plans_providers.dart';
@@ -328,7 +329,7 @@ void main() {
     // bao giờ đi tới trạng thái hỏng — bộ nhớ đệm đĩa của CachedNetworkImage
     // chờ I/O thật, thứ không chạy trong đồng hồ giả của pumpAndSettle.
     expect(
-      find.descendant(of: tile, matching: find.byIcon(Icons.image_outlined)),
+      find.descendant(of: tile, matching: find.byIcon(LucideIcons.image)),
       findsOneWidget,
     );
 
@@ -346,11 +347,11 @@ void main() {
         ),
       ),
     );
-    expect(find.byIcon(Icons.broken_image_outlined), findsOneWidget);
+    expect(find.byIcon(LucideIcons.imageOff), findsOneWidget);
     expect(
       tester.getSize(
         find.ancestor(
-          of: find.byIcon(Icons.broken_image_outlined),
+          of: find.byIcon(LucideIcons.imageOff),
           matching: find.byType(Container),
         ),
       ),

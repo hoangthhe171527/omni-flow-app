@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../design/components/components.dart';
 import '../../application/opportunities_providers.dart';
@@ -80,8 +81,8 @@ class StagePickerSheet extends StatelessWidget {
         icon: !stage.isClosed
             ? null
             : won
-            ? Icons.emoji_events_outlined
-            : Icons.cancel_outlined,
+            ? LucideIcons.trophy
+            : LucideIcons.circleX,
         title: stage.label,
         subtitle: stage.probability == null
             ? null

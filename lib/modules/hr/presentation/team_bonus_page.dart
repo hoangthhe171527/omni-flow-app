@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../design/components/components.dart';
 import '../application/hr_providers.dart';
@@ -55,7 +56,7 @@ class _TeamBonusPageState extends ConsumerState<TeamBonusPage> {
                   ...switch (data) {
                     AsyncData(:final value) when value == null => const [
                       OmniEmptyState(
-                        icon: Icons.groups_outlined,
+                        icon: LucideIcons.users,
                         title: 'Bạn chưa thuộc đội nào',
                       ),
                     ],
@@ -110,7 +111,7 @@ class _TeamBonusPageState extends ConsumerState<TeamBonusPage> {
           title: 'Tiêu chuẩn hoàn thiện',
           children: [
             for (final s in kpi.standards)
-              OmniGroupRow(icon: Icons.check_rounded, title: s),
+              OmniGroupRow(icon: LucideIcons.check, title: s),
           ],
         ),
       ],

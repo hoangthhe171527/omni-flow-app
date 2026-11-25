@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/core/config/app_config.dart';
 import 'package:omni_app/core/domain/channel.dart';
 import 'package:omni_app/core/error/app_exception.dart';
@@ -254,7 +255,7 @@ void main() {
     await openThread(tester);
     await tester.enterText(find.byType(TextField), 'Đang đi');
     await tester.pump();
-    await tester.tap(find.byIcon(Icons.send_rounded));
+    await tester.tap(find.byIcon(LucideIcons.send));
     await tester.pump();
     await doubleTap(tester, 'Đang đi');
     expect(api.reactCalls, isEmpty);

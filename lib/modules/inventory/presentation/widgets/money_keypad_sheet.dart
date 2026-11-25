@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
@@ -123,7 +124,7 @@ class _MoneyKeypadState extends State<_MoneyKeypad> {
                     child: Center(
                       child: k == 'del'
                           ? Icon(
-                              Icons.backspace_outlined,
+                              LucideIcons.delete,
                               size: 20,
                               semanticLabel: 'Xoá',
                               color: scheme.onSurface,

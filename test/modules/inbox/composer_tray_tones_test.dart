@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/inbox/presentation/widgets/message_composer.dart';
 
@@ -40,12 +41,12 @@ void main() {
 
       expect(find.byKey(const Key('composer-tools-menu')), findsOneWidget);
       expect(
-        tester.widget<Icon>(find.byIcon(Icons.task_alt_rounded)).color,
+        tester.widget<Icon>(find.byIcon(LucideIcons.circleCheckBig)).color,
         // Menu kính: icon một tông theo màu chữ (viomni-apple-uiux.html).
         theme.colorScheme.onSurface.withValues(alpha: .78),
       );
       expect(
-        tester.widget<Icon>(find.byIcon(Icons.bolt_rounded)).color,
+        tester.widget<Icon>(find.byIcon(LucideIcons.zap)).color,
         // Menu kính: icon một tông theo màu chữ (viomni-apple-uiux.html).
         theme.colorScheme.onSurface.withValues(alpha: .78),
       );

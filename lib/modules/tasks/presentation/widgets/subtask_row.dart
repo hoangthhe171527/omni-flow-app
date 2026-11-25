@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/utils/formatters.dart';
 import '../../../../design/components/components.dart';
@@ -133,7 +134,7 @@ class SubtaskRow extends StatelessWidget {
         : Builder(
             builder: (buttonContext) => _MiniButton(
               semanticsLabel: 'Giao việc con',
-              icon: Icons.add_rounded,
+              icon: LucideIcons.plus,
               label: 'Người làm',
               onTap: () {
                 final box = buttonContext.findRenderObject() as RenderBox?;
@@ -226,7 +227,7 @@ class SubtaskRow extends StatelessWidget {
                           else if (onSetDue != null)
                             _MiniButton(
                               semanticsLabel: 'Đặt hạn việc con',
-                              icon: Icons.calendar_today_outlined,
+                              icon: LucideIcons.calendar,
                               label: 'Hạn',
                               onTap: onSetDue!,
                             ),
@@ -265,7 +266,7 @@ class SubtaskRow extends StatelessWidget {
                     padding: EdgeInsets.zero,
                     foregroundColor: secondary,
                   ),
-                  icon: const Icon(Icons.more_vert_rounded, size: 18),
+                  icon: const Icon(LucideIcons.ellipsisVertical, size: 18),
                 ),
               ),
             ),
@@ -505,7 +506,7 @@ class _TickButtonState extends State<_TickButton>
         ),
         child: widget.done
             ? Icon(
-                Icons.check_rounded,
+                LucideIcons.check,
                 size: 14,
                 color: widget.failed
                     ? OmniColors.destructive
@@ -563,7 +564,7 @@ class _FailureNotice extends StatelessWidget {
         Row(
           children: [
             Icon(
-              Icons.error_outline_rounded,
+              LucideIcons.circleAlert,
               size: OmniIconSize.xs,
               color: OmniColors.dangerTextOf(context),
             ),

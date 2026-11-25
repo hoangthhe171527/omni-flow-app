@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/nav/shell_bar_inset.dart';
 import '../../../core/nav/shell_tab_routes.dart';
@@ -50,7 +51,7 @@ class _ReservationsPageState extends ConsumerState<ReservationsPage> {
           fallbackBack: subPage ? back : null,
         ),
         body: const OmniEmptyState(
-          icon: Icons.lock_outline_rounded,
+          icon: LucideIcons.lock,
           title: 'Chưa có phiếu giữ hàng',
         ),
       );
@@ -207,7 +208,7 @@ class ReservationRow extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
                 Icon(
-                  Icons.chevron_right_rounded,
+                  LucideIcons.chevronRight,
                   size: 18,
                   color: OmniTaskTones.of(context).chevron,
                 ),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../design/components/components.dart';
 import '../../../design/platform/omni_motion_scope.dart';
@@ -162,7 +163,7 @@ class _Feed extends ConsumerWidget {
           const SliverFillRemaining(
             hasScrollBody: false,
             child: OmniEmptyState(
-              icon: Icons.task_alt_rounded,
+              icon: LucideIcons.circleCheckBig,
               title: 'Chưa có việc nào xong',
               // KHÔNG phải "chưa có hoạt động nào": có thể có rất nhiều hoạt
               // động mà không có việc nào được đánh dấu xong. Hai chuyện khác

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../design/components/components.dart';
 import '../../application/inventory_providers.dart';
@@ -173,21 +174,21 @@ class _ProductSheetState extends ConsumerState<ProductSheet> {
               if (perms.write)
                 OmniGroupRow(
                   key: const ValueKey('inv-product-receive'),
-                  icon: Icons.add_box_outlined,
+                  icon: LucideIcons.squarePlus,
                   title: 'Nhập hàng',
                   onTap: _saving ? null : () => _stock(StockAction.receive),
                 ),
               if (perms.write && multi && p.onHand > 0)
                 OmniGroupRow(
                   key: const ValueKey('inv-product-transfer'),
-                  icon: Icons.swap_horiz_rounded,
+                  icon: LucideIcons.arrowLeftRight,
                   title: 'Chuyển vị trí',
                   onTap: _saving ? null : () => _stock(StockAction.transfer),
                 ),
               if (perms.adjustStock)
                 OmniGroupRow(
                   key: const ValueKey('inv-product-adjust'),
-                  icon: Icons.fact_check_outlined,
+                  icon: LucideIcons.clipboardCheck,
                   title: 'Đặt số thật',
                   onTap: _saving ? null : () => _stock(StockAction.adjust),
                 ),
@@ -198,7 +199,7 @@ class _ProductSheetState extends ConsumerState<ProductSheet> {
             children: [
               OmniGroupRow(
                 key: const ValueKey('inv-product-rename'),
-                icon: Icons.edit_outlined,
+                icon: LucideIcons.pencil,
                 title: 'Đổi tên',
                 onTap: _editName,
               ),

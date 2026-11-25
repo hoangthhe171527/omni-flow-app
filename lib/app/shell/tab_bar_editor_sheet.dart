@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/module/module_registry.dart';
 import '../../core/module/nav_destination.dart';
@@ -183,7 +184,7 @@ class TabBarEditor extends ConsumerWidget {
                         ref.read(tabPinsProvider.notifier).reset();
                       }
                     : null,
-                icon: const Icon(Icons.restart_alt_rounded, size: 16),
+                icon: const Icon(LucideIcons.rotateCcw, size: 16),
                 label: const Text('Về mặc định'),
               ),
             ),
@@ -281,7 +282,7 @@ class _BarPreview extends StatelessWidget {
                     child: SizedBox.square(
                       dimension: 26,
                       child: Icon(
-                        Icons.add_rounded,
+                        LucideIcons.plus,
                         size: 15,
                         color: scheme.onSurfaceVariant,
                       ),
@@ -321,7 +322,7 @@ class _BarPreview extends StatelessWidget {
                 else
                   slot(),
               slot(
-                icon: Icons.grid_view_outlined,
+                icon: LucideIcons.layoutGrid,
                 label: 'Tất cả',
                 fixed: true,
               ),
@@ -461,7 +462,7 @@ class _SelectedRow extends StatelessWidget {
                     ),
                   ),
                   _RoundButton(
-                    icon: Icons.remove_rounded,
+                    icon: LucideIcons.minus,
                     tooltip: 'Bỏ ${entry.label} khỏi thanh menu',
                     primary: false,
                     onPressed: onRemove,
@@ -474,7 +475,7 @@ class _SelectedRow extends StatelessWidget {
                         width: 36,
                         height: 44,
                         child: Icon(
-                          Icons.drag_handle_rounded,
+                          LucideIcons.gripHorizontal,
                           size: 20,
                           color: scheme.onSurfaceVariant,
                         ),
@@ -544,7 +545,7 @@ class _AvailableRow extends StatelessWidget {
               ),
             ),
             _RoundButton(
-              icon: Icons.add_rounded,
+              icon: LucideIcons.plus,
               tooltip: 'Thêm ${entry.label} vào thanh menu',
               onPressed: onAdd,
             ),

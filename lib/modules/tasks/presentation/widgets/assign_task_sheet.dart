@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
@@ -107,7 +108,7 @@ class _AssignTaskSheetState extends ConsumerState<_AssignTaskSheet> {
             child: IconButton(
               tooltip: 'Đóng chọn người làm',
               onPressed: () => Navigator.of(context).pop(),
-              icon: const Icon(Icons.close_rounded),
+              icon: const Icon(LucideIcons.x),
             ),
           ),
         ),
@@ -138,7 +139,7 @@ class _AssignTaskSheetState extends ConsumerState<_AssignTaskSheet> {
             ),
             AsyncData(:final value) when _visible(value).isEmpty =>
               const OmniEmptyState(
-                icon: Icons.person_search_outlined,
+                icon: LucideIcons.userSearch,
                 title: 'Không tìm thấy ai',
                 message: 'Thử tên khác, hoặc xoá ô tìm kiếm.',
               ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../platform/omni_motion_scope.dart';
 import '../tokens/omni_motion.dart';
@@ -124,7 +125,7 @@ class _OmniCollapsibleCardState extends State<OmniCollapsibleCard> {
                         turns: _expanded ? .5 : 0,
                         duration: duration,
                         child: Icon(
-                          Icons.keyboard_arrow_down_rounded,
+                          LucideIcons.chevronDown,
                           size: 22,
                           color: scheme.onSurfaceVariant,
                         ),

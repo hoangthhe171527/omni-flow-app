@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/tasks/application/tasks_providers.dart';
 import 'package:omni_app/modules/tasks/data/tasks_api.dart';
@@ -95,7 +96,7 @@ void main() {
     await pump(tester);
     await tester.tap(find.text('Khẩn cấp'));
     await tester.pump();
-    expect(find.byIcon(Icons.check_rounded), findsNothing);
+    expect(find.byIcon(LucideIcons.check), findsNothing);
   });
 
   testWidgets('mở từ việc: có ✓ khi bật, chạm gọi onToggle', (tester) async {
@@ -105,7 +106,7 @@ void main() {
     expect(
       find.descendant(
         of: find.byKey(const Key('label-row-bao_hanh')),
-        matching: find.byIcon(Icons.check_rounded),
+        matching: find.byIcon(LucideIcons.check),
       ),
       findsOneWidget,
     );
@@ -115,7 +116,7 @@ void main() {
     expect(
       find.descendant(
         of: find.byKey(const Key('label-row-khan_cap')),
-        matching: find.byIcon(Icons.check_rounded),
+        matching: find.byIcon(LucideIcons.check),
       ),
       findsOneWidget,
     );

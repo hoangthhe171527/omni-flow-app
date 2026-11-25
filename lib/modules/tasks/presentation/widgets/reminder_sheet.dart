@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/error/app_exception.dart';
 import '../../../../core/utils/formatters.dart';
@@ -175,7 +176,7 @@ class _ReminderSheetState extends ConsumerState<ReminderSheet> {
             children: [
               OmniGroupRow.add(
                 title: 'Thêm lời nhắc',
-                icon: Icons.add_alarm_rounded,
+                icon: LucideIcons.alarmClockPlus,
                 onTap: _busy ? null : _add,
               ),
             ],
@@ -236,7 +237,7 @@ class _ReminderSheetState extends ConsumerState<ReminderSheet> {
 
     return OmniGroupRow(
       key: ValueKey('reminder-${r.id}'),
-      icon: r.isPending ? Icons.alarm_rounded : Icons.alarm_off_rounded,
+      icon: r.isPending ? LucideIcons.alarmClock : LucideIcons.alarmClockOff,
       title: at == null ? 'Không rõ giờ' : _stamp(at),
       subtitle: '$who$by$state',
       chevron: false,
@@ -249,7 +250,7 @@ class _ReminderSheetState extends ConsumerState<ReminderSheet> {
                         _run((api) => api.deleteReminder(widget.taskId, r.id)),
               style: IconButton.styleFrom(minimumSize: const Size(44, 44)),
               icon: Icon(
-                Icons.close_rounded,
+                LucideIcons.x,
                 size: OmniIconSize.md,
                 color: secondary,
               ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
@@ -145,9 +146,7 @@ class PlanTile extends StatelessWidget {
                             child: SizedBox.square(
                               dimension: 44,
                               child: Icon(
-                                fav
-                                    ? Icons.star_rounded
-                                    : Icons.star_outline_rounded,
+                                fav ? Icons.star_rounded : LucideIcons.star,
                                 size: 19,
                                 color: fav ? tones.star : tones.faint,
                               ),
@@ -158,7 +157,7 @@ class PlanTile extends StatelessWidget {
                         SizedBox.square(
                           dimension: 44,
                           child: Icon(
-                            Icons.chevron_right_rounded,
+                            LucideIcons.chevronRight,
                             size: 18,
                             color: tones.faint,
                           ),
@@ -174,7 +173,7 @@ class PlanTile extends StatelessWidget {
                             height: 44,
                           ),
                           icon: Icon(
-                            Icons.more_horiz_rounded,
+                            LucideIcons.ellipsis,
                             size: OmniIconSize.md,
                             color: scheme.onSurfaceVariant,
                           ),

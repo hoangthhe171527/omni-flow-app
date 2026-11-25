@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/app/shell/tab_bar_editor_sheet.dart';
 import 'package:omni_app/core/module/module_registry.dart';
 import 'package:omni_app/core/module/nav_destination.dart';
@@ -12,8 +13,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 ModuleNavEntry _e(String route, String label, NavArea area) => ModuleNavEntry(
   moduleId: route,
   label: label,
-  icon: Icons.circle_outlined,
-  selectedIcon: Icons.circle,
+  icon: LucideIcons.circle,
+  selectedIcon: LucideIcons.circle,
   routeName: route,
   area: area,
   weight: NavWeight.primary,

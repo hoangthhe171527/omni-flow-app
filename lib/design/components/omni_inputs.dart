@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../platform/omni_motion_scope.dart';
 import '../platform/omni_platform.dart';
@@ -109,7 +110,7 @@ class _OmniSearchFieldState extends State<OmniSearchField> {
             color: scheme.onSurfaceVariant,
           ),
           prefixIcon: Icon(
-            Icons.search_rounded,
+            LucideIcons.search,
             color: scheme.onSurfaceVariant,
             size: OmniIconSize.lg,
           ),
@@ -128,7 +129,7 @@ class _OmniSearchFieldState extends State<OmniSearchField> {
                       : null,
                   tooltip: 'Xoá nội dung tìm',
                   icon: Icon(
-                    Icons.close_rounded,
+                    LucideIcons.x,
                     size: OmniIconSize.md,
                     color: scheme.onSurfaceVariant,
                   ),
@@ -286,7 +287,7 @@ class OmniField extends StatelessWidget {
           Row(
             children: [
               Icon(
-                Icons.error_outline_rounded,
+                LucideIcons.circleAlert,
                 size: OmniIconSize.xs,
                 color: scheme.error,
               ),

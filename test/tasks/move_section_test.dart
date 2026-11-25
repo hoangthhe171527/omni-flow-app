@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/design/tokens/tokens.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
@@ -71,14 +72,14 @@ void main() {
   testWidgets('đánh dấu ✓ đúng nhóm việc đang đứng', (tester) async {
     await open(tester);
 
-    expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+    expect(find.byIcon(LucideIcons.check), findsOneWidget);
     expect(
       find.descendant(
         of: find.ancestor(
           of: find.text('Đang phục chế'),
           matching: find.byType(InkWell),
         ),
-        matching: find.byIcon(Icons.check_rounded),
+        matching: find.byIcon(LucideIcons.check),
       ),
       findsOneWidget,
     );

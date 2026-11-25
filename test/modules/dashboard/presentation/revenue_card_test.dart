@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/core/error/app_exception.dart';
 import 'package:omni_app/design/components/omni_segmented.dart';
 import 'package:omni_app/design/components/omni_states.dart';
@@ -60,7 +61,7 @@ void main() {
     await t.pumpAndSettle();
     expect(find.text('1.000.000.000 đ'), findsOneWidget); // 10 × 100tr
     expect(find.text('11%'), findsOneWidget); // 1000/900
-    expect(find.byIcon(Icons.arrow_drop_up_rounded), findsOneWidget);
+    expect(find.byIcon(LucideIcons.chevronUp), findsOneWidget);
     expect(find.text('Cùng kỳ trước'), findsOneWidget);
     expect(find.text('900.000.000 đ'), findsOneWidget); // số cùng kỳ đủ chữ số
     await t.tap(find.text('Năm'));
@@ -77,7 +78,7 @@ void main() {
     await t.pumpAndSettle();
     final down = t.widget<Text>(find.text('50%'));
     expect(down.style?.color, OmniColors.dangerText);
-    expect(find.byIcon(Icons.arrow_drop_down_rounded), findsOneWidget);
+    expect(find.byIcon(LucideIcons.chevronDown), findsOneWidget);
     await t.pumpWidget(
       host(
         (ref) async => RevenueSeries(

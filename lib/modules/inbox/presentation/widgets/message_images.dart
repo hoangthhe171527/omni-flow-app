@@ -7,6 +7,7 @@ import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
@@ -484,7 +485,7 @@ class _NetworkMediaImageState extends State<_NetworkMediaImage> {
           child: IconButton(
             tooltip: 'Tải lại ảnh',
             onPressed: _retry,
-            icon: Icon(Icons.refresh_rounded, color: scheme.onSurfaceVariant),
+            icon: Icon(LucideIcons.refreshCw, color: scheme.onSurfaceVariant),
           ),
         ),
       ),
@@ -575,7 +576,7 @@ class _ImageViewerState extends State<_ImageViewer> {
                         ),
                         onPressed: () => Navigator.of(context).pop(),
                         icon: Icon(
-                          Icons.close_rounded,
+                          LucideIcons.x,
                           size: OmniIconSize.md,
                           color: scheme.onSurface,
                         ),

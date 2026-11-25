@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/utils/formatters.dart';
@@ -209,7 +210,7 @@ class _QuickActions extends StatelessWidget {
         children: [
           Expanded(
             child: _Action(
-              icon: Icons.chat_bubble_outline_rounded,
+              icon: LucideIcons.messageCircle,
               label: 'Nhắn',
               onTap: customer.hasPhone
                   ? () => launchWithToast(
@@ -223,7 +224,7 @@ class _QuickActions extends StatelessWidget {
           ),
           Expanded(
             child: _Action(
-              icon: Icons.call_outlined,
+              icon: LucideIcons.phone,
               label: 'Gọi',
               onTap: customer.hasPhone
                   ? () => launchWithToast(
@@ -237,7 +238,7 @@ class _QuickActions extends StatelessWidget {
           if (canCreateTask)
             Expanded(
               child: _Action(
-                icon: Icons.task_alt_rounded,
+                icon: LucideIcons.circleCheckBig,
                 label: 'Tạo việc',
                 onTap: () => context.pushNamed(
                   TaskRoutes.create,
@@ -249,7 +250,7 @@ class _QuickActions extends StatelessWidget {
             ),
           Expanded(
             child: _Action(
-              icon: Icons.person_outline_rounded,
+              icon: LucideIcons.user,
               label: 'Hồ sơ',
               onTap: () => context.pushNamed(
                 CustomersModule.detail,

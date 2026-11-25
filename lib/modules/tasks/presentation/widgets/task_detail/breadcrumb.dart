@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../design/tokens/tokens.dart';
 
@@ -36,7 +37,7 @@ class TaskBreadcrumb extends StatelessWidget {
           _Crumb(key: const ValueKey('crumb-plan'), text: plan, onTap: onPlan),
         if (plan != null && section != null)
           Icon(
-            Icons.chevron_right_rounded,
+            LucideIcons.chevronRight,
             // Bản mẫu: › 14 màu `#9AA5B8`.
             size: 14,
             color: OmniTaskTones.of(context).faint,

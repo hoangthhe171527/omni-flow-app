@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../design/components/components.dart';
 import '../../../../../design/tokens/tokens.dart';
@@ -176,78 +177,78 @@ DetailMenuItem<TaskMenuAction> _item(TaskMenuAction a, int followers) =>
     switch (a) {
       TaskMenuAction.resolveIssue => DetailMenuItem(
         value: a,
-        icon: Icons.check_circle_outline_rounded,
+        icon: LucideIcons.circleCheck,
         label: 'Đã xử lý',
       ),
       TaskMenuAction.labels => DetailMenuItem(
         value: a,
-        icon: Icons.sell_outlined,
+        icon: LucideIcons.tag,
         label: 'Nhãn màu',
       ),
       TaskMenuAction.followers => DetailMenuItem(
         value: a,
-        icon: Icons.visibility_outlined,
+        icon: LucideIcons.eye,
         label: 'Người theo dõi',
         trailing: '$followers',
       ),
       TaskMenuAction.reminders => DetailMenuItem(
         value: a,
-        icon: Icons.alarm_rounded,
+        icon: LucideIcons.alarmClock,
         label: 'Nhắc việc',
       ),
       TaskMenuAction.copy => DetailMenuItem(
         value: a,
-        icon: Icons.content_copy_rounded,
+        icon: LucideIcons.copy,
         label: 'Sao chép công việc',
       ),
       TaskMenuAction.pin => DetailMenuItem(
         value: a,
-        icon: Icons.push_pin_outlined,
+        icon: LucideIcons.pin,
         label: 'Ghim lên đầu cột',
       ),
       TaskMenuAction.unpin => DetailMenuItem(
         value: a,
-        icon: Icons.push_pin_rounded,
+        icon: LucideIcons.pin,
         label: 'Bỏ ghim',
       ),
       TaskMenuAction.rename => DetailMenuItem(
         value: a,
-        icon: Icons.edit_outlined,
+        icon: LucideIcons.pencil,
         label: 'Đổi tên việc',
       ),
       TaskMenuAction.move => DetailMenuItem(
         value: a,
-        icon: Icons.arrow_forward_rounded,
+        icon: LucideIcons.arrowRight,
         label: 'Chuyển sang nhóm / kế hoạch khác',
       ),
       TaskMenuAction.copyLink => DetailMenuItem(
         value: a,
-        icon: Icons.link_rounded,
+        icon: LucideIcons.link,
         label: 'Sao chép liên kết',
       ),
       TaskMenuAction.lock => DetailMenuItem(
         value: a,
-        icon: Icons.lock_outline_rounded,
+        icon: LucideIcons.lock,
         label: 'Khoá công việc',
       ),
       TaskMenuAction.unlock => DetailMenuItem(
         value: a,
-        icon: Icons.lock_open_outlined,
+        icon: LucideIcons.lockOpen,
         label: 'Mở khoá',
       ),
       TaskMenuAction.archive => DetailMenuItem(
         value: a,
-        icon: Icons.archive_outlined,
+        icon: LucideIcons.archive,
         label: 'Lưu trữ',
       ),
       TaskMenuAction.unarchive => DetailMenuItem(
         value: a,
-        icon: Icons.unarchive_outlined,
+        icon: LucideIcons.archiveRestore,
         label: 'Bỏ lưu trữ',
       ),
       TaskMenuAction.delete => DetailMenuItem(
         value: a,
-        icon: Icons.delete_outline,
+        icon: LucideIcons.trash2,
         label: 'Xoá công việc',
         danger: true,
       ),

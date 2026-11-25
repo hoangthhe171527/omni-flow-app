@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../design/components/components.dart';
 import '../../../../design/platform/omni_motion_scope.dart';
@@ -36,7 +37,7 @@ class BoardZoomButton extends StatelessWidget {
             key: const Key('board-zoom-fab'),
             child: Center(
               child: Icon(
-                zoomed ? Icons.zoom_in_rounded : Icons.zoom_out_rounded,
+                zoomed ? LucideIcons.zoomIn : LucideIcons.zoomOut,
                 size: 20,
                 color: scheme.primary,
               ),

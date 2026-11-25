@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../design/tokens/omni_colors.dart';
 
@@ -133,7 +134,7 @@ class ChannelMeta {
       kind: ChannelKind.official,
       color: Color(0xFF0EA5E9),
       tint: Color(0xFFE0F2FE),
-      icon: Icons.chat_bubble_rounded,
+      icon: LucideIcons.messageCircle,
       textColor: Color(0xFF0777B8),
       textColorDark: Color(0xFF56BFF5),
     ),
@@ -143,7 +144,7 @@ class ChannelMeta {
       kind: ChannelKind.personal,
       color: Color(0xFF0369A1),
       tint: Color(0xFFE0F2FE),
-      icon: Icons.chat_bubble_rounded,
+      icon: LucideIcons.messageCircle,
       textColor: Color(0xFF0369A1),
       textColorDark: Color(0xFF5BB8EE),
     ),
@@ -153,7 +154,7 @@ class ChannelMeta {
       kind: ChannelKind.official,
       color: Color(0xFF0F172A),
       tint: Color(0xFFF1F5F9),
-      icon: Icons.music_note_rounded,
+      icon: LucideIcons.music,
       textColor: Color(0xFF0F172A),
       textColorDark: Color(0xFFE2E8F0),
     ),
@@ -163,7 +164,7 @@ class ChannelMeta {
       kind: ChannelKind.official,
       color: OmniColors.success,
       tint: Color(0xFFD1FAE5),
-      icon: Icons.language_rounded,
+      icon: LucideIcons.globe,
       textColor: Color(0xFF047857),
       textColorDark: Color(0xFF34D399),
     ),
@@ -173,7 +174,7 @@ class ChannelMeta {
       kind: ChannelKind.official,
       color: Color(0xFFEC4899),
       tint: Color(0xFFFCE7F3),
-      icon: Icons.camera_alt_rounded,
+      icon: LucideIcons.camera,
       textColor: Color(0xFFBE185D),
       textColorDark: Color(0xFFF472B6),
     ),
@@ -183,7 +184,7 @@ class ChannelMeta {
       kind: ChannelKind.personal,
       color: Color(0xFF22C55E),
       tint: Color(0xFFDCFCE7),
-      icon: Icons.chat_rounded,
+      icon: LucideIcons.messageCircle,
       textColor: Color(0xFF15803D),
       textColorDark: Color(0xFF4ADE80),
     ),
@@ -193,7 +194,7 @@ class ChannelMeta {
       kind: ChannelKind.official,
       color: OmniColors.mutedForeground,
       tint: OmniColors.muted,
-      icon: Icons.forum_rounded,
+      icon: LucideIcons.messagesSquare,
       textColor: OmniColors.mutedForeground,
       textColorDark: Color(0xFF9AA8BD),
     ),

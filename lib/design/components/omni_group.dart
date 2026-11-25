@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../tokens/tokens.dart';
 import 'omni_tinted_buttons.dart';
@@ -206,7 +207,7 @@ class OmniGroupRow extends StatelessWidget {
     super.key,
     required this.title,
     required this.onTap,
-    this.icon = Icons.add_rounded,
+    this.icon = LucideIcons.plus,
     this.semanticsLabel,
   }) : subtitle = null,
        leading = null,
@@ -325,12 +326,12 @@ class OmniGroupRow extends StatelessWidget {
               if (trailing case final t?) ...[const SizedBox(width: 10), t],
               if (selected) ...[
                 const SizedBox(width: 10),
-                Icon(Icons.check_rounded, size: 20, color: scheme.primary),
+                Icon(LucideIcons.check, size: 20, color: scheme.primary),
               ],
               if (showChevron) ...[
                 const SizedBox(width: 6),
                 Icon(
-                  Icons.chevron_right_rounded,
+                  LucideIcons.chevronRight,
                   size: 18,
                   color: OmniTaskTones.of(context).chevron,
                 ),
@@ -469,7 +470,7 @@ class OmniSheetCloseButton extends StatelessWidget {
                 child: SizedBox.square(
                   dimension: 32,
                   child: Icon(
-                    Icons.close_rounded,
+                    LucideIcons.x,
                     size: 18,
                     color: scheme.onSurfaceVariant,
                   ),

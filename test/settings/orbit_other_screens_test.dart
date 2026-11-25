@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/core/module/module_registry.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/settings/presentation/my_permissions_page.dart';
@@ -39,7 +40,7 @@ void main() {
     // Tên tiếng Việt thay mã thô.
     expect(find.text('Xem hộp thư'), findsOneWidget);
     expect(find.text('inbox.read'), findsNothing);
-    expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
-    expect(find.byIcon(Icons.remove_circle_outline_rounded), findsOneWidget);
+    expect(find.byIcon(LucideIcons.circleCheck), findsOneWidget);
+    expect(find.byIcon(LucideIcons.circleMinus), findsOneWidget);
   });
 }

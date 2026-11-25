@@ -6,6 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/error/app_exception.dart';
@@ -59,7 +60,7 @@ Future<String?> showFinanceDateSelector({
       const FinancePopoverItem<String>(
         value: calendarSentinel,
         label: 'Chọn ngày khác…',
-        icon: Icons.edit_calendar_outlined,
+        icon: LucideIcons.calendarCog,
       ),
     ],
   );
@@ -98,17 +99,17 @@ Future<ExpenseAttachment?> pickAndUploadFinanceAttachment({
       FinancePopoverItem<String>(
         value: 'photo',
         label: 'Chụp ảnh phiếu chi',
-        icon: Icons.camera_alt_outlined,
+        icon: LucideIcons.camera,
       ),
       FinancePopoverItem<String>(
         value: 'gallery',
         label: 'Chọn ảnh hoá đơn',
-        icon: Icons.image_outlined,
+        icon: LucideIcons.image,
       ),
       FinancePopoverItem<String>(
         value: 'pdf',
         label: 'Chọn tệp PDF / chứng từ',
-        icon: Icons.picture_as_pdf_outlined,
+        icon: LucideIcons.fileText,
       ),
     ],
   );
@@ -299,8 +300,8 @@ Widget _buildReceiptVisualFallback(
                 children: [
                   Icon(
                     att.isPdf
-                        ? Icons.picture_as_pdf_rounded
-                        : Icons.receipt_long_rounded,
+                        ? LucideIcons.fileText
+                        : LucideIcons.receiptText,
                     size: 11,
                     color: p.primary,
                   ),
@@ -359,7 +360,7 @@ Widget _buildReceiptVisualFallback(
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(
-          att.isPdf ? Icons.description_outlined : Icons.image_outlined,
+          att.isPdf ? LucideIcons.fileText : LucideIcons.image,
           size: 40,
           color: p.primary,
         ),
@@ -464,7 +465,7 @@ class FinanceAttachmentInlineThumb extends StatelessWidget {
                       ),
                       alignment: Alignment.center,
                       child: const Icon(
-                        Icons.close_rounded,
+                        LucideIcons.x,
                         size: 12,
                         color: Colors.white,
                       ),
@@ -535,7 +536,7 @@ Future<void> showFinanceAttachmentPreviewDialog({
                     await launchUrl(uri, mode: LaunchMode.externalApplication);
                   }
                 },
-                icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                icon: const Icon(LucideIcons.externalLink, size: 16),
                 label: const Text('Mở tệp'),
               ),
             ],

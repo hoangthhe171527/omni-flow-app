@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/storage/preferences_store.dart';
 import '../../../../design/components/components.dart';
@@ -61,7 +62,7 @@ class _InventoryIntroState extends State<_InventoryIntro> {
       'Hàng về',
       'Lô đang về nằm ở Sắp về. Mở lô để xem từng cây.',
       _ArtCard(
-        icon: Icons.local_shipping_outlined,
+        icon: LucideIcons.truck,
         title: 'Lô đang về',
         sub: '24 cây · dự kiến về',
         badge: 'Đang về',
@@ -71,7 +72,7 @@ class _InventoryIntroState extends State<_InventoryIntro> {
       'Nhận hàng',
       'Hàng tới thì Nhận hàng: đánh dấu từng cây, cây vào Tồn kho.',
       _ArtCard(
-        icon: Icons.qr_code_scanner_rounded,
+        icon: LucideIcons.scanQrCode,
         title: 'Nhận hàng',
         sub: 'Đánh dấu từng serial',
         badge: '✓',
@@ -81,7 +82,7 @@ class _InventoryIntroState extends State<_InventoryIntro> {
       'Giữ và bán',
       'Ở Tồn kho, giữ cây cho khách hoặc bán ngay.',
       _ArtCard(
-        icon: Icons.inventory_2_outlined,
+        icon: LucideIcons.package,
         title: 'Còn bán',
         sub: 'Giữ cho khách · Bán',
         badge: 'Tồn kho',

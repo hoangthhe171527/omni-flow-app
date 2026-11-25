@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../core/nav/search_mode.dart';
@@ -329,7 +330,7 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
         () => SizedBox(
           height: 260,
           child: OmniEmptyState(
-            icon: Icons.workspaces_outline,
+            icon: LucideIcons.boxes,
             title: 'Chưa có team nào',
             message: isAssigner
                 ? 'Tạo một team để nhóm các kế hoạch lại.'
@@ -794,7 +795,7 @@ class _FavoritesSection extends StatelessWidget {
                     child: Row(
                       children: [
                         OmniIconTile(
-                          Icons.star_border_rounded,
+                          LucideIcons.star,
                           color: scheme.primary,
                           background: scheme.primary.withValues(alpha: .10),
                         ),
@@ -824,7 +825,7 @@ class _FavoritesSection extends StatelessWidget {
                                 : Duration.zero,
                             curve: OmniCurves.standard,
                             child: Icon(
-                              Icons.keyboard_arrow_down_rounded,
+                              LucideIcons.chevronDown,
                               size: OmniIconSize.md,
                               color: scheme.onSurfaceVariant,
                             ),

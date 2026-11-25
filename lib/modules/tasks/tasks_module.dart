@@ -1,5 +1,6 @@
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+
 import 'routes.dart';
-import 'package:flutter/material.dart';
 
 import '../../core/module/module_route.dart';
 import '../../core/module/nav_destination.dart';
@@ -104,8 +105,8 @@ class TasksModule extends OmniModule {
       moduleId: 'tasks',
       label: 'Việc của tôi',
       subtitle: 'Việc được giao cho bạn',
-      icon: Icons.checklist_outlined,
-      selectedIcon: Icons.checklist_rounded,
+      icon: LucideIcons.listChecks,
+      selectedIcon: LucideIcons.listChecks,
       routeName: list,
       area: NavArea.work,
       // Với thợ xưởng, đây LÀ trang chủ của họ.

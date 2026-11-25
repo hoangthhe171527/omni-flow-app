@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/inbox/presentation/widgets/message_composer.dart';
@@ -86,15 +87,15 @@ void main() {
 
   testWidgets('nút gửi vẫn hiện khi có chữ và ẩn khi xoá hết', (tester) async {
     await tester.pumpWidget(host());
-    expect(find.byIcon(Icons.send_rounded), findsNothing);
+    expect(find.byIcon(LucideIcons.send), findsNothing);
     expect(find.byTooltip('Ảnh'), findsOneWidget);
 
     await type(tester, 'ok');
-    expect(find.byIcon(Icons.send_rounded), findsOneWidget);
+    expect(find.byIcon(LucideIcons.send), findsOneWidget);
 
     await tester.enterText(find.byType(TextField), '');
     await tester.pump();
-    expect(find.byIcon(Icons.send_rounded), findsNothing);
+    expect(find.byIcon(LucideIcons.send), findsNothing);
   });
 
   testWidgets('composer có RepaintBoundary của riêng nó', (tester) async {

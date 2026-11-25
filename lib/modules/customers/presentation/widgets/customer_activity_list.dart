@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/utils/formatters.dart';
 import '../../../../design/components/components.dart';
@@ -125,11 +126,11 @@ class _ActivityTile extends StatelessWidget {
   }
 
   static IconData _icon(ActivityKind kind) => switch (kind) {
-    ActivityKind.message => Icons.chat_bubble_outline_rounded,
-    ActivityKind.call => Icons.call_outlined,
-    ActivityKind.order => Icons.receipt_long_outlined,
-    ActivityKind.task => Icons.task_alt_rounded,
-    ActivityKind.note => Icons.sticky_note_2_outlined,
-    ActivityKind.other => Icons.more_horiz_rounded,
+    ActivityKind.message => LucideIcons.messageCircle,
+    ActivityKind.call => LucideIcons.phone,
+    ActivityKind.order => LucideIcons.receiptText,
+    ActivityKind.task => LucideIcons.circleCheckBig,
+    ActivityKind.note => LucideIcons.stickyNote,
+    ActivityKind.other => LucideIcons.ellipsis,
   };
 }

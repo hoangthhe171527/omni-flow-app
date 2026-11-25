@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/core/error/app_exception.dart';
 import 'package:omni_app/modules/customers/presentation/widgets/inline_edit_row.dart';
 
@@ -207,7 +208,7 @@ void main() {
         ),
       ),
     );
-    expect(find.byIcon(Icons.edit_outlined), findsNothing);
+    expect(find.byIcon(LucideIcons.pencil), findsNothing);
     await t.tap(find.text('0283'));
     await t.pump();
     expect(find.byType(TextField), findsNothing);

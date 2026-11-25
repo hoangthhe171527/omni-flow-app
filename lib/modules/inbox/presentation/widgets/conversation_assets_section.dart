@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
 
@@ -140,7 +141,7 @@ class _LinkList extends StatelessWidget {
       rows: [
         for (final link in links)
           OmniGroupRow(
-            icon: Icons.link_rounded,
+            icon: LucideIcons.link,
             title: link,
             maxTitleLines: 1,
             chevron: false,
@@ -221,7 +222,7 @@ class _MediaViewerPageState extends State<_MediaViewerPage> {
                         memCacheWidth: 1440,
                         memCacheHeight: 1440,
                         errorWidget: (_, _, _) => const Icon(
-                          Icons.broken_image_outlined,
+                          LucideIcons.imageOff,
                           color: Colors.white54,
                           size: OmniIconSize.hero,
                         ),
@@ -254,7 +255,7 @@ class _MediaViewerPageState extends State<_MediaViewerPage> {
                             ),
                             onPressed: () => Navigator.of(context).pop(),
                             icon: Icon(
-                              Icons.close_rounded,
+                              LucideIcons.x,
                               size: OmniIconSize.md,
                               color: scheme.onSurface,
                             ),
@@ -304,7 +305,7 @@ class _AssetTile extends StatelessWidget {
         memCacheHeight: 420,
         errorWidget: (_, _, _) => const ColoredBox(
           color: Colors.black12,
-          child: Icon(Icons.broken_image_outlined),
+          child: Icon(LucideIcons.imageOff),
         ),
       );
     }
@@ -314,7 +315,7 @@ class _AssetTile extends StatelessWidget {
         const ColoredBox(color: Colors.black87),
         const Center(
           child: Icon(
-            Icons.play_circle_fill_rounded,
+            LucideIcons.circlePlay,
             color: Colors.white,
             size: OmniIconSize.lg,
           ),
@@ -399,7 +400,7 @@ class _PlayableVideoState extends State<_PlayableVideo>
           onPressed: _activate,
           tooltip: 'Phát video',
           iconSize: 40,
-          icon: const Icon(Icons.play_arrow_rounded),
+          icon: const Icon(LucideIcons.play),
         ),
       );
     }
@@ -425,8 +426,8 @@ class _PlayableVideoState extends State<_PlayableVideo>
               }),
               icon: Icon(
                 controller.value.isPlaying
-                    ? Icons.pause_rounded
-                    : Icons.play_arrow_rounded,
+                    ? LucideIcons.pause
+                    : LucideIcons.play,
               ),
             ),
           ],
@@ -448,10 +449,10 @@ class _FileList extends StatelessWidget {
       rows: [
         for (final file in files)
           OmniGroupRow(
-            icon: Icons.insert_drive_file_outlined,
+            icon: LucideIcons.file,
             title: file.name ?? 'Tệp đính kèm',
             maxTitleLines: 1,
-            trailing: const Icon(Icons.download_rounded, size: 20),
+            trailing: const Icon(LucideIcons.download, size: 20),
             onTap: () => _openUrl(file.url),
           ),
       ],

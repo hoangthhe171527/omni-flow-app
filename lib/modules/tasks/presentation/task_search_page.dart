@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
@@ -67,7 +68,7 @@ class _TaskSearchPageState extends ConsumerState<TaskSearchPage> {
       ),
       body: query.isEmpty
           ? const OmniEmptyState(
-              icon: Icons.search_rounded,
+              icon: LucideIcons.search,
               title: 'Tìm một cây đàn',
               message:
                   'Gõ số máy, tên cây đàn hoặc tên khách. Tìm trong cả việc '
@@ -78,7 +79,7 @@ class _TaskSearchPageState extends ConsumerState<TaskSearchPage> {
               onRetry: () => ref.invalidate(taskSearchProvider),
               isEmpty: (list) => list.isEmpty,
               empty: OmniEmptyState(
-                icon: Icons.search_off_rounded,
+                icon: LucideIcons.searchX,
                 title: 'Không có kết quả cho "$query"',
                 message:
                     'Thử một phần của số máy thay vì cả chuỗi — tìm theo đoạn '

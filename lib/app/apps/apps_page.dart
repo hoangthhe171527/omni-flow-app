@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/module/nav_destination.dart';
 import '../../design/components/components.dart';
@@ -186,7 +187,7 @@ class _CompanyButton extends StatelessWidget {
         if (onTap != null) ...[
           const SizedBox(width: 4),
           Icon(
-            Icons.unfold_more_rounded,
+            LucideIcons.chevronsUpDown,
             size: 16,
             color: scheme.onSurfaceVariant,
           ),
@@ -415,7 +416,7 @@ class _HomeRow extends ConsumerWidget {
                   const SizedBox(width: 8),
                 ],
                 Icon(
-                  Icons.chevron_right_rounded,
+                  LucideIcons.chevronRight,
                   size: 22,
                   color: scheme.onSurfaceVariant.withValues(alpha: .6),
                 ),

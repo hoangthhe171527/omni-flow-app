@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/error/app_exception.dart';
 import '../../../../design/components/components.dart';
@@ -358,12 +359,12 @@ class _InlineEditRowState extends State<InlineEditRow> {
           ),
           _miniButton(
             label: 'Huỷ',
-            icon: Icons.close,
+            icon: LucideIcons.x,
             onTap: _saving ? null : _cancel,
           ),
           _miniButton(
             label: 'Lưu',
-            icon: Icons.check,
+            icon: LucideIcons.check,
             accent: true,
             onTap: _saving ? null : _save,
             busy: _saving

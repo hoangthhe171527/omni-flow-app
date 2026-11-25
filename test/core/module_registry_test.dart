@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/bootstrap.dart';
 import 'package:omni_app/core/module/module_registry.dart';
 import 'package:omni_app/core/module/module_route.dart';
@@ -255,8 +255,8 @@ class _FlagModule extends OmniModule {
     ModuleNavEntry(
       moduleId: 'inbox',
       label: 'Hộp thư',
-      icon: Icons.inbox,
-      selectedIcon: Icons.inbox,
+      icon: LucideIcons.inbox,
+      selectedIcon: LucideIcons.inbox,
       routeName: 'flag-inbox',
       area: NavArea.communication,
       feature: 'inbox',
@@ -264,8 +264,8 @@ class _FlagModule extends OmniModule {
     ModuleNavEntry(
       moduleId: 'team',
       label: 'Nhân viên',
-      icon: Icons.people,
-      selectedIcon: Icons.people,
+      icon: LucideIcons.users,
+      selectedIcon: LucideIcons.users,
       routeName: 'flag-team',
       area: NavArea.admin,
     ),

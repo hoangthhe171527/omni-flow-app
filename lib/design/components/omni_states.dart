@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/error/app_exception.dart';
 import '../platform/omni_motion_scope.dart';
@@ -63,7 +64,7 @@ class OmniEmptyState extends StatelessWidget {
     super.key,
     required this.title,
     this.message,
-    this.icon = Icons.inbox_rounded,
+    this.icon = LucideIcons.inbox,
     this.actionLabel,
     this.onAction,
   });
@@ -148,14 +149,14 @@ class OmniErrorView extends StatelessWidget {
       final missing = error.requiredPermissions.isEmpty
           ? error.message
           : '${error.message}\nCần quyền: ${error.requiredPermissions.join(", ")}';
-      return (Icons.lock_outline_rounded, 'Không có quyền', missing, false);
+      return (LucideIcons.lock, 'Không có quyền', missing, false);
     }
     if (error is NotFoundException) {
-      return (Icons.search_off_rounded, 'Không tìm thấy', error.message, false);
+      return (LucideIcons.searchX, 'Không tìm thấy', error.message, false);
     }
     if (error is TimeoutException || error is NetworkException) {
       return (
-        Icons.wifi_off_rounded,
+        LucideIcons.wifiOff,
         'Mất kết nối',
         (error as AppException).message,
         true,
@@ -163,16 +164,16 @@ class OmniErrorView extends StatelessWidget {
     }
     if (error is RequestBlockedException) {
       return (
-        Icons.workspaces_outline,
+        LucideIcons.boxes,
         'Chưa chọn workspace',
         error.message,
         false,
       );
     }
     if (error is AppException) {
-      return (Icons.error_outline_rounded, 'Đã có lỗi', error.message, true);
+      return (LucideIcons.circleAlert, 'Đã có lỗi', error.message, true);
     }
-    return (Icons.error_outline_rounded, 'Đã có lỗi', humanError(error), true);
+    return (LucideIcons.circleAlert, 'Đã có lỗi', humanError(error), true);
   }
 }
 

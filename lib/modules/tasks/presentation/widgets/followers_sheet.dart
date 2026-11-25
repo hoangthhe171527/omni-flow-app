@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/error/app_exception.dart';
 import '../../../../design/components/components.dart';
@@ -99,8 +100,8 @@ class _FollowersSheetState extends ConsumerState<FollowersSheet> {
       if (me != null)
         OmniGroupRow(
           icon: following
-              ? Icons.visibility_off_outlined
-              : Icons.visibility_outlined,
+              ? LucideIcons.eyeOff
+              : LucideIcons.eye,
           title: following ? 'Bỏ theo dõi' : 'Theo dõi việc này',
           chevron: false,
           onTap: _busy
@@ -109,7 +110,7 @@ class _FollowersSheetState extends ConsumerState<FollowersSheet> {
         ),
       if (widget.canEditOthers)
         OmniGroupRow(
-          icon: Icons.person_add_alt_outlined,
+          icon: LucideIcons.userPlus,
           title: 'Thêm người theo dõi',
           onTap: _busy ? null : () => _addOthers(ids),
         ),
@@ -170,7 +171,7 @@ class _FollowersSheetState extends ConsumerState<FollowersSheet> {
                               minimumSize: const Size(44, 44),
                             ),
                             icon: Icon(
-                              Icons.close_rounded,
+                              LucideIcons.x,
                               size: OmniIconSize.md,
                               color: scheme.onSurfaceVariant,
                             ),

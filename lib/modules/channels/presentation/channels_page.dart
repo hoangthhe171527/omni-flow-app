@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/domain/channel.dart';
@@ -253,7 +254,7 @@ class _ChannelsPageState extends ConsumerState<ChannelsPage>
             ? OmniLiquidFab(
                 key: const Key('channels-connect'),
                 tooltip: 'Kết nối kênh',
-                icon: Icons.add_link_rounded,
+                icon: LucideIcons.link2,
                 onPressed: (anchor) {
                   if (_connecting) return;
                   _pickChannel(anchor);
@@ -272,7 +273,7 @@ class _ChannelsPageState extends ConsumerState<ChannelsPage>
                   onRetry: () => ref.invalidate(channelsProvider),
                   isEmpty: (list) => list.isEmpty,
                   empty: const OmniEmptyState(
-                    icon: Icons.hub_outlined,
+                    icon: LucideIcons.network,
                     title: 'Chưa nối kênh nào',
                     message:
                         'Nối Zalo, Facebook hoặc TikTok để tin nhắn khách đổ về hộp thư.',

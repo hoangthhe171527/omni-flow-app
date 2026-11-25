@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../design/components/components.dart';
 
@@ -40,12 +41,12 @@ class _CreateMenu extends StatelessWidget {
       children: [
         if (canCreateTeam)
           OmniAnchoredMenuItem(
-            icon: Icons.person_add_alt_outlined,
+            icon: LucideIcons.userPlus,
             label: 'Tạo team',
             onTap: () => Navigator.of(context).pop(CreateChoice.team),
           ),
         OmniAnchoredMenuItem(
-          icon: Icons.view_kanban_outlined,
+          icon: LucideIcons.squareKanban,
           label: 'Tạo kế hoạch',
           divider: canCreateTeam,
           onTap: () => Navigator.of(context).pop(CreateChoice.plan),

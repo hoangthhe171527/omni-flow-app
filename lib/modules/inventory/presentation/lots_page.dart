@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/nav/shell_tab_routes.dart';
 import '../../../design/components/components.dart';
@@ -67,7 +68,7 @@ class _LotsPageState extends ConsumerState<LotsPage> {
               constraints: const BoxConstraints.tightFor(width: 44, height: 44),
               onPressed: () => context.pushNamed(InventoryRoutes.suppliers),
               icon: Icon(
-                Icons.storefront_outlined,
+                LucideIcons.store,
                 size: OmniIconSize.md,
                 color: Theme.of(context).colorScheme.onSurface,
               ),
@@ -76,7 +77,7 @@ class _LotsPageState extends ConsumerState<LotsPage> {
       ),
       body: !perms.read
           ? const OmniEmptyState(
-              icon: Icons.lock_outline_rounded,
+              icon: LucideIcons.lock,
               title: 'Chưa có quyền xem kho',
             )
           : OmniAsyncView<List<Lot>>(
@@ -259,8 +260,8 @@ class LotRow extends StatelessWidget {
           children: [
             OmniIconTile(
               l.status == LotStatus.inTransit
-                  ? Icons.local_shipping_outlined
-                  : Icons.inventory_2_outlined,
+                  ? LucideIcons.truck
+                  : LucideIcons.package,
               color: switch (l.status) {
                 LotStatus.inTransit => scheme.primary,
                 LotStatus.ordered => OmniColors.warningTextOf(context),
@@ -346,7 +347,7 @@ class LotRow extends StatelessWidget {
             ),
             const SizedBox(width: 6),
             Icon(
-              Icons.chevron_right_rounded,
+              LucideIcons.chevronRight,
               size: 18,
               color: scheme.onSurfaceVariant,
             ),

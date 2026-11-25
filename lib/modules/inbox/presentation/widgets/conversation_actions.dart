@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/error/app_exception.dart';
 import '../../../../design/components/components.dart';
@@ -254,76 +255,76 @@ List<PeekMenuItem> peekMenuFor(Conversation c, InboxAccess access) {
     if (c.isUnread && access.canUpdate)
       const PeekMenuItem(
         label: 'Đánh dấu đã đọc',
-        icon: Icons.mark_email_read_outlined,
+        icon: LucideIcons.mailCheck,
         action: PeekAction.markRead,
       ),
     // Đã chặn: API trả 422 `conversation_blocked` cho /unread.
     if (!c.isUnread && !c.isBlocked && access.canUpdate)
       const PeekMenuItem(
         label: 'Đánh dấu chưa đọc',
-        icon: Icons.mark_email_unread_outlined,
+        icon: LucideIcons.mail,
         action: PeekAction.markUnread,
       ),
     if (access.canAssign)
       const PeekMenuItem(
         label: 'Gán cho…',
-        icon: Icons.person_add_alt_outlined,
+        icon: LucideIcons.userPlus,
         action: PeekAction.assign,
       ),
     if (access.canLabel)
       const PeekMenuItem(
         label: 'Thêm nhãn',
-        icon: Icons.sell_outlined,
+        icon: LucideIcons.tag,
         action: PeekAction.label,
       ),
     if (c.isPinned)
       const PeekMenuItem(
         label: 'Bỏ ghim',
-        icon: Icons.push_pin_outlined,
+        icon: LucideIcons.pin,
         action: PeekAction.unpin,
       )
     else
       const PeekMenuItem(
         label: 'Ghim',
-        icon: Icons.push_pin_outlined,
+        icon: LucideIcons.pin,
         action: PeekAction.pin,
       ),
     if (c.isMuted)
       const PeekMenuItem(
         label: 'Bật thông báo',
-        icon: Icons.notifications_active_outlined,
+        icon: LucideIcons.bellRing,
         action: PeekAction.unmute,
       )
     else
       const PeekMenuItem(
         label: 'Tắt thông báo',
-        icon: Icons.notifications_off_outlined,
+        icon: LucideIcons.bellOff,
         action: PeekAction.mute,
       ),
     if (access.canUpdate && !closed)
       const PeekMenuItem(
         label: 'Lưu trữ',
-        icon: Icons.archive_outlined,
+        icon: LucideIcons.archive,
         action: PeekAction.archive,
         destructive: true,
       ),
     if (access.canUpdate && closed)
       const PeekMenuItem(
         label: 'Mở lại',
-        icon: Icons.unarchive_outlined,
+        icon: LucideIcons.archiveRestore,
         action: PeekAction.reopen,
       ),
     if (access.canBlock && !c.isBlocked)
       const PeekMenuItem(
         label: 'Chặn hội thoại',
-        icon: Icons.block_rounded,
+        icon: LucideIcons.ban,
         action: PeekAction.block,
         destructive: true,
       ),
     if (access.canBlock && c.isBlocked)
       const PeekMenuItem(
         label: 'Bỏ chặn hội thoại',
-        icon: Icons.block_rounded,
+        icon: LucideIcons.ban,
         action: PeekAction.unblock,
       ),
   ];

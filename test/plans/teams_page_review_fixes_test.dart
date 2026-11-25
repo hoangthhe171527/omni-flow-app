@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/plans/application/plans_providers.dart';
@@ -195,7 +196,7 @@ void main() {
 
     expect(
       tester.widget<Icon>(find.byKey(const Key('team-group-icon'))).icon,
-      Icons.groups_2_outlined,
+      LucideIcons.users,
     );
     expect(find.byKey(const Key('plan-tile-swatch')), findsOneWidget);
     expect(find.byKey(const Key('team-group-marker')), findsNothing);

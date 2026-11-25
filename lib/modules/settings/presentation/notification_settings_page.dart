@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../design/components/components.dart';
@@ -89,7 +90,7 @@ class _NotificationSettingsPageState
             OmniGroupSection(
               children: [
                 OmniGroupRow(
-                  icon: Icons.notifications_none_rounded,
+                  icon: LucideIcons.bell,
                   title: 'Báo khi có công đoạn xong',
                   trailing: Switch.adaptive(
                     value: value,

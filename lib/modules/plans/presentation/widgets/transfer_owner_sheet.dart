@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/utils/text_search.dart';
 import '../../../../design/components/components.dart';
@@ -59,7 +60,7 @@ class _TransferOwnerSheetState extends ConsumerState<_TransferOwnerSheet> {
           onRetry: () => ref.invalidate(teamDirectoryProvider),
           isEmpty: (rows) => _visible(rows).isEmpty,
           empty: const OmniEmptyState(
-            icon: Icons.person_search_outlined,
+            icon: LucideIcons.userSearch,
             title: 'Không có ai để chọn',
             message: 'Chủ mới phải là thành viên đang làm của workspace.',
           ),

@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/core/module/module_registry.dart';
 import 'package:omni_app/core/module/module_route.dart';
 import 'package:omni_app/core/module/nav_destination.dart';
@@ -41,8 +41,8 @@ ModuleNavEntry _entry({
   moduleId: label,
   label: label,
   routeName: 'route.$label',
-  icon: Icons.circle_outlined,
-  selectedIcon: Icons.circle,
+  icon: LucideIcons.circle,
+  selectedIcon: LucideIcons.circle,
   area: area,
   weight: weight,
   order: order,

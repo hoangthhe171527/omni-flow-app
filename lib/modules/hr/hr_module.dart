@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/module/module_route.dart';
 import '../../core/module/nav_destination.dart';
@@ -113,8 +113,8 @@ class HrModule extends OmniModule {
     ModuleNavEntry(
       moduleId: moduleId,
       label: 'Xưởng hôm nay',
-      icon: Icons.factory_outlined,
-      selectedIcon: Icons.factory_rounded,
+      icon: LucideIcons.factory,
+      selectedIcon: LucideIcons.factory,
       routeName: HrRoutes.workshop,
       area: NavArea.hr,
       order: 1,
@@ -125,8 +125,8 @@ class HrModule extends OmniModule {
     ModuleNavEntry(
       moduleId: moduleId,
       label: 'Duyệt đơn',
-      icon: Icons.fact_check_outlined,
-      selectedIcon: Icons.fact_check_rounded,
+      icon: LucideIcons.clipboardCheck,
+      selectedIcon: LucideIcons.clipboardCheck,
       routeName: HrRoutes.approvals,
       area: NavArea.hr,
       order: 2,
@@ -139,8 +139,8 @@ class HrModule extends OmniModule {
     const ModuleNavEntry(
       moduleId: moduleId,
       label: 'Chấm công',
-      icon: Icons.schedule_outlined,
-      selectedIcon: Icons.schedule_rounded,
+      icon: LucideIcons.clock,
+      selectedIcon: LucideIcons.clock,
       routeName: HrRoutes.clock,
       area: NavArea.hr,
       order: 3,
@@ -151,8 +151,8 @@ class HrModule extends OmniModule {
     const ModuleNavEntry(
       moduleId: moduleId,
       label: 'Công tháng',
-      icon: Icons.calendar_month_outlined,
-      selectedIcon: Icons.calendar_month_rounded,
+      icon: LucideIcons.calendarDays,
+      selectedIcon: LucideIcons.calendarDays,
       routeName: HrRoutes.timesheet,
       area: NavArea.hr,
       order: 4,
@@ -163,8 +163,8 @@ class HrModule extends OmniModule {
     const ModuleNavEntry(
       moduleId: moduleId,
       label: 'Đơn từ',
-      icon: Icons.description_outlined,
-      selectedIcon: Icons.description_rounded,
+      icon: LucideIcons.fileText,
+      selectedIcon: LucideIcons.fileText,
       routeName: HrRoutes.requests,
       area: NavArea.hr,
       order: 5,
@@ -175,8 +175,8 @@ class HrModule extends OmniModule {
     const ModuleNavEntry(
       moduleId: moduleId,
       label: 'Phiếu lương',
-      icon: Icons.receipt_long_outlined,
-      selectedIcon: Icons.receipt_long_rounded,
+      icon: LucideIcons.receiptText,
+      selectedIcon: LucideIcons.receiptText,
       routeName: HrRoutes.payslip,
       area: NavArea.hr,
       order: 6,
@@ -187,8 +187,8 @@ class HrModule extends OmniModule {
     const ModuleNavEntry(
       moduleId: moduleId,
       label: 'Thưởng đội',
-      icon: Icons.emoji_events_outlined,
-      selectedIcon: Icons.emoji_events_rounded,
+      icon: LucideIcons.trophy,
+      selectedIcon: LucideIcons.trophy,
       routeName: HrRoutes.kpi,
       area: NavArea.hr,
       order: 7,

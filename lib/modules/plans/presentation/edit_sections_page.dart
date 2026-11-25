@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../core/utils/client_id.dart';
@@ -256,7 +257,7 @@ class _SectionRowState extends State<_SectionRow> {
           OmniGroupSection(
             children: [
               OmniGroupRow(
-                icon: Icons.delete_outline_rounded,
+                icon: LucideIcons.trash2,
                 title: 'Xoá nhóm việc',
                 destructive: true,
                 chevron: false,
@@ -299,7 +300,7 @@ class _SectionRowState extends State<_SectionRow> {
               padding: const EdgeInsets.fromLTRB(14, 6, 4, 6),
               child: Row(
                 children: [
-                  const OmniIconTile(Icons.view_column_outlined),
+                  const OmniIconTile(LucideIcons.columns3),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -338,7 +339,7 @@ class _SectionRowState extends State<_SectionRow> {
                   if (widget.onRemove != null)
                     IconButton(
                       onPressed: _options,
-                      icon: const Icon(Icons.more_horiz_rounded),
+                      icon: const Icon(LucideIcons.ellipsis),
                       tooltip: 'Tuỳ chọn nhóm việc',
                     ),
                 ],
@@ -350,7 +351,7 @@ class _SectionRowState extends State<_SectionRow> {
           // được từ web. Nhãn nói HẬU QUẢ chứ không nói tên cờ — bật nhầm thì
           // bảng trông y hệt, chỉ có con số cuối tháng khác đi.
           OmniGroupRow(
-            icon: Icons.playlist_add_check_rounded,
+            icon: LucideIcons.listChecks,
             title: 'Chặn vào nhóm khi việc con chưa xong',
             trailing: Switch.adaptive(
               value: widget.section.requiresChecklist,
@@ -361,7 +362,7 @@ class _SectionRowState extends State<_SectionRow> {
             ),
           ),
           OmniGroupRow(
-            icon: Icons.flag_outlined,
+            icon: LucideIcons.flag,
             title: 'Nhóm này là đích đếm KPI tháng',
             trailing: Switch.adaptive(
               value: widget.section.countsForKpi,

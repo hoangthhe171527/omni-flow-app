@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/core/network/api_client.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/plans/data/plans_api.dart';
@@ -74,7 +75,7 @@ void main() {
 
     final next = tester.widget<IconButton>(
       find.ancestor(
-        of: find.byIcon(Icons.chevron_right_rounded),
+        of: find.byIcon(LucideIcons.chevronRight),
         matching: find.byType(IconButton),
       ),
     );
@@ -84,7 +85,7 @@ void main() {
       isNull,
       reason: 'Mũi tên tới phải MỜ, không biến mất.',
     );
-    expect(find.byIcon(Icons.chevron_right_rounded), findsOneWidget);
+    expect(find.byIcon(LucideIcons.chevronRight), findsOneWidget);
   });
 
   testWidgets('tháng đã khép thì không khuyên "còn bao xa"', (tester) async {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/utils/formatters.dart';
@@ -235,7 +236,7 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
                 _invalidateDetail(activity: activityOn, opps: oppsOn);
               },
               icon: Icon(
-                Icons.edit_note_rounded,
+                LucideIcons.notebookPen,
                 size: OmniIconSize.md,
                 color: Theme.of(context).colorScheme.onSurface,
               ),
@@ -464,7 +465,7 @@ class _Actions extends StatelessWidget {
     final phone = customer.phone.trim();
     final buttons = <Widget>[
       _ActButton(
-        icon: Icons.chat_bubble_outline_rounded,
+        icon: LucideIcons.messageCircle,
         label: 'Nhắn',
         primary: true,
         onTap: customer.hasPhone
@@ -477,7 +478,7 @@ class _Actions extends StatelessWidget {
             : null,
       ),
       _ActButton(
-        icon: Icons.call_outlined,
+        icon: LucideIcons.phone,
         label: 'Gọi',
         onTap: customer.hasPhone
             ? () => launchWithToast(
@@ -489,7 +490,7 @@ class _Actions extends StatelessWidget {
       ),
       if (canCreateTask)
         _ActButton(
-          icon: Icons.task_alt_rounded,
+          icon: LucideIcons.circleCheckBig,
           label: 'Việc',
           onTap: () => context.pushNamed(
             TaskRoutes.create,
@@ -498,7 +499,7 @@ class _Actions extends StatelessWidget {
         ),
       if (canCreateOpportunity)
         _ActButton(
-          icon: Icons.trending_up_rounded,
+          icon: LucideIcons.trendingUp,
           label: 'Cơ hội',
           onTap: () => context.pushNamed(
             OpportunityRoutes.create,
@@ -685,7 +686,7 @@ class _Overview extends StatelessWidget {
               _row(
                 CustomerField.phone,
                 c.phone,
-                icon: Icons.call_outlined,
+                icon: LucideIcons.phone,
                 keyboardType: TextInputType.phone,
                 valueColor: scheme.primary,
                 onTapValue: phone.isEmpty
@@ -699,7 +700,7 @@ class _Overview extends StatelessWidget {
               _row(
                 CustomerField.email,
                 c.email,
-                icon: Icons.mail_outline_rounded,
+                icon: LucideIcons.mail,
                 keyboardType: TextInputType.emailAddress,
                 onTapValue: email.isEmpty
                     ? null
@@ -712,14 +713,14 @@ class _Overview extends StatelessWidget {
               _row(
                 CustomerField.address,
                 c.address,
-                icon: Icons.location_on_outlined,
+                icon: LucideIcons.mapPin,
                 maxLength: 500,
                 viewMaxLines: 3,
               ),
               _row(
                 CustomerField.note,
                 c.note ?? '',
-                icon: Icons.notes_rounded,
+                icon: LucideIcons.notebookText,
                 multiline: true,
               ),
             ],
@@ -730,14 +731,14 @@ class _Overview extends StatelessWidget {
             dividerIndent: 54,
             children: [
               _PickerRow(
-                icon: Icons.person_outline_rounded,
+                icon: LucideIcons.user,
                 label: CustomerField.owner.label,
                 editable: canUpdate,
                 onTap: onPickOwner,
                 child: _OwnerValue(name: c.ownerName),
               ),
               _PickerRow(
-                icon: Icons.sell_outlined,
+                icon: LucideIcons.tag,
                 label: CustomerField.tags.label,
                 editable: canUpdate,
                 onTap: onPickTags,
@@ -796,7 +797,7 @@ class _PickerRow extends StatelessWidget {
               if (editable) ...[
                 const SizedBox(width: 6),
                 Icon(
-                  Icons.chevron_right_rounded,
+                  LucideIcons.chevronRight,
                   size: 18,
                   color: OmniTaskTones.of(context).chevron,
                 ),
