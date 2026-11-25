@@ -53,12 +53,8 @@ class _ReportIssueSheetState extends State<_ReportIssueSheet> {
       builder: (sheet) => OmniSheetBody(
         header: OmniSheetHeader(
           title: 'Đính kèm ảnh',
-          trailing: OmniGlassCircle(
-            child: IconButton(
-              tooltip: 'Đóng',
-              onPressed: () => Navigator.of(sheet).maybePop(),
-              icon: const Icon(Icons.close_rounded, size: OmniIconSize.lg),
-            ),
+          trailing: OmniSheetCloseButton(
+            onPressed: () => Navigator.of(sheet).maybePop(),
           ),
         ),
         children: [
@@ -102,12 +98,8 @@ class _ReportIssueSheetState extends State<_ReportIssueSheet> {
     return OmniSheetBody(
       header: OmniSheetHeader(
         title: 'Báo vấn đề',
-        trailing: OmniGlassCircle(
-          child: IconButton(
-            tooltip: 'Đóng',
-            onPressed: () => Navigator.of(context).maybePop(),
-            icon: const Icon(Icons.close_rounded, size: OmniIconSize.lg),
-          ),
+        trailing: OmniSheetCloseButton(
+          onPressed: () => Navigator.of(context).maybePop(),
         ),
       ),
       footer: FilledButton(

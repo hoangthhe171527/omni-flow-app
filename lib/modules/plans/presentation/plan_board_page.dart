@@ -1936,12 +1936,8 @@ class _NameSheetState extends State<_NameSheet> {
       header: OmniSheetHeader(
         title: widget.title,
         subtitle: 'Áp dụng ngay trên bảng kế hoạch',
-        trailing: OmniGlassCircle(
-          child: IconButton(
-            tooltip: 'Đóng',
-            onPressed: () => Navigator.of(context).maybePop(),
-            icon: const Icon(Icons.close_rounded),
-          ),
+        trailing: OmniSheetCloseButton(
+          onPressed: () => Navigator.of(context).maybePop(),
         ),
       ),
       footer: ValueListenableBuilder<TextEditingValue>(

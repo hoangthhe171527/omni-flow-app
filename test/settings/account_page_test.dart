@@ -155,7 +155,7 @@ void main() {
     // Thông báo, nền, giao diện, hỗ trợ đã về "Tất cả"; Đội nhóm, Kênh kết
     // nối có ô ở "Tất cả" (`tat-ca-tai-khoan-uiux.html`).
     await pump(t, policy: const AccessPolicy({'*'}));
-    expect(find.text('Bảo mật'), findsOneWidget);
+    expect(find.text('BẢO MẬT'), findsOneWidget);
     expect(find.text('Đổi mật khẩu'), findsOneWidget);
     expect(find.text('Quyền của tôi'), findsOneWidget);
     for (final gone in [

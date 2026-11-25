@@ -165,12 +165,8 @@ class PlanFilesPage extends ConsumerWidget {
         header: OmniSheetHeader(
           title: file.name,
           subtitle: task.title,
-          trailing: OmniGlassCircle(
-            child: IconButton(
-              tooltip: 'Đóng',
-              onPressed: () => Navigator.of(sheet).maybePop(),
-              icon: const Icon(Icons.close_rounded),
-            ),
+          trailing: OmniSheetCloseButton(
+            onPressed: () => Navigator.of(sheet).maybePop(),
           ),
         ),
         children: [

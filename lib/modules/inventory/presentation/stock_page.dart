@@ -640,27 +640,12 @@ class _StockPageState extends ConsumerState<StockPage> {
             if (groupIdx > 0)
               () => const SizedBox(height: OmniGroupSection.gap),
             if (e.key != null || (groupIdx == 0 && pickToggle != null))
-              () => Padding(
-                padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Semantics(
-                        header: true,
-                        child: Text(
-                          e.key == null
-                              ? ''
-                              : '${e.key} · ${InventoryFormat.number(e.value.length)} cây',
-                          style: OmniType.caption.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                    ),
-                    if (groupIdx == 0) ?pickToggle,
-                  ],
-                ),
+              // Đầu nhóm chữ HOA (spec phong cách iOS §3.4), "Chọn" bên phải.
+              () => OmniGroupHeader(
+                title: e.key == null
+                    ? ''
+                    : '${e.key} · ${InventoryFormat.number(e.value.length)} cây',
+                trailing: groupIdx == 0 ? pickToggle : null,
               ),
             for (var idx = 0; idx < e.value.length; idx++)
               () {

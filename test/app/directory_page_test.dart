@@ -330,12 +330,13 @@ void main() {
         // Logo của thanh trên cũng là header (chữ Viomni là Text.rich).
         .where((l) => l != null && l != 'Tất cả')
         .toList();
+    // Đầu nhóm chữ HOA (spec phong cách iOS §3.4).
     expect(labels, [
-      'Bán hàng',
-      'Công việc',
-      'Nhân sự',
-      'Cài đặt ứng dụng',
-      'Trợ giúp',
+      'BÁN HÀNG',
+      'CÔNG VIỆC',
+      'NHÂN SỰ',
+      'CÀI ĐẶT ỨNG DỤNG',
+      'TRỢ GIÚP',
     ]);
   });
 
@@ -488,7 +489,7 @@ void main() {
     await t.pump(const Duration(milliseconds: 400)); // debounce của ô tìm
     await t.pumpAndSettle();
     expect(find.text('Giao diện'), findsOneWidget);
-    expect(find.text('Bán hàng'), findsNothing);
+    expect(find.text('BÁN HÀNG'), findsNothing);
   });
 
   testWidgets('Giao diện đổi ngay tại chỗ: Máy / Sáng / Tối', (t) async {

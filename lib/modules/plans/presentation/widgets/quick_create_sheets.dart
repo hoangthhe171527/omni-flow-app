@@ -44,12 +44,8 @@ Future<QuickCreated?> showQuickCreateTeam(
 OmniSheetHeader _sheetHeader(BuildContext context, String title) =>
     OmniSheetHeader(
       title: title,
-      trailing: OmniGlassCircle(
-        child: IconButton(
-          tooltip: 'Đóng',
-          onPressed: () => Navigator.of(context).maybePop(),
-          icon: const Icon(Icons.close_rounded),
-        ),
+      trailing: OmniSheetCloseButton(
+        onPressed: () => Navigator.of(context).maybePop(),
       ),
     );
 

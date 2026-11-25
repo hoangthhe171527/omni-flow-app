@@ -56,26 +56,7 @@ class OmniGroupSection extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         if (title != null || trailingTitle != null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Semantics(
-                    header: true,
-                    child: Text(
-                      title ?? '',
-                      style: OmniType.caption.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                ),
-                ?trailingTitle,
-              ],
-            ),
-          ),
+          OmniGroupHeader(title: title ?? '', trailing: trailingTitle),
         Material(
           color: background ?? scheme.surface,
           // Nhóm bo 16 (spec phong cách iOS §3.5).
@@ -113,6 +94,46 @@ class OmniGroupSection extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// Đầu nhóm (spec phong cách iOS §3.4): chữ HOA 13/600 xám, giãn chữ nhẹ,
+/// thụt 16 cho thẳng chữ trong dòng; [trailing] (vd "Chọn") bên phải. Trình
+/// đọc màn hình đọc [title] gốc (chữ thường), không đánh vần chữ hoa.
+class OmniGroupHeader extends StatelessWidget {
+  const OmniGroupHeader({super.key, required this.title, this.trailing});
+
+  final String title;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 7),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Semantics(
+              header: true,
+              label: title,
+              excludeSemantics: true,
+              child: Text(
+                title.toUpperCase(),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: OmniType.overline.copyWith(
+                  color: scheme.onSurfaceVariant,
+                  letterSpacing: 0.4,
+                ),
+              ),
+            ),
+          ),
+          if (trailing case final t?) ...[const SizedBox(width: 12), t],
+        ],
+      ),
     );
   }
 }
@@ -343,8 +364,9 @@ class OmniSheetHeader extends StatelessWidget {
   final Widget? trailing;
 
   /// Không có [trailing] thì hiện nút ✕ (spec phong cách iOS §3.4) — chỉ khi
-  /// đầu sheet nằm trong sheet / popup thật (`PopupRoute`), để không lỡ đóng
-  /// cả màn khi widget này được dùng trong một trang.
+  /// đầu sheet nằm trong sheet thật (`showOmniSheet` → ModalBottomSheetRoute).
+  /// Trong trang thì không (lỡ đóng cả màn), trong menu bật lên (popover) cũng
+  /// không — popover đóng bằng chạm ra ngoài như iOS.
   final bool close;
 
   @override
@@ -352,7 +374,7 @@ class OmniSheetHeader extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final trailing =
         this.trailing ??
-        (close && ModalRoute.of(context) is PopupRoute
+        (close && ModalRoute.of(context) is ModalBottomSheetRoute
             ? const OmniSheetCloseButton()
             : null);
 

@@ -343,29 +343,20 @@ class _GroupTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final style = OmniType.caption.copyWith(
-      fontWeight: FontWeight.w600,
-      color: scheme.onSurfaceVariant,
-    );
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 4, 8, 6),
-      child: Semantics(
-        header: true,
-        child: Row(
-          children: [
-            Expanded(child: Text(label, style: style)),
-            if (trailing != null)
-              Text(
-                trailing!,
-                style: style.copyWith(
-                  fontFeatures: OmniType.tabular,
-                  color: trailingStrong ? scheme.primary : null,
-                ),
+    // Đầu nhóm chữ HOA dùng chung (spec phong cách iOS §3.4).
+    return OmniGroupHeader(
+      title: label,
+      trailing: trailing == null
+          ? null
+          : Text(
+              trailing!,
+              style: OmniType.overline.copyWith(
+                fontFeatures: OmniType.tabular,
+                color: trailingStrong
+                    ? scheme.primary
+                    : scheme.onSurfaceVariant,
               ),
-          ],
-        ),
-      ),
+            ),
     );
   }
 }

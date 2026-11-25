@@ -225,12 +225,8 @@ class _FieldSheetState extends State<_FieldSheet> {
     return OmniSheetBody(
       header: OmniSheetHeader(
         title: widget.initial == null ? 'Thêm trường' : 'Sửa trường',
-        trailing: OmniGlassCircle(
-          child: IconButton(
-            tooltip: 'Đóng',
-            onPressed: () => Navigator.of(context).maybePop(),
-            icon: const Icon(Icons.close_rounded),
-          ),
+        trailing: OmniSheetCloseButton(
+          onPressed: () => Navigator.of(context).maybePop(),
         ),
       ),
       footer: FilledButton(

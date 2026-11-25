@@ -212,7 +212,7 @@ void main() {
           ]),
         );
 
-        expect(find.text('Xưởng'), findsOneWidget);
+        expect(find.text('XƯỞNG'), findsOneWidget);
         expect(find.text('Tân trang'), findsOneWidget);
         expect(find.text('Lên dây · Thanh Hòa, Ngọc Trâm'), findsOneWidget);
         expect(find.text('8/10'), findsOneWidget);
@@ -231,7 +231,7 @@ void main() {
     testWidgets('chưa vào xưởng: một dòng mờ', (t) async {
       await pump(t, unit(const <dynamic>[]));
 
-      expect(find.text('Xưởng'), findsOneWidget);
+      expect(find.text('XƯỞNG'), findsOneWidget);
       expect(find.text('Chưa vào xưởng'), findsOneWidget);
       expect(find.byType(OmniProgressBar), findsNothing);
     });
@@ -239,7 +239,7 @@ void main() {
     testWidgets('API cũ (không có khoá workshop): không có nhóm', (t) async {
       await pump(t, unit(null, withKey: false));
 
-      expect(find.text('Xưởng'), findsNothing);
+      expect(find.text('XƯỞNG'), findsNothing);
       expect(find.text('Chưa vào xưởng'), findsNothing);
     });
 

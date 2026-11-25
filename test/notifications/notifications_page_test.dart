@@ -149,9 +149,9 @@ void main() {
 
   testWidgets('nhóm Hôm nay / Trước đó và thanh chọn có số server', (t) async {
     await pump(t);
-    expect(find.text('HÔM NAY'), findsNothing);
-    expect(find.text('Hôm nay'), findsOneWidget);
-    expect(find.text('Trước đó'), findsOneWidget);
+    // Đầu nhóm chữ HOA (spec phong cách iOS §3.4).
+    expect(find.text('HÔM NAY'), findsOneWidget);
+    expect(find.text('TRƯỚC ĐÓ'), findsOneWidget);
     expect(find.bySemanticsLabel('Chưa đọc 2'), findsOneWidget);
     // Tin nhắn không hiển thị trong phần chuông thông báo.
     expect(find.text('Tin nhan bi an khoi chuong'), findsNothing);

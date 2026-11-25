@@ -397,14 +397,8 @@ class _CopyTaskSheetState extends ConsumerState<CopyTaskSheet> {
       child: OmniSheetBody(
         header: OmniSheetHeader(
           title: 'Sao chép công việc',
-          trailing: OmniGlassCircle(
-            child: IconButton(
-              tooltip: 'Đóng',
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-              onPressed: () => Navigator.of(context).pop(),
-              icon: const Icon(Icons.close_rounded, size: OmniIconSize.lg),
-            ),
+          trailing: OmniSheetCloseButton(
+            onPressed: () => Navigator.of(context).pop(),
           ),
         ),
         footer: FilledButton(
@@ -514,14 +508,8 @@ class _CopyTaskSheetState extends ConsumerState<CopyTaskSheet> {
       semanticsLabel: title,
       header: OmniSheetHeader(
         title: title,
-        trailing: OmniGlassCircle(
-          child: IconButton(
-            tooltip: 'Đóng',
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-            onPressed: () => Navigator.of(sheet).maybePop(),
-            icon: const Icon(Icons.close_rounded, size: OmniIconSize.lg),
-          ),
+        trailing: OmniSheetCloseButton(
+          onPressed: () => Navigator.of(sheet).maybePop(),
         ),
       ),
       children: [

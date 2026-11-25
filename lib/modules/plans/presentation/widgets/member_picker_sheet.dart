@@ -47,12 +47,8 @@ class _MemberPickerSheetState extends ConsumerState<_MemberPickerSheet> {
         subtitle: _selected.isEmpty
             ? 'Chạm để chọn người tham gia'
             : 'Đã chọn ${_selected.length} người',
-        trailing: OmniGlassCircle(
-          child: IconButton(
-            tooltip: 'Đóng',
-            onPressed: () => Navigator.of(context).maybePop(),
-            icon: const Icon(Icons.close_rounded),
-          ),
+        trailing: OmniSheetCloseButton(
+          onPressed: () => Navigator.of(context).maybePop(),
         ),
       ),
       footer: FilledButton(

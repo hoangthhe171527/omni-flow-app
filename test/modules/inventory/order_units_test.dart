@@ -121,7 +121,7 @@ void main() {
       'Chưa vào xưởng',
       'Đã giao',
     ]) {
-      expect(find.text(label), findsOneWidget, reason: label);
+      expect(find.text(label.toUpperCase()), findsOneWidget, reason: label);
     }
     // Khối đầu (phong cách iOS): Còn phải thu là số chính, Tổng đơn · Đã thu
     // ngay dưới, không còn thẻ tổng ở cuối màn.
