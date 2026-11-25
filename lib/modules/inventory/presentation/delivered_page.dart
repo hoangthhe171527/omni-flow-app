@@ -213,9 +213,13 @@ class DeliveredUnitRow extends StatelessWidget {
                 InvValue(
                   u.soldPrice == null ? '—' : InvUi.vnd(u.soldPrice),
                   sub: inv?.status.label,
-                  subColor: inv?.status == InvoiceStatus.pending
-                      ? OmniColors.warningTextOf(context)
-                      : null,
+                  // Trạng thái hoá đơn = nhãn bo 6 (spec §3.4).
+                  subTone: switch (inv?.status) {
+                    null => null,
+                    InvoiceStatus.pending => OmniTone.warning,
+                    InvoiceStatus.issued => OmniTone.success,
+                    InvoiceStatus.notRequired => OmniTone.neutral,
+                  },
                 ),
                 const SizedBox(width: 6),
                 Icon(
@@ -231,5 +235,3 @@ class DeliveredUnitRow extends StatelessWidget {
     );
   }
 }
-
-

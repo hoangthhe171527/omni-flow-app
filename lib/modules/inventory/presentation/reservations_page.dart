@@ -180,8 +180,8 @@ class ReservationRow extends StatelessWidget {
                     children: [
                       Text(
                         r.customerName ?? 'Khách',
-                        style: OmniType.body.copyWith(
-                          fontWeight: FontWeight.w600,
+                        // Tên dòng 16/600 (spec §3.4).
+                        style: OmniType.section.copyWith(
                           color: scheme.onSurface,
                         ),
                       ),
@@ -315,7 +315,7 @@ class _ReservationSheetState extends ConsumerState<ReservationSheet> {
                 trailing: InvValue(
                   InventoryFormat.dmy(r.expiresAt),
                   sub: expired ? 'quá hạn' : null,
-                  subColor: expired ? OmniColors.warningTextOf(context) : null,
+                  subTone: expired ? OmniTone.warning : null,
                 ),
               ),
             if (r.releasedAt != null)

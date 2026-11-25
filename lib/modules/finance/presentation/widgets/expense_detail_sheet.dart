@@ -54,19 +54,7 @@ class _FinanceTwoStepDeleteSheetState
       semanticsLabel: 'Xoá khoản chi',
       header: OmniSheetHeader(
         title: 'Xoá khoản chi?',
-        trailing: OmniGlassCircle(
-          child: IconButton(
-            tooltip: 'Đóng',
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-            icon: Icon(
-              Icons.close_rounded,
-              size: OmniIconSize.md,
-              color: p.ink,
-            ),
-            onPressed: () => Navigator.of(context).pop(false),
-          ),
-        ),
+        // ✕ do OmniSheetHeader tự thêm (spec §3.4); đóng = không xoá.
       ),
       footer: Row(
         children: [
@@ -102,8 +90,11 @@ class _FinanceTwoStepDeleteSheetState
                     Navigator.of(context).pop(true);
                   }
                 },
-                // Chữ đỏ ngữ nghĩa trên nút kính hệ thống 50dp.
-                style: FilledButton.styleFrom(foregroundColor: p.danger),
+                // Nút chính của sheet xoá: nền đỏ đặc, chữ trắng.
+                style: FilledButton.styleFrom(
+                  backgroundColor: p.danger,
+                  foregroundColor: Colors.white,
+                ),
                 child: Text(_step == 1 ? 'Tiếp tục xoá' : 'Xác nhận xoá'),
               ),
             ),
@@ -111,23 +102,14 @@ class _FinanceTwoStepDeleteSheetState
         ],
       ),
       children: [
+        // Bước xoá = nhãn trạng thái đỏ bo 6 (spec §3.4).
         Align(
           alignment: Alignment.centerLeft,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: p.dangerSoft,
-              borderRadius: BorderRadius.circular(99),
-            ),
-            child: Text(
-              _step == 1
-                  ? 'Bước 1/2 · Kiểm tra mục sắp xoá'
-                  : 'Bước 2/2 · Xác nhận xoá vĩnh viễn',
-              style: OmniType.caption.copyWith(
-                color: p.danger,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+          child: OmniStatusLabel(
+            label: _step == 1
+                ? 'Bước 1/2 · Kiểm tra mục sắp xoá'
+                : 'Bước 2/2 · Xác nhận xoá vĩnh viễn',
+            tone: OmniTone.danger,
           ),
         ),
         OmniGroupSection(
@@ -147,8 +129,9 @@ class _FinanceTwoStepDeleteSheetState
                   const SizedBox(height: 4),
                   Text(
                     '${FinanceMonthUtils.formatVndSpace(item.amount)} · ${widget.groupName}',
+                    // Số tiền màu mực (spec §3.5): đỏ đã nằm ở nhãn bước xoá.
                     style: OmniType.bodySm.copyWith(
-                      color: p.danger,
+                      color: p.ink,
                       fontWeight: FontWeight.w600,
                       fontFeatures: const [FontFeature.tabularFigures()],
                     ),
@@ -163,7 +146,7 @@ class _FinanceTwoStepDeleteSheetState
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
               color: p.dangerSoft,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Text(
               'Xác nhận bước cuối: Chọn "Xác nhận xoá" bên dưới để xoá khoản chi này khỏi sổ.',
@@ -501,12 +484,8 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
               ),
               const SizedBox(width: 7),
             ],
-            _buildCircleIconBtn(
-              p,
-              tooltip: 'Đóng',
-              icon: Icons.close_rounded,
-              onTap: () => Navigator.of(context).pop(),
-            ),
+            // ✕ tròn 32 nền xám (spec §3.4).
+            OmniSheetCloseButton(onPressed: () => Navigator.of(context).pop()),
           ],
         ),
       ),
@@ -544,7 +523,7 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                           if (mounted) _titleFocus.requestFocus();
                         });
                       },
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 8,
@@ -574,7 +553,7 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                   // Số tiền lớn — đầy đủ chữ số tabularFigures, không co nhỏ bằng FittedBox
                   InkWell(
                     onTap: item.isRefund ? null : () => _openAmountKeypad(item),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 10,
@@ -591,9 +570,11 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                               FinanceMonthUtils.formatNumber(item.amount),
                               maxLines: 1,
                               softWrap: false,
+                              // Số tiền lớn nhất sheet: displayLg đậm 800.
                               style: OmniType.displayLg.copyWith(
                                 color: p.ink,
-                                fontWeight: FontWeight.w600,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.6,
                                 fontFeatures: const [
                                   FontFeature.tabularFigures(),
                                 ],
@@ -621,97 +602,45 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                     ),
                   ),
                   const SizedBox(height: 8),
+                  // Trạng thái trả = nhãn bo 6 (spec §3.4): xanh lá đủ,
+                  // xanh trả một phần, vàng chưa trả, xám hoàn/giảm.
                   if (item.isRefund)
-                    Container(
-                      height: 28,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        color: p.control,
-                        borderRadius: BorderRadius.circular(99),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.replay_rounded, size: 14, color: p.muted),
-                          const SizedBox(width: 5),
-                          Text(
-                            'Khoản hoàn / giảm trừ',
-                            style: OmniType.caption.copyWith(
-                              color: p.muted,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
+                    const OmniStatusLabel(
+                      label: 'Khoản hoàn / giảm trừ',
+                      icon: Icons.replay_rounded,
                     )
                   else if (isSingleFull)
                     InkWell(
                       key: const ValueKey('finance-detail-paid-date-pill'),
                       onTap: () => _openPaymentDateMenu(item, paymentIndex: 0),
-                      borderRadius: BorderRadius.circular(99),
-                      child: Container(
-                        height: 28,
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(
-                          color: p.okSoft,
-                          borderRadius: BorderRadius.circular(99),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.check_rounded, size: 14, color: p.ok),
-                            const SizedBox(width: 5),
-                            Text(
-                              'Đã trả đủ · $paidDateDm',
-                              style: OmniType.caption.copyWith(
-                                color: p.ok,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
+                      borderRadius: BorderRadius.circular(6),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 44),
+                        child: Center(
+                          widthFactor: 1,
+                          child: OmniStatusLabel(
+                            label: 'Đã trả đủ · $paidDateDm',
+                            icon: Icons.check_rounded,
+                            tone: OmniTone.success,
+                          ),
                         ),
                       ),
                     )
                   else
-                    Container(
-                      constraints: const BoxConstraints(minHeight: 28),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: left > 0 ? p.amberSoft : p.okSoft,
-                        borderRadius: BorderRadius.circular(99),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            left > 0
-                                ? Icons.schedule_rounded
-                                : Icons.check_rounded,
-                            size: 14,
-                            color: left > 0 ? p.amber : p.ok,
-                          ),
-                          const SizedBox(width: 5),
-                          Flexible(
-                            child: Text(
-                              left > 0
-                                  ? (paid > 0
-                                        ? 'Trả một phần · Còn ${FinanceMonthUtils.formatVndSpace(left)}'
-                                        : 'Chưa thanh toán')
-                                  : 'Đã trả đủ (${item.payments.length} lần)',
-                              style: OmniType.caption.copyWith(
-                                color: left > 0 ? p.amber : p.ok,
-                                fontWeight: FontWeight.w600,
-                                fontFeatures: const [
-                                  FontFeature.tabularFigures(),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                    OmniStatusLabel(
+                      label: left > 0
+                          ? (paid > 0
+                                ? 'Trả một phần · Còn ${FinanceMonthUtils.formatVndSpace(left)}'
+                                : 'Chưa thanh toán')
+                          : 'Đã trả đủ (${item.payments.length} lần)',
+                      icon: left > 0
+                          ? Icons.schedule_rounded
+                          : Icons.check_rounded,
+                      tone: left <= 0
+                          ? OmniTone.success
+                          : paid > 0
+                          ? OmniTone.info
+                          : OmniTone.warning,
                     ),
                 ],
               ),
@@ -841,15 +770,13 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                             fontFeatures: const [FontFeature.tabularFigures()],
                           ),
                         ),
-                        Text(
-                          left > 0
+                        // Phần còn nợ = nhãn trạng thái (spec §3.4).
+                        OmniStatusLabel(
+                          label: left > 0
                               ? 'Còn ${FinanceMonthUtils.formatVndSpace(left)}'
-                              : '✓ Đã trả đủ (${item.payments.length} lần)',
-                          style: OmniType.bodySm.copyWith(
-                            color: left > 0 ? p.amber : p.ok,
-                            fontWeight: FontWeight.w600,
-                            fontFeatures: const [FontFeature.tabularFigures()],
-                          ),
+                              : 'Đã trả đủ (${item.payments.length} lần)',
+                          icon: left > 0 ? null : Icons.check_rounded,
+                          tone: left > 0 ? OmniTone.warning : OmniTone.success,
                         ),
                       ],
                     ),
@@ -888,10 +815,17 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                           ),
                         ),
                         const SizedBox(width: 8),
+                        // ✓ xanh lá + số tiền màu mực (spec §3.5).
+                        Icon(Icons.check_rounded, size: 14, color: p.ok),
+                        const SizedBox(width: 4),
                         Text(
-                          '✓ ${FinanceMonthUtils.formatVndSpace(item.payments[i].amount)}',
+                          FinanceMonthUtils.formatVndSpace(
+                            item.payments[i].amount,
+                          ),
+                          maxLines: 1,
+                          softWrap: false,
                           style: OmniType.bodySm.copyWith(
-                            color: p.ok,
+                            color: p.ink,
                             fontWeight: FontWeight.w600,
                             fontFeatures: const [FontFeature.tabularFigures()],
                           ),
@@ -924,9 +858,14 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
               ),
               if (left >= 2000) ...[
                 const SizedBox(width: 8),
-                OmniGlass(
-                  blur: false,
-                  radius: 25,
+                // Nút phụ tròn (spec §3.2): nền xanh nhạt đặc, không kính.
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: .10),
+                  ),
                   child: SizedBox.square(
                     dimension: 50,
                     child: Center(

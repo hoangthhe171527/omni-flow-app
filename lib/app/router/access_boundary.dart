@@ -34,7 +34,7 @@ class AccessBoundary extends ConsumerWidget {
 }
 
 /// Màn "không có quyền" theo chuẩn Liquid Glass (`#s-no-access`): nền xám
-/// chuẩn, thanh đầu `OmniAppBar`, thẻ nhóm trắng bo 18, ô khoá 64 bo 18 một
+/// chuẩn, thanh đầu `OmniAppBar`, thẻ nhóm trắng bo 16, ô khoá 64 bo 16 một
 /// tông màu chính, tên quyền còn thiếu in đậm, và nút quay lại khi có đường lùi.
 class NoAccessView extends StatelessWidget {
   const NoAccessView({super.key, required this.requirement, this.fallbackBack});
@@ -102,7 +102,8 @@ class NoAccessView extends StatelessWidget {
                             color: scheme.primary.withValues(
                               alpha: dark ? 0.16 : 0.10,
                             ),
-                            borderRadius: BorderRadius.circular(18),
+                            // Bo theo thang 6/10/16/32: ô khoá lớn → 16.
+                            borderRadius: BorderRadius.circular(16),
                           ),
                           child: Icon(
                             Icons.lock_outline_rounded,

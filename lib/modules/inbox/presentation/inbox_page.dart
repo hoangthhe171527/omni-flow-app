@@ -350,8 +350,8 @@ class _InboxPageState extends ConsumerState<InboxPage>
                             );
                           }
                           // Nhóm lồng (viomni-apple-uiux.html `.group`): cả
-                          // danh sách hội thoại là một thẻ bo 18 cách mép 16.
-                          const r = Radius.circular(18);
+                          // danh sách hội thoại là một thẻ bo 16 cách mép 16.
+                          const r = Radius.circular(16);
                           final last =
                               index == state.items.length - 1 && !state.hasMore;
                           return Padding(

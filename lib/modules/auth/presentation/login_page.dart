@@ -10,7 +10,7 @@ import '../auth_module.dart';
 import 'widgets/auth_widgets.dart';
 
 /// Màn đăng nhập (`#s-auth-login`): cụm `BrandAnchor` ôm `OmniBrandMark(64)` +
-/// `OmniWordmark`, thẻ nhóm 2 ô nhập xếp chồng, nút kính chính, Google vector
+/// `OmniWordmark`, thẻ nhóm 2 ô nhập xếp chồng, nút chính xanh đặc, Google vector
 /// 4 màu và liên kết tạo tài khoản ở chân màn.
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});

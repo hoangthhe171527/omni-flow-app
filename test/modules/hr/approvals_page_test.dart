@@ -49,7 +49,7 @@ void main() {
       ),
     );
     await t.pumpAndSettle();
-    expect(find.text('Chờ duyệt · 1'), findsOneWidget);
+    expect(find.bySemanticsLabel('Chờ duyệt 1'), findsOneWidget);
 
     await t.tap(find.text('Vũ Văn Hoàng'));
     await t.pumpAndSettle();

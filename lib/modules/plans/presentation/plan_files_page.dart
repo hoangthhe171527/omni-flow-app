@@ -99,7 +99,7 @@ class PlanFilesPage extends ConsumerWidget {
                   DecoratedBox(
                     decoration: BoxDecoration(
                       color: scheme.surface,
-                      borderRadius: BorderRadius.circular(18),
+                      borderRadius: BorderRadius.circular(16),
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(_cardPad),

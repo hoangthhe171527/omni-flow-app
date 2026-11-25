@@ -9,8 +9,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:omni_app/design/components/omni_group.dart';
 import 'package:omni_app/design/components/omni_segmented.dart';
 import 'package:omni_app/design/components/omni_states.dart';
+import 'package:omni_app/design/components/omni_status_chip.dart';
 import 'package:omni_app/design/platform/omni_motion_scope.dart';
-import 'package:omni_app/design/tokens/omni_colors.dart';
 import 'package:omni_app/design/tokens/omni_motion.dart';
 import 'package:omni_app/design/tokens/omni_typography.dart';
 
@@ -137,7 +137,8 @@ class _RevenueCardState extends ConsumerState<RevenueCard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(caption, style: OmniType.micro.copyWith(color: muted)),
+              // Khối tổng (spec §3.4): nhãn 13 xám, số 30/800.
+              Text(caption, style: OmniType.caption.copyWith(color: muted)),
               const SizedBox(height: 2),
               Wrap(
                 spacing: 8,
@@ -146,8 +147,10 @@ class _RevenueCardState extends ConsumerState<RevenueCard> {
                 children: [
                   Text(
                     big,
-                    style: OmniType.moneyHero.copyWith(
+                    style: OmniType.displayLg.copyWith(
                       color: scheme.onSurface,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.6,
                       fontFeatures: OmniType.tabular,
                     ),
                   ),
@@ -193,52 +196,26 @@ class _Delta extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final r = ratio;
-    final scheme = Theme.of(context).colorScheme;
-    final Color color;
+    final OmniTone tone;
     final String text;
     IconData? icon;
     String? label;
     if (r == null) {
-      color = scheme.onSurfaceVariant;
+      tone = OmniTone.neutral;
       text = '—';
     } else {
       final up = r >= 0;
-      color = up
-          ? OmniColors.byBrightness(
-              context,
-              OmniColors.primaryPressed,
-              scheme.primary,
-            )
-          : OmniColors.dangerTextOf(context);
+      tone = up ? OmniTone.info : OmniTone.danger;
       icon = up ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded;
       text = '${(r.abs() * 100).round()}%';
       label = '${up ? 'tăng' : 'giảm'} $text so với cùng kỳ';
     }
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: .12),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      // Font app không có ▲/▼ (font_glyph_coverage_test) → dùng icon.
-      child: Semantics(
-        label: label,
-        excludeSemantics: label != null,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (icon != null) Icon(icon, size: 18, color: color),
-            Text(
-              text,
-              style: OmniType.micro.copyWith(
-                color: color,
-                fontWeight: FontWeight.w600,
-                fontFeatures: OmniType.tabular,
-              ),
-            ),
-          ],
-        ),
-      ),
+    // Biến động = nhãn trạng thái bo 6 (spec §3.4). Font app không có ▲/▼
+    // (font_glyph_coverage_test) → dùng icon.
+    return Semantics(
+      label: label,
+      excludeSemantics: label != null,
+      child: OmniStatusLabel(label: text, icon: icon, tone: tone),
     );
   }
 }
@@ -301,16 +278,16 @@ class _Skeleton extends StatelessWidget {
   Widget build(BuildContext context) => const Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      OmniSkeletonBox(height: 14, width: 120, radius: 7),
+      OmniSkeletonBox(height: 14, width: 120, radius: 6),
       SizedBox(height: 6),
       OmniSkeletonBox(height: 30, width: 160, radius: 10),
       SizedBox(height: 12),
-      OmniSkeletonBox(height: RevenueChart.height, radius: 12),
+      OmniSkeletonBox(height: RevenueChart.height, radius: 16),
     ],
   );
 }
 
-/// Thẻ trắng bo 18 cho trạng thái tải / lỗi (cùng dáng nhóm lồng).
+/// Thẻ trắng bo 16 cho trạng thái tải / lỗi (cùng dáng nhóm lồng).
 class _Shell extends StatelessWidget {
   const _Shell({required this.child});
 
@@ -319,7 +296,7 @@ class _Shell extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Material(
     color: Theme.of(context).colorScheme.surface,
-    borderRadius: BorderRadius.circular(18),
+    borderRadius: BorderRadius.circular(16),
     child: Padding(padding: const EdgeInsets.all(16), child: child),
   );
 }

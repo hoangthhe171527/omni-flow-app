@@ -197,8 +197,6 @@ class _PlanMembersPageState extends ConsumerState<PlanMembersPage> {
     String? avatarUrl,
     VoidCallback? onTap,
   }) {
-    final scheme = Theme.of(context).colorScheme;
-    final dark = Theme.of(context).brightness == Brightness.dark;
     final isOwner = role == PlanRole.owner;
 
     final row = OmniGroupRow(
@@ -206,23 +204,9 @@ class _PlanMembersPageState extends ConsumerState<PlanMembersPage> {
       title: name,
       maxTitleLines: 2,
       subtitle: isOwner ? null : planRoleLabel(role),
+      // Nhãn vai chủ: nhãn bo 6 (spec phong cách iOS §3.4).
       trailing: isOwner
-          ? DecoratedBox(
-              decoration: BoxDecoration(
-                color: scheme.primary.withValues(alpha: dark ? .18 : .10),
-                borderRadius: OmniRadius.pillAll,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                child: Text(
-                  planRoleLabel(role),
-                  style: OmniType.micro.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: scheme.primary,
-                  ),
-                ),
-              ),
-            )
+          ? OmniStatusLabel(label: planRoleLabel(role), tone: OmniTone.info)
           : null,
       onTap: onTap,
     );

@@ -79,6 +79,7 @@ TextStyle invMuted(BuildContext context) => OmniType.caption.copyWith(
 );
 
 /// Giá trị bên phải của dòng: số tiền (không bao giờ cắt) + dòng nhỏ dưới.
+/// [subTone] khác null: dòng dưới là trạng thái → nhãn bo 6 (spec §3.4).
 class InvValue extends StatelessWidget {
   const InvValue(
     this.value, {
@@ -86,12 +87,14 @@ class InvValue extends StatelessWidget {
     this.valueColor,
     this.sub,
     this.subColor,
+    this.subTone,
   });
 
   final String value;
   final Color? valueColor;
   final String? sub;
   final Color? subColor;
+  final OmniTone? subTone;
 
   @override
   Widget build(BuildContext context) {
@@ -108,12 +111,16 @@ class InvValue extends StatelessWidget {
           ),
         ),
         if (sub != null && sub!.isNotEmpty)
-          Text(
-            sub!,
-            style: OmniType.caption.copyWith(
-              color: subColor ?? scheme.onSurfaceVariant,
+          if (subTone case final tone?) ...[
+            const SizedBox(height: 3),
+            OmniStatusLabel(label: sub!, tone: tone),
+          ] else
+            Text(
+              sub!,
+              style: OmniType.caption.copyWith(
+                color: subColor ?? scheme.onSurfaceVariant,
+              ),
             ),
-          ),
       ],
     );
   }
@@ -132,8 +139,7 @@ class InvStatusPill extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       constraints: const BoxConstraints(minHeight: 22),
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
       decoration: BoxDecoration(
         color: tone.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(6),
@@ -142,9 +148,7 @@ class InvStatusPill extends StatelessWidget {
         label,
         maxLines: 1,
         softWrap: false,
-        style: TextStyle(
-          fontSize: 12,
-          height: 1.4,
+        style: OmniType.micro.copyWith(
           color: tone,
           fontWeight: FontWeight.w600,
         ),
@@ -305,10 +309,12 @@ class InvDropPill extends StatelessWidget {
           child: Container(
             constraints: const BoxConstraints(minHeight: 40),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            // Chip lọc: nền đặc, đang lọc = xanh nhạt chữ xanh (spec §3.4).
             decoration: active
-                ? OmniGlass.buttonDecoration(
-                    context,
-                  ).copyWith(color: OmniGlass.selectionOf(context))
+                ? BoxDecoration(
+                    color: OmniGlass.selectionOf(context),
+                    borderRadius: BorderRadius.circular(999),
+                  )
                 : BoxDecoration(
                     color: scheme.onSurface.withValues(alpha: dark ? .08 : .05),
                     borderRadius: BorderRadius.circular(999),
@@ -324,9 +330,7 @@ class InvDropPill extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: OmniType.chip.copyWith(
                       fontWeight: active ? FontWeight.w600 : FontWeight.w500,
-                      color: active
-                          ? scheme.onSurface
-                          : scheme.onSurfaceVariant,
+                      color: active ? scheme.primary : scheme.onSurfaceVariant,
                     ),
                   ),
                 ),

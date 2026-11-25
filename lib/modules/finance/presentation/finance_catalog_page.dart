@@ -171,15 +171,7 @@ class FinanceCatalogPage extends ConsumerWidget {
       builder: (sheet) => OmniSheetBody(
         header: OmniSheetHeader(
           title: 'Thêm danh mục',
-          trailing: OmniGlassCircle(
-            child: IconButton(
-              tooltip: 'Đóng',
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-              icon: const Icon(Icons.close_rounded, size: OmniIconSize.md),
-              onPressed: () => Navigator.of(sheet).maybePop(),
-            ),
-          ),
+          // ✕ do OmniSheetHeader tự thêm (spec §3.4).
         ),
         children: [
           OmniGroupSection(
@@ -455,19 +447,7 @@ class _CatalogEditSheetState extends State<_CatalogEditSheet> {
       header: OmniSheetHeader(
         title: widget.title,
         subtitle: '${widget.expenseCount} khoản',
-        trailing: OmniGlassCircle(
-          child: IconButton(
-            tooltip: 'Đóng',
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-            icon: Icon(
-              Icons.close_rounded,
-              size: OmniIconSize.md,
-              color: scheme.onSurface,
-            ),
-            onPressed: () => Navigator.of(context).maybePop(),
-          ),
-        ),
+        // ✕ do OmniSheetHeader tự thêm (spec §3.4).
       ),
       footer: FilledButton(
         key: const ValueKey('finance-catalog-save'),

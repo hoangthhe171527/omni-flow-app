@@ -191,8 +191,8 @@ void main() {
       await t.enterText(fields.at(2), 'MatKhauKhac1!');
       await t.pump();
       expect(find.text('Hai mật khẩu chưa khớp.'), findsOneWidget);
-      final save = t.widget<OutlinedButton>(
-        find.widgetWithText(OutlinedButton, 'Lưu mật khẩu mới'),
+      final save = t.widget<FilledButton>(
+        find.widgetWithText(FilledButton, 'Lưu mật khẩu mới'),
       );
       expect(save.onPressed, isNull);
     });
@@ -207,7 +207,7 @@ void main() {
       await t.enterText(fields.at(1), 'MatKhauMoi1!');
       await t.enterText(fields.at(2), 'MatKhauMoi1!');
       await t.pump();
-      await t.tap(find.widgetWithText(OutlinedButton, 'Lưu mật khẩu mới'));
+      await t.tap(find.widgetWithText(FilledButton, 'Lưu mật khẩu mới'));
       await t.pumpAndSettle();
       expect(api.calls, [('MatKhauCu1!', 'MatKhauMoi1!')]);
       expect(find.text('Lưu mật khẩu mới'), findsNothing);
@@ -226,7 +226,7 @@ void main() {
       await t.enterText(fields.at(1), 'MatKhauMoi1!');
       await t.enterText(fields.at(2), 'MatKhauMoi1!');
       await t.pump();
-      await t.tap(find.widgetWithText(OutlinedButton, 'Lưu mật khẩu mới'));
+      await t.tap(find.widgetWithText(FilledButton, 'Lưu mật khẩu mới'));
       await t.pumpAndSettle();
       expect(find.text('Mật khẩu hiện tại không đúng.'), findsOneWidget);
       expect(find.text('Lưu mật khẩu mới'), findsOneWidget);

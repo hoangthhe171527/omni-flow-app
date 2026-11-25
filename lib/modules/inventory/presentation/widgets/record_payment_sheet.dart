@@ -136,7 +136,7 @@ class _RecordPaymentSheetState extends ConsumerState<RecordPaymentSheet> {
           excludeSemantics: true,
           child: InkWell(
             key: const ValueKey('pay-amount'),
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(16),
             onTap: _editAmount,
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 10),

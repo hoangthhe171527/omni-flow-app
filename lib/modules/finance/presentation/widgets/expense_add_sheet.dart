@@ -385,19 +385,7 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
       header: OmniSheetHeader(
         title:
             'Thêm chi phí · ${FinanceMonthUtils.formatMonthSlash(state.activeMonth)}',
-        trailing: OmniGlassCircle(
-          child: IconButton(
-            tooltip: 'Đóng',
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-            icon: Icon(
-              Icons.close_rounded,
-              size: OmniIconSize.md,
-              color: p.ink,
-            ),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-        ),
+        // ✕ do OmniSheetHeader tự thêm (spec §3.4).
       ),
       footer: _buildActions(p),
       children: [
@@ -786,15 +774,16 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
                             InkWell(
                               key: const ValueKey('finance-add-attach-btn'),
                               onTap: _openAttachmentPicker,
-                              borderRadius: BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(10),
                               child: Container(
                                 height: _attachments.isNotEmpty ? 46 : 34,
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 12,
                                 ),
-                                decoration: OmniGlass.buttonDecoration(
-                                  context,
-                                  radius: 14,
+                                // Nút phụ (spec §3.2): xanh nhạt đặc, bo 10.
+                                decoration: BoxDecoration(
+                                  color: p.primary.withValues(alpha: .10),
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,

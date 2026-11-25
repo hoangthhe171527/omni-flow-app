@@ -4,8 +4,8 @@ import 'package:flutter/services.dart';
 import '../../design/components/components.dart';
 import '../../design/tokens/tokens.dart';
 
-/// Đầu thanh trên của màn gốc trong một ứng dụng (khung ứng dụng): nút kính ô
-/// lưới, tên ứng dụng nhỏ và tên màn. Chạm nút hay tên ứng dụng đều về màn Chọn
+/// Đầu thanh trên của màn gốc trong một ứng dụng (khung ứng dụng): nút ô lưới
+/// trơn (không vòng kính), tên ứng dụng nhỏ và tên màn. Chạm nút hay tên ứng dụng đều về màn Chọn
 /// ứng dụng. [onSwitch] null (người chỉ có một ô) thì không có nút, chỉ chữ.
 class AppTitleLeading extends StatelessWidget {
   const AppTitleLeading({

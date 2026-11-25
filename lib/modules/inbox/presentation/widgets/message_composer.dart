@@ -585,28 +585,31 @@ class _MessageComposerState extends State<MessageComposer> {
     final motion = OmniMotion.of(context);
     final duration = motion.enabled ? OmniDuration.slow : Duration.zero;
     final toolsWidth = _toolWidth * _toolCount;
-    // Liền khối với viên kính: ô chữ không nền riêng.
+    // Liền khối với khung soạn: ô chữ không nền riêng.
     const fieldFill = Colors.transparent;
     const border = OutlineInputBorder(
-      borderRadius: BorderRadius.all(Radius.circular(18)),
+      borderRadius: BorderRadius.all(Radius.circular(10)),
       borderSide: BorderSide.none,
     );
 
     // Lớp vẽ riêng: gõ phím, nháy con trỏ, đổi nút gửi — chỉ composer raster
     // lại, danh sách tin nhắn và nền phía trên nó thì không.
     //
-    // Dùng đúng mặt OmniGlass của toàn app: nền bán trong suốt, vệt sáng sát
-    // mép trên và bóng mềm. `blur: false` giữ phong cách liquid nhưng tránh
-    // BackdropFilter cố định đáy phải dựng lại theo mỗi khung cuộn tin.
+    // Ô soạn tin là nội dung: nền đặc, không kính/vệt sáng/bóng (spec phong
+    // cách iOS §3.1). Dáng viên thuốc (bo 27 = tròn hẳn khi một dòng).
+    final highContrast = MediaQuery.highContrastOf(context);
     return RepaintBoundary(
       child: SafeArea(
         top: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
-          child: OmniGlass(
+          child: DecoratedBox(
             key: const ValueKey('composer-glass'),
-            radius: 27,
-            blur: false,
+            decoration: BoxDecoration(
+              color: scheme.surface,
+              borderRadius: BorderRadius.circular(27),
+              border: highContrast ? Border.all(color: scheme.outline) : null,
+            ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(27),
               child: Column(
@@ -976,7 +979,7 @@ class _ImageTray extends StatelessWidget {
             clipBehavior: Clip.none,
             children: [
               ClipRRect(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
                 child: Image.file(
                   File(image.path),
                   width: 68,
@@ -1041,7 +1044,7 @@ class _FileTile extends StatelessWidget {
       padding: const EdgeInsets.only(left: 6),
       decoration: BoxDecoration(
         color: scheme.surface,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: OmniColors.byBrightness(
             context,
@@ -1390,16 +1393,8 @@ class _EmojiSheet extends StatelessWidget {
         maxHeight: MediaQuery.sizeOf(context).height * 0.56,
       ),
       child: OmniSheetBody(
-        header: OmniSheetHeader(
-          title: 'Biểu tượng cảm xúc',
-          trailing: OmniGlassCircle(
-            child: IconButton(
-              tooltip: 'Đóng',
-              onPressed: () => Navigator.of(context).pop(),
-              icon: const Icon(Icons.close_rounded),
-            ),
-          ),
-        ),
+        // Đầu sheet tự có nút ✕ tròn xám (spec phong cách iOS §3.4).
+        header: const OmniSheetHeader(title: 'Biểu tượng cảm xúc'),
         children: [
           GridView.builder(
             shrinkWrap: true,
@@ -1415,7 +1410,7 @@ class _EmojiSheet extends StatelessWidget {
                   HapticFeedback.selectionClick();
                   Navigator.pop(context, _emojis[index]);
                 },
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
                 child: Center(
                   child: Text(_emojis[index], style: OmniChatType.emoji),
                 ),

@@ -288,7 +288,7 @@ class HrCalendar extends StatelessWidget {
       button: true,
       label: 'Ngày $d',
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         onTap: () => onDay(day),
         child: content,
       ),

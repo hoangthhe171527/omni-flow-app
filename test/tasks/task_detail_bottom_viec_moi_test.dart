@@ -540,7 +540,7 @@ void main() {
       final box = find.byKey(const ValueKey('subtask-tick-box')).last;
       expect(t.getSize(box), const Size(22, 22));
       final deco = t.widget<Container>(box).decoration! as BoxDecoration;
-      expect(deco.borderRadius, BorderRadius.circular(7.5));
+      expect(deco.borderRadius, BorderRadius.circular(6));
 
       await t.tap(find.bySemanticsLabel('Đánh dấu xong việc con').first);
       await t.pump();

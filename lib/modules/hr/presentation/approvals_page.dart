@@ -65,11 +65,11 @@ class _ApprovalsPageState extends ConsumerState<ApprovalsPage> {
                 padding: hrListPadding(context, top),
                 children: [
                   OmniSegmented(
-                    labels: [
-                      pending.isEmpty
-                          ? 'Chờ duyệt'
-                          : 'Chờ duyệt · ${pending.length}',
-                      'Đã xử lý',
+                    // Số đếm qua `counts`, không ghép vào nhãn (spec §3.4).
+                    labels: const ['Chờ duyệt', 'Đã xử lý'],
+                    counts: [
+                      if (pending.isEmpty) null else pending.length,
+                      null,
                     ],
                     index: _tab,
                     onChanged: (i) => setState(() => _tab = i),

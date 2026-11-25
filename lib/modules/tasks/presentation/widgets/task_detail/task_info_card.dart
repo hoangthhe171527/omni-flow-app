@@ -51,12 +51,12 @@ class TaskInfoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    // Thẻ nhóm lồng bo 18 (viomni-apple-uiux.html "Chi tiết việc").
+    // Thẻ nhóm lồng bo 16 (viomni-apple-uiux.html "Chi tiết việc").
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: scheme.surface,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         children: [
@@ -608,7 +608,7 @@ class _DateField extends StatelessWidget {
 
     return Material(
       color: scheme.onSurface.withValues(alpha: dark ? .08 : .05),
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(10),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,

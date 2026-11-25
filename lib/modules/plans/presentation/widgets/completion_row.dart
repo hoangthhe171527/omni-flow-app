@@ -137,7 +137,7 @@ class _Photos extends StatelessWidget {
     final fade = OmniMotion.of(context).fast;
 
     final scheme = Theme.of(context).colorScheme;
-    final thumbRadius = BorderRadius.circular(12);
+    final thumbRadius = BorderRadius.circular(10);
 
     return SizedBox(
       height: _size,

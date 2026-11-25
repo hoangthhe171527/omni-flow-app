@@ -152,7 +152,7 @@ void main() {
     expect(find.text('HÔM NAY'), findsNothing);
     expect(find.text('Hôm nay'), findsOneWidget);
     expect(find.text('Trước đó'), findsOneWidget);
-    expect(find.text('Chưa đọc · 2'), findsOneWidget);
+    expect(find.bySemanticsLabel('Chưa đọc 2'), findsOneWidget);
     // Tin nhắn không hiển thị trong phần chuông thông báo.
     expect(find.text('Tin nhan bi an khoi chuong'), findsNothing);
   });
@@ -192,7 +192,7 @@ void main() {
   testWidgets('đang tải số chưa đọc → "Chưa đọc" không kèm số', (t) async {
     await pump(t, countPending: true);
     expect(find.text('Chưa đọc'), findsOneWidget);
-    expect(find.textContaining('Chưa đọc ·'), findsNothing);
+    expect(find.bySemanticsLabel(RegExp(r'^Chưa đọc \d')), findsNothing);
   });
 
   testWidgets('bấm thông báo chưa đọc → gọi markRead, dòng thành đã đọc', (
@@ -230,7 +230,7 @@ void main() {
 
   testWidgets('Chưa đọc trống → "Bạn đã đọc hết thông báo"', (t) async {
     await pump(t, emptyWhenUnreadOnly: true);
-    await t.tap(find.text('Chưa đọc · 2'));
+    await t.tap(find.bySemanticsLabel('Chưa đọc 2'));
     await t.pumpAndSettle();
     expect(find.text('Bạn đã đọc hết thông báo'), findsOneWidget);
   });

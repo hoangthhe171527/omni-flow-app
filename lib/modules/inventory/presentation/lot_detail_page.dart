@@ -567,7 +567,7 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
       trailing: InvValue(
         InvUi.vnd(vnd),
         sub: planned ? 'dự kiến' : InventoryFormat.dmy(c.paidAt),
-        subColor: planned ? OmniColors.warningTextOf(context) : null,
+        subTone: planned ? OmniTone.warning : null,
       ),
       chevron: true,
       onTap: () => openCostSheet(context, lot: lot, cost: c),
@@ -588,7 +588,7 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
       trailing: InvValue(
         InvUi.vnd(planned ? plannedAmount(lot, c) : c.amountVnd),
         sub: planned ? 'dự kiến' : 'đã trả',
-        subColor: planned ? OmniColors.warningTextOf(context) : null,
+        subTone: planned ? OmniTone.warning : OmniTone.success,
       ),
       selected: planned && _pms.contains(c.id),
       chevron: false,
@@ -688,12 +688,10 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
       }
     }
     return [
+      // Số đếm đứng cạnh nhãn qua `counts`, không ghép vào chuỗi (spec §3.4).
       OmniSegmented(
-        labels: [
-          'Tất cả ${units.length}',
-          'Chưa có khách ${units.length - held}',
-          'Đặt trước $held',
-        ],
+        labels: const ['Tất cả', 'Chưa có khách', 'Đặt trước'],
+        counts: [units.length, units.length - held, held],
         index: _seg.index,
         onChanged: (i) => setState(() => _seg = _Seg.values[i]),
       ),
@@ -739,8 +737,7 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
                       if (!nested)
                         Text(
                           u.name,
-                          style: OmniType.body.copyWith(
-                            fontWeight: FontWeight.w600,
+                          style: OmniType.section.copyWith(
                             color: scheme.onSurface,
                           ),
                         ),

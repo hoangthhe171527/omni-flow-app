@@ -63,7 +63,7 @@ class ChannelTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final meta = connection.channel.meta;
-    final (statusLabel, _, tone) =
+    final (statusLabel, statusIcon, tone) =
         _statusLabels[connection.status] ??
         ('Chưa kết nối', Icons.link_off_rounded, OmniTone.neutral);
 
@@ -99,7 +99,13 @@ class ChannelTile extends StatelessWidget {
                   runSpacing: OmniSpacing.xs,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    _StatusPill(label: statusLabel, tone: tone),
+                    // Nhãn trạng thái (spec phong cách iOS §3.4): bo 6, icon
+                    // để không chỉ dựa vào màu.
+                    OmniStatusLabel(
+                      label: statusLabel,
+                      tone: tone,
+                      icon: statusIcon,
+                    ),
                     Text(
                       '${connection.today} tin hôm nay',
                       style: OmniType.micro.copyWith(
@@ -164,57 +170,6 @@ class _MoreButton extends StatelessWidget {
           );
           if (disconnect == true) onDisconnect();
         },
-      ),
-    );
-  }
-}
-
-/// Trạng thái kênh: viên bo tròn cao 22 có chấm màu đứng trước chữ
-/// (`MChannels.dc.html`). Chấm + chữ, không chỉ màu.
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({required this.label, required this.tone});
-
-  final String label;
-  final OmniTone tone;
-
-  @override
-  Widget build(BuildContext context) {
-    final (foreground, background) = tone.of(context);
-    final dot = switch (tone) {
-      OmniTone.success => Theme.of(context).colorScheme.primary,
-      OmniTone.danger => OmniColors.destructive,
-      OmniTone.warning => OmniColors.sla,
-      _ => foreground,
-    };
-
-    return Container(
-      constraints: const BoxConstraints(minHeight: 22),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: OmniRadius.pillAll,
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 6,
-            height: 6,
-            decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 4),
-          Flexible(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: OmniType.micro.copyWith(
-                fontWeight: FontWeight.w600,
-                color: foreground,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -326,7 +326,7 @@ class _TickOnSwipe extends StatelessWidget {
       background: Container(
         decoration: BoxDecoration(
           color: scheme.primary,
-          borderRadius: BorderRadius.circular(OmniRadius.lg),
+          borderRadius: BorderRadius.circular(OmniRadius.xl),
         ),
         alignment: Alignment.centerLeft,
         padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.lg),

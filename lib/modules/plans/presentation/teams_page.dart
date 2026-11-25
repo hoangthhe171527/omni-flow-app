@@ -454,7 +454,7 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
       padding: EdgeInsets.only(top: topInset + 4, bottom: 110),
       itemCount: children.length,
       // Nhóm lồng (viomni-apple-uiux.html "Việc" `.group`): mỗi team (và
-      // Yêu thích) là một thẻ bo 18 cách mép 16 trên nền xám, cách nhau 12.
+      // Yêu thích) là một thẻ bo 16 cách mép 16 trên nền xám, cách nhau 12.
       separatorBuilder: (context, _) =>
           const SizedBox(height: OmniGroupSection.gap),
       itemBuilder: (context, i) => Padding(
@@ -463,7 +463,7 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
             ? children[i]()
             : Material(
                 color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(16),
                 clipBehavior: Clip.antiAlias,
                 child: children[i](),
               ),

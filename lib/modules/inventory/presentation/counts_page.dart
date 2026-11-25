@@ -544,8 +544,7 @@ class CountUnitRow extends StatelessWidget {
                       children: [
                         Text(
                           u.name,
-                          style: OmniType.body.copyWith(
-                            fontWeight: FontWeight.w600,
+                          style: OmniType.section.copyWith(
                             color: scheme.onSurface,
                           ),
                         ),
@@ -560,11 +559,10 @@ class CountUnitRow extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 10),
-                  Text(
-                    UnitCondition.labelOf(u.condition),
-                    style: invMuted(context).copyWith(
-                      color: InvUi.conditionColor(context, u.condition),
-                    ),
+                  // Tình trạng = nhãn trạng thái bo 6 (spec §3.4).
+                  OmniStatusLabel(
+                    label: UnitCondition.labelOf(u.condition),
+                    tone: InvUi.conditionTone(u.condition),
                   ),
                   if (seen) ...[
                     const SizedBox(width: 8),
@@ -592,7 +590,6 @@ class CountResultSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final c = count;
     final approved = c.status == CountStatus.approved;
-    final danger = OmniColors.dangerTextOf(context);
     final products = c.qty.isEmpty
         ? const <InvProduct>[]
         : ref.watch(qtyProductsProvider).valueOrNull ?? const <InvProduct>[];
@@ -621,15 +618,16 @@ class CountResultSection extends ConsumerWidget {
             OmniGroupRow(
               key: const ValueKey('inv-count-missing'),
               title: 'Không thấy',
-              trailing: Text(
-                '${InventoryFormat.number(c.missingUnits.length)} cây',
-                style: OmniType.bodyStrong.copyWith(
-                  color: c.missingUnits.isEmpty
-                      ? Theme.of(context).colorScheme.onSurface
-                      : danger,
-                  fontFeatures: OmniType.tabular,
-                ),
-              ),
+              // Có cây không thấy = lỗi → nhãn đỏ bo 6 (spec §3.4).
+              trailing: c.missingUnits.isEmpty
+                  ? InvValue(
+                      '${InventoryFormat.number(c.missingUnits.length)} cây',
+                    )
+                  : OmniStatusLabel(
+                      label:
+                          '${InventoryFormat.number(c.missingUnits.length)} cây',
+                      tone: OmniTone.danger,
+                    ),
             ),
           ],
         ),

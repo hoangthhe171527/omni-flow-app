@@ -175,8 +175,8 @@ class _CompanyButton extends StatelessWidget {
             name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
+            // Cỡ chữ lấy từ OmniType (luật: không đặt cỡ thô ngoài lib/design).
             style: OmniType.body.copyWith(
-              fontSize: 15,
               height: 1.3,
               fontWeight: FontWeight.w600,
               color: scheme.onSurface.withValues(alpha: .82),
@@ -237,10 +237,10 @@ class _AppsGreeting extends ConsumerWidget {
       child: Text(
         greeting,
         maxLines: 2,
-        style: OmniType.body.copyWith(
-          fontSize: 28,
+        // 28/800 (spec iOS §3.6): kiểu 28 có sẵn của OmniType.
+        style: OmniType.moneyHero.copyWith(
           height: 1.2,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w800,
           letterSpacing: -0.4,
           color: scheme.onSurface,
         ),
@@ -326,9 +326,8 @@ class _SectionLabel extends StatelessWidget {
       header: true,
       child: Text(
         text.toUpperCase(),
-        style: OmniType.caption.copyWith(
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
+        // Đầu nhóm 13/600 = OmniType.overline.
+        style: OmniType.overline.copyWith(
           letterSpacing: 0.4,
           color: Theme.of(context).colorScheme.onSurfaceVariant,
         ),
@@ -391,8 +390,7 @@ class _HomeRow extends ConsumerWidget {
                     children: [
                       Text(
                         app.name,
-                        style: OmniType.body.copyWith(
-                          fontSize: 17,
+                        style: OmniType.navTitle.copyWith(
                           fontWeight: FontWeight.w700,
                           color: scheme.onSurface,
                         ),
@@ -545,10 +543,8 @@ class _AppTileState extends ConsumerState<_AppTile> {
                   app.name,
                   maxLines: 2,
                   textAlign: TextAlign.center,
-                  style: OmniType.caption.copyWith(
-                    fontSize: 13,
+                  style: OmniType.overline.copyWith(
                     height: 1.3,
-                    fontWeight: FontWeight.w600,
                     color: scheme.onSurface,
                   ),
                 ),
@@ -628,16 +624,13 @@ class _TodoSection extends ConsumerWidget {
                                   Text(
                                     item.entry.label,
                                     maxLines: 2,
-                                    style: OmniType.body.copyWith(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
+                                    style: OmniType.section.copyWith(
                                       color: scheme.onSurface,
                                     ),
                                   ),
                                   Text(
                                     app.name,
                                     style: OmniType.caption.copyWith(
-                                      fontSize: 13,
                                       color: scheme.onSurfaceVariant,
                                     ),
                                   ),

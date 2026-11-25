@@ -53,36 +53,14 @@ class _OwnerPickerSheetState extends ConsumerState<_OwnerPickerSheet> {
     );
 
     return OmniSheetBody(
-      header: OmniSheetHeader(
-        title: 'Chọn người phụ trách',
-        trailing: OmniGlassCircle(
-          child: IconButton(
-            tooltip: 'Đóng',
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-            onPressed: () => Navigator.of(context).pop(),
-            icon: Icon(
-              Icons.close_rounded,
-              size: OmniIconSize.md,
-              color: scheme.onSurface,
-            ),
-          ),
-        ),
-      ),
+      // Đầu sheet tự có nút ✕ tròn xám (spec phong cách iOS §3.4).
+      header: const OmniSheetHeader(title: 'Chọn người phụ trách'),
       children: [
-        OmniGlass(
-          blur: false,
-          radius: 22,
-          child: SizedBox(
-            height: 44,
-            child: OmniSearchField(
-              hint: 'Tìm người',
-              flat: true,
-              dense: true,
-              debounce: Duration.zero,
-              onChanged: (v) => setState(() => _query = v.trim().toLowerCase()),
-            ),
-          ),
+        // Ô tìm nền xám bo 10 (spec phong cách iOS §3.4).
+        OmniSearchBottom(
+          hint: 'Tìm người',
+          debounce: Duration.zero,
+          onChanged: (v) => setState(() => _query = v.trim().toLowerCase()),
         ),
         members.when(
           data: (all) {

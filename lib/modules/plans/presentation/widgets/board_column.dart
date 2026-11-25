@@ -615,7 +615,7 @@ class _ColumnDropBuilder extends ValueListenableBuilder<BoardColumnDrop> {
         : Duration.zero;
 
     // Khung kính trên ảnh bìa (viomni-apple-uiux.html `.col.glass`, duyệt
-    // 07/11 — thay rãnh phẳng bản 0.1.6): bo 20, nền trắng mờ. Không nhoè
+    // 07/11 — thay rãnh phẳng bản 0.1.6): bo 16, nền trắng mờ. Không nhoè
     // phía sau: cột cuộn ngang cả bảng, nhoè từng khung là tốn khung hình.
     final dark = Theme.of(context).brightness == Brightness.dark;
     final glass = MediaQuery.highContrastOf(context)
@@ -628,7 +628,7 @@ class _ColumnDropBuilder extends ValueListenableBuilder<BoardColumnDrop> {
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: hot ? OmniTaskTones.of(context).today.background : glass,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: Colors.white.withValues(alpha: dark ? .12 : .55),
         ),
@@ -643,7 +643,7 @@ class _ColumnDropBuilder extends ValueListenableBuilder<BoardColumnDrop> {
                 key: const Key('column-drop-border'),
                 duration: duration,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: hot ? scheme.primary : Colors.transparent,
                     width: 2,
@@ -990,7 +990,7 @@ class _Header extends StatelessWidget {
   }
 }
 
-/// `.add`: cao 44, bo 14, chữ w500 14, dấu + 18.
+/// `.add`: cao 44, bo 10, chữ w500 14, dấu + 18.
 class _AddTaskButton extends StatelessWidget {
   const _AddTaskButton({required this.onTap});
 
@@ -1004,7 +1004,7 @@ class _AddTaskButton extends StatelessWidget {
       type: MaterialType.transparency,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(10),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 44),
           child: Padding(
@@ -1043,10 +1043,10 @@ class BoardAddSectionTile extends StatelessWidget {
       height: 52,
       child: Material(
         color: Colors.white.withValues(alpha: .18),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [

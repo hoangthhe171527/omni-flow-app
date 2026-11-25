@@ -87,7 +87,7 @@ class _CoverPickerState extends State<CoverPicker> {
         children: [
           ClipRRect(
             key: const Key('cover-preview'),
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(16),
             child: AspectRatio(
               aspectRatio: 2.5,
               child: Stack(
@@ -120,14 +120,14 @@ class _CoverPickerState extends State<CoverPicker> {
                       // thấy ngay).
                       child: Align(
                         alignment: Alignment.centerLeft,
-                        child: Container(
+                        // Lớp nổi trên ảnh bìa giữ kính (spec phong cách
+                        // iOS §3.1); nút xám đặc chìm mất trên ảnh.
+                        child: OmniGlass(
+                          radius: 10,
+                          shadow: false,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 12,
                             vertical: 6,
-                          ),
-                          decoration: OmniGlass.buttonDecoration(
-                            context,
-                            radius: 14,
                           ),
                           child: Text(
                             widget.title!.trim(),

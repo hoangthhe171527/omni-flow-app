@@ -49,10 +49,13 @@ class _ConversationAssetsSectionState extends State<ConversationAssetsSection> {
           child: Column(
             children: [
               OmniSegmented(
-                labels: [
-                  'Ảnh · ${assets.media.length}',
-                  'Tệp · ${assets.files.length}',
-                  'Link · ${links.length}',
+                // Số đếm cạnh nhãn, không ghép vào chữ (spec phong cách iOS
+                // §3.4).
+                labels: const ['Ảnh', 'Tệp', 'Link'],
+                counts: [
+                  assets.media.length,
+                  assets.files.length,
+                  links.length,
                 ],
                 index: _tab,
                 onChanged: (value) {
@@ -107,8 +110,9 @@ class _MediaGrid extends StatelessWidget {
           crossAxisSpacing: 4,
           mainAxisSpacing: 4,
         ),
+        // Ảnh nhỏ bo 10 (thang bo góc, spec phong cách iOS §3.5).
         itemBuilder: (_, index) => ClipRRect(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(10),
           child: GestureDetector(
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute<void>(

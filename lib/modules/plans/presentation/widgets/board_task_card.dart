@@ -9,6 +9,7 @@ import '../../../../core/error/app_exception.dart';
 import '../../../../design/components/omni_avatar.dart';
 import '../../../../design/components/omni_dashed_circle.dart';
 import '../../../../design/components/omni_motion_widgets.dart';
+import '../../../../design/components/omni_status_chip.dart';
 import '../../../../design/components/omni_tabs.dart';
 import '../../../../design/components/omni_task_chip.dart';
 import '../../../../design/platform/omni_motion_scope.dart';
@@ -190,15 +191,20 @@ class _BoardTaskCardState extends ConsumerState<BoardTaskCard>
         ),
       if (task.priority == 'high') const OmniTaskChip.high('Ưu tiên cao'),
       // Việc có cây: tiến độ là vạch + `8/10` ngay dưới tên, không lặp ở đây.
+      // Tiến độ x/y là nhãn trạng thái (spec phong cách iOS §3.4).
       if (task.hasSubtasks && unit == null)
-        _Meta(
+        Semantics(
           key: const ValueKey('card-checklist'),
-          icon: _isAllDone(task)
-              ? Icons.check_circle_rounded
-              : Icons.checklist_rounded,
-          text: '${task.doneCount}/${task.totalCount}',
-          semantics: '${task.doneCount} trên ${task.totalCount} việc con xong',
-          color: progressColor(context, task),
+          container: true,
+          label: '${task.doneCount} trên ${task.totalCount} việc con xong',
+          excludeSemantics: true,
+          child: OmniStatusLabel(
+            label: '${task.doneCount}/${task.totalCount}',
+            icon: _isAllDone(task)
+                ? Icons.check_circle_rounded
+                : Icons.checklist_rounded,
+            tone: progressTone(task),
+          ),
         ),
       if (task.attachmentCount > 0)
         _Meta(
@@ -330,14 +336,11 @@ class _BoardTaskCardState extends ConsumerState<BoardTaskCard>
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Text(
-                            '${task.doneCount}/${task.totalCount}',
+                          OmniStatusLabel(
                             key: const ValueKey('card-unit-count'),
-                            style: OmniType.micro.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: progressColor(context, task),
-                              fontFeatures: OmniType.tabular,
-                            ),
+                            label: '${task.doneCount}/${task.totalCount}',
+                            icon: _isAllDone(task) ? Icons.check_rounded : null,
+                            tone: progressTone(task),
                           ),
                         ],
                       ),
@@ -376,21 +379,15 @@ class _BoardTaskCardState extends ConsumerState<BoardTaskCard>
         type: MaterialType.transparency,
         child: InkWell(
           onTap: widget.onTap,
-          borderRadius: const BorderRadius.all(Radius.circular(14)),
+          borderRadius: const BorderRadius.all(Radius.circular(10)),
           child: Container(
             key: const ValueKey('card-shell'),
             padding: const EdgeInsets.fromLTRB(8, 10, 10, 10),
             decoration: BoxDecoration(
               color: scheme.surface,
-              // Thẻ bo 14 trên khung kính của cột (viomni-apple-uiux.html).
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: OmniColors.ink.withValues(alpha: 0.08),
-                  offset: const Offset(0, 1),
-                  blurRadius: 2,
-                ),
-              ],
+              // Thẻ nền đặc bo 10 lồng trong cột bo 16, không bóng (spec
+              // phong cách iOS §3.5: chỉ thứ nổi mới có bóng).
+              borderRadius: BorderRadius.circular(10),
             ),
             child: content,
           ),
@@ -502,7 +499,7 @@ class _TickBox extends StatelessWidget {
                   height: 20,
                   decoration: BoxDecoration(
                     color: done ? scheme.primary : scheme.surface,
-                    borderRadius: BorderRadius.circular(5),
+                    borderRadius: BorderRadius.circular(6),
                     border: done ? null : Border.all(color: faint, width: 1.5),
                   ),
                   child: done
@@ -525,44 +522,33 @@ class _TickBox extends StatelessWidget {
 bool _isAllDone(Task task) =>
     progressLevelOf(task.doneCount, task.totalCount) == ProgressLevel.done;
 
-/// Màu ô `x/y` việc con theo bốn mức ([progressLevelOf]): đỏ, cam, xanh dương,
-/// xong. "Xong" dùng màu chính + tick đặc chứ không dùng chữ xanh lá — app cố
-/// ý không có chữ xanh lá (xem `OmniColors.success`).
+/// Giọng nhãn `x/y` việc con theo bốn mức ([progressLevelOf]), cùng bảng với
+/// nhãn tiến độ ở Đơn hàng: đỏ, vàng, xanh; 10/10 là xanh kèm tick (spec phong
+/// cách iOS §3.4). App cố ý không có chữ xanh lá (xem `OmniColors.success`).
 @visibleForTesting
-Color progressColor(BuildContext context, Task task) {
-  final scheme = Theme.of(context).colorScheme;
-  return switch (progressLevelOf(task.doneCount, task.totalCount)) {
-    ProgressLevel.low => OmniColors.dangerTextOf(context),
-    ProgressLevel.mid => OmniColors.warningTextOf(context),
-    ProgressLevel.near => OmniColors.byBrightness(
-      context,
-      OmniColors.infoText,
-      OmniColors.darkInfoText,
-    ),
-    ProgressLevel.done => scheme.primary,
-    null => scheme.onSurfaceVariant,
-  };
-}
+OmniTone progressTone(Task task) =>
+    switch (progressLevelOf(task.doneCount, task.totalCount)) {
+      ProgressLevel.low => OmniTone.danger,
+      ProgressLevel.mid => OmniTone.warning,
+      ProgressLevel.near || ProgressLevel.done => OmniTone.info,
+      null => OmniTone.neutral,
+    };
 
-/// `.mt`: biểu tượng 14, cách 3, chữ 12 màu phụ ([color] đổi màu riêng ô này).
+/// `.mt`: biểu tượng 14, cách 3, chữ 12 màu phụ.
 class _Meta extends StatelessWidget {
   const _Meta({
-    super.key,
     required this.icon,
     required this.text,
     required this.semantics,
-    this.color,
   });
 
   final IconData icon;
   final String text;
   final String semantics;
-  final Color? color;
 
   @override
   Widget build(BuildContext context) {
-    final color = this.color ?? Theme.of(context).colorScheme.onSurfaceVariant;
-    final tinted = this.color != null;
+    final color = Theme.of(context).colorScheme.onSurfaceVariant;
 
     return Semantics(
       container: true,
@@ -576,7 +562,7 @@ class _Meta extends StatelessWidget {
           Text(
             text,
             style: OmniType.micro.copyWith(
-              fontWeight: tinted ? FontWeight.w600 : FontWeight.w400,
+              fontWeight: FontWeight.w400,
               color: color,
               fontFeatures: OmniType.tabular,
             ),

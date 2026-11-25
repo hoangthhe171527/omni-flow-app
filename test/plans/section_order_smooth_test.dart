@@ -245,7 +245,7 @@ void main() {
       expect(
         slivers.any(
           (d) =>
-              d.borderRadius == BorderRadius.circular(18) &&
+              d.borderRadius == BorderRadius.circular(16) &&
               d.color == scheme.surface &&
               d.border == null,
         ),

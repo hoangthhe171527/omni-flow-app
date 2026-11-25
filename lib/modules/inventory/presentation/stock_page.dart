@@ -933,10 +933,7 @@ class StockUnitRow extends StatelessWidget {
                           u.name,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 16,
-                            height: 1.4,
-                            fontWeight: FontWeight.w600,
+                          style: OmniType.section.copyWith(
                             color: scheme.onSurface,
                           ),
                         ),
@@ -1007,9 +1004,7 @@ class StockUnitRow extends StatelessWidget {
                         InvUi.vnd(u.listPrice),
                         maxLines: 1,
                         softWrap: false,
-                        style: TextStyle(
-                          fontSize: 16,
-                          height: 1.4,
+                        style: OmniType.section.copyWith(
                           fontWeight: FontWeight.w700,
                           color: scheme.onSurface,
                           fontFeatures: OmniType.tabular,

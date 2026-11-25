@@ -235,9 +235,11 @@ class _NotificationDropState extends ConsumerState<_NotificationDrop> {
               namesRoute: true,
               explicitChildNodes: true,
               label: 'Thông báo',
+              // Popover đang mở: GIỮ kính (spec phong cách iOS §3.1), bo 16
+              // như menu neo.
               child: OmniGlass(
                 key: const ValueKey('notification-drop'),
-                radius: 24,
+                radius: 16,
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     color: scheme.surface.withValues(alpha: dark ? 0.88 : 0.92),
@@ -261,24 +263,11 @@ class _NotificationDropState extends ConsumerState<_NotificationDrop> {
                                 ),
                                 if ((unreadCount ?? 0) > 0) ...[
                                   const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 7,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: scheme.primary.withValues(
-                                        alpha: 0.12,
-                                      ),
-                                      borderRadius: BorderRadius.circular(999),
-                                    ),
-                                    child: Text(
-                                      '$unreadCount mới',
-                                      style: OmniType.caption.copyWith(
-                                        color: scheme.primary,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
+                                  // Nhãn trạng thái bo 6 (spec phong cách
+                                  // iOS §3.4), không còn viên bo tròn.
+                                  OmniStatusLabel(
+                                    label: '$unreadCount mới',
+                                    tone: OmniTone.info,
                                   ),
                                 ],
                                 const Spacer(),

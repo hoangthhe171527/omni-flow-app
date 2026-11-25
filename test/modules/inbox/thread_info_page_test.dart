@@ -242,9 +242,9 @@ void main() {
 
   testWidgets('tab Ảnh · Tệp · Link có số đếm', (tester) async {
     await pump(tester, const {});
-    expect(find.text('Ảnh · 0'), findsOneWidget);
-    expect(find.text('Tệp · 0'), findsOneWidget);
-    expect(find.text('Link · 0'), findsOneWidget);
+    expect(find.bySemanticsLabel('Ảnh 0'), findsOneWidget);
+    expect(find.bySemanticsLabel('Tệp 0'), findsOneWidget);
+    expect(find.bySemanticsLabel('Link 0'), findsOneWidget);
   });
 
   testWidgets('các nhóm thông tin là nhóm lồng liquid, nền xám', (

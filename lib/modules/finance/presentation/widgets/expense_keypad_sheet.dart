@@ -284,22 +284,8 @@ class _ExpenseKeypadSheetState extends State<_ExpenseKeypadSheet> {
               ),
             ],
             const SizedBox(width: 6),
-            OmniGlassCircle(
-              child: IconButton(
-                tooltip: 'Đóng',
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints.tightFor(
-                  width: 44,
-                  height: 44,
-                ),
-                icon: Icon(
-                  Icons.close_rounded,
-                  size: OmniIconSize.md,
-                  color: p.ink,
-                ),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ),
+            // ✕ tròn 32 nền xám (spec §3.4).
+            const OmniSheetCloseButton(),
           ],
         ),
       ),
@@ -363,9 +349,10 @@ class _ExpenseKeypadSheetState extends State<_ExpenseKeypadSheet> {
                                 FinanceMonthUtils.formatNumber(val),
                                 maxLines: 1,
                                 softWrap: false,
-                                style: OmniType.moneyHero.copyWith(
+                                // Số lớn nhất sheet: displayLg đậm 800.
+                                style: OmniType.displayLg.copyWith(
                                   color: _fresh ? p.primary : p.ink,
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.w800,
                                   fontFeatures: const [
                                     FontFeature.tabularFigures(),
                                   ],
@@ -534,13 +521,14 @@ class _ExpenseKeypadSheetState extends State<_ExpenseKeypadSheet> {
       _KeyTone.normal => p.card,
       _KeyTone.operatorKey => p.control,
       _KeyTone.subKey => p.control,
-      _KeyTone.okKey => Colors.transparent,
+      // "Xong" = nút chính của sheet: xanh đặc (spec §3.2).
+      _KeyTone.okKey => Theme.of(context).colorScheme.primary,
     };
     final textColor = switch (tone) {
       _KeyTone.normal => p.ink,
       _KeyTone.operatorKey => p.ink,
       _KeyTone.subKey => p.ink2,
-      _KeyTone.okKey => Theme.of(context).colorScheme.primary,
+      _KeyTone.okKey => Theme.of(context).colorScheme.onPrimary,
     };
     final textStyle = switch (tone) {
       _KeyTone.normal => OmniType.title.copyWith(
@@ -562,22 +550,17 @@ class _ExpenseKeypadSheetState extends State<_ExpenseKeypadSheet> {
       ),
     };
 
-    // "Xong" là nút kính chữ màu chính Viomni (#0159DB); các phím còn lại bo 16, cao 52dp.
-    final ok = tone == _KeyTone.okKey;
-
+    // Phím bo 10, cao 52 (spec §3.5); "Xong" nền xanh đặc chữ trắng.
     return Expanded(
       child: Material(
         color: bgColor,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(10),
         child: InkWell(
           onTap: () => _onKey(keyVal),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(10),
           child: Container(
             height: 52,
             alignment: Alignment.center,
-            decoration: ok
-                ? OmniGlass.buttonDecoration(context, radius: 16)
-                : null,
             child: Text(label, style: textStyle),
           ),
         ),

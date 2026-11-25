@@ -103,7 +103,7 @@ class _InboxPinnedSectionState extends State<InboxPinnedSection> {
           child: Material(
             key: const Key('inbox-pinned-group'),
             color: scheme.surface,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(16),
             clipBehavior: Clip.antiAlias,
             child: Column(
               mainAxisSize: MainAxisSize.min,

@@ -48,8 +48,9 @@ class TeamKpiCard extends StatelessWidget {
         if (next != null && !kpi.closed && next.gain > 0)
           HrStatRow(
             title: 'Thêm ${next.need} cây',
+            // Số tiền màu mực (spec §3.5); dấu + đã nói là được thêm.
             value: '+${HrFormat.money(next.gain)}',
-            tone: OmniTone.success,
+            strong: true,
             subtitle: 'Thưởng cả đội khi đạt ${next.at} cây',
           ),
         if (onTap != null) OmniGroupRow(title: 'Xem thưởng đội', onTap: onTap),

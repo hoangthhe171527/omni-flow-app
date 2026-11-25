@@ -313,7 +313,7 @@ class _QuickCreatePlanFormState extends ConsumerState<QuickCreatePlanForm> {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: scheme.primary.withValues(alpha: .08),
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Row(
               children: [

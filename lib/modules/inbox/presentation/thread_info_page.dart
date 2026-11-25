@@ -454,7 +454,7 @@ class _QuickAction extends StatelessWidget {
       toggled: active ? true : null,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(10),
         child: SizedBox(
           width: 70,
           child: Column(
@@ -587,7 +587,7 @@ class _Assignee extends StatelessWidget {
               OmniColors.ink,
               OmniColors.darkMuted,
             ),
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(6),
           ),
           child: Text(
             initials,
@@ -763,29 +763,10 @@ class _StageChip extends StatelessWidget {
 
   final String label;
 
+  // Nhãn trạng thái bo 6 (spec phong cách iOS §3.4), không còn viên bo tròn.
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-    decoration: BoxDecoration(
-      color: OmniColors.byBrightness(
-        context,
-        OmniColors.accent,
-        OmniColors.darkAccent,
-      ),
-      borderRadius: BorderRadius.circular(999),
-    ),
-    child: Text(
-      label,
-      style: OmniType.micro.copyWith(
-        fontWeight: FontWeight.w600,
-        color: OmniColors.byBrightness(
-          context,
-          OmniColors.accentForeground,
-          OmniColors.darkAccentForeground,
-        ),
-      ),
-    ),
-  );
+  Widget build(BuildContext context) =>
+      OmniStatusLabel(label: label, tone: OmniTone.info);
 }
 
 /// Khối hiện dần: dịch 10→0 và mờ→rõ trong 500ms, trễ 50ms × [index]. Giảm

@@ -160,15 +160,16 @@ class _PairPageState extends ConsumerState<PairPage>
                   padding: const EdgeInsets.fromLTRB(18, 20, 18, 18),
                   child: Column(
                     children: [
-                      // Mã QR trong ô trắng bo 18 — trắng cả ở chế độ tối vì
-                      // máy quét cần vùng sáng quanh mã.
+                      // Mã QR trong ô trắng bo 16 (khối lớn, spec phong cách
+                      // iOS §3.5) — trắng cả ở chế độ tối vì máy quét cần
+                      // vùng sáng quanh mã.
                       Container(
                         width: 220,
                         height: 220,
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: OmniRadius.lgAll,
+                          borderRadius: OmniRadius.xxlAll,
                           border: Border.all(color: scheme.outlineVariant),
                         ),
                         child: Image.memory(
@@ -413,7 +414,8 @@ class _Hint extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       decoration: BoxDecoration(
         color: background,
-        borderRadius: OmniRadius.mdAll,
+        // Ô nhắc bo 10 (thang bo góc, spec phong cách iOS §3.5).
+        borderRadius: OmniRadius.xlAll,
       ),
       child: Row(
         children: [

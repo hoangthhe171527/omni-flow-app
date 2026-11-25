@@ -211,14 +211,12 @@ class _StackedImageCarouselState extends State<_StackedImageCarousel> {
                   padding: const EdgeInsets.only(right: 10, top: 7, bottom: 7),
                   child: DecoratedBox(
                     key: ValueKey('message-image-card-$index'),
+                    // Ảnh lớn bo 16, bỏ bóng đổ (ảnh là nội dung — spec
+                    // phong cách iOS §3.5); giữ viền sáng 1px để tách hai ảnh
+                    // chồng nhau.
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(18),
+                      borderRadius: BorderRadius.circular(16),
                       boxShadow: [
-                        BoxShadow(
-                          color: scheme.shadow.withValues(alpha: 0.18),
-                          blurRadius: 16,
-                          offset: const Offset(0, 7),
-                        ),
                         BoxShadow(
                           color: scheme.surface.withValues(alpha: 0.22),
                           blurRadius: 0,

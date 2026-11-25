@@ -12,7 +12,7 @@ import 'widgets/auth_widgets.dart';
 
 /// Màn chọn không gian làm việc (`#s-auth-workspace`): biểu tượng V-Orbit 64×64,
 /// viên thuốc hiển thị email tài khoản đang đăng nhập, danh sách tổ chức trong
-/// `OmniGroupSection` (bo 18) với ô chữ tắt 40×40 một tông thương hiệu và nút
+/// `OmniGroupSection` (bo 16) với ô chữ tắt 40×40 một tông thương hiệu và nút
 /// `Đăng xuất` ở vùng ngón cái dưới màn.
 class WorkspacePage extends ConsumerStatefulWidget {
   const WorkspacePage({super.key});
@@ -145,7 +145,8 @@ class _AccountIdentityPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
       decoration: BoxDecoration(
         color: scheme.primaryContainer,
-        borderRadius: OmniRadius.pillAll,
+        // Nhãn bo 6 (thang 6/10/16/32), không còn viên thuốc bo tròn.
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -205,13 +206,13 @@ class _WorkspaceCard extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
           child: Row(
             children: [
-              // Ô chữ tắt 40×40 bo 12 đồng bộ một tông màu thương hiệu.
+              // Ô chữ tắt 40×40 bo 10 (ô icon, thang 6/10/16/32) một tông màu.
               Container(
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
                   color: scheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 alignment: Alignment.center,
                 child: Text(

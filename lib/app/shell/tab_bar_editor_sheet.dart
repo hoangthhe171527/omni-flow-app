@@ -103,7 +103,8 @@ class TabBarEditor extends ConsumerWidget {
                   sliver: SliverToBoxAdapter(
                     child: Material(
                       color: scheme.surface,
-                      borderRadius: BorderRadius.circular(18),
+                      // Nhóm/thẻ bo 16 (thang 6/10/16/32).
+                      borderRadius: BorderRadius.circular(16),
                       clipBehavior: Clip.antiAlias,
                       child: ReorderableListView.builder(
                         shrinkWrap: true,
@@ -113,7 +114,7 @@ class TabBarEditor extends ConsumerWidget {
                         proxyDecorator: (child, _, _) => Material(
                           color: scheme.surface,
                           elevation: 6,
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(16),
                           child: child,
                         ),
                         onReorderItem: move,
@@ -193,7 +194,8 @@ class TabBarEditor extends ConsumerWidget {
   }
 }
 
-/// Viên thuốc kính 'Xong' ở đầu sheet.
+/// Nút nhẹ 'Xong' (nền xám đặc) ở đầu sheet — đổi đã tự lưu nên không phải
+/// nút chính.
 class _DonePill extends StatelessWidget {
   const _DonePill({required this.label, required this.onPressed});
 
@@ -273,7 +275,8 @@ class _BarPreview extends StatelessWidget {
                   Icon(icon, size: 19, color: fg)
                 else
                   OmniDashedBox(
-                    radius: OmniRadius.lg,
+                    // Ô vuông nhỏ bo 10 (thang 6/10/16/32).
+                    radius: OmniRadius.xl,
                     color: scheme.outline,
                     child: SizedBox.square(
                       dimension: 26,

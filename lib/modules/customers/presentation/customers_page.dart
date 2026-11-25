@@ -237,8 +237,8 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
                     }
                     final customer = state.items[index];
                     // Nhóm lồng (viomni-apple-uiux.html `.group`): cả danh sách
-                    // là một thẻ bo 18 cách mép 16 trên nền xám.
-                    const r = Radius.circular(18);
+                    // là một thẻ bo 16 cách mép 16 trên nền xám.
+                    const r = Radius.circular(16);
                     final first = index == 0;
                     final last =
                         index == state.items.length - 1 && !state.hasMore;

@@ -75,16 +75,17 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
               labelText: 'Mật khẩu hiện tại',
               filled: true,
               fillColor: scheme.surfaceContainerHighest.withValues(alpha: 0.55),
+              // Ô nhập bo 10 (thang 6/10/16/32).
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(10),
                 borderSide: BorderSide(color: scheme.outlineVariant),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(10),
                 borderSide: BorderSide(color: scheme.outlineVariant),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(10),
                 borderSide: BorderSide(color: scheme.primary, width: 1.5),
               ),
               suffixIcon: IconButton(
@@ -106,7 +107,7 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
             inMutuallyExclusiveGroup: false,
             child: InkWell(
               key: const Key('delete-account-confirm'),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(10),
               onTap: () {
                 HapticFeedback.selectionClick();
                 setState(() => _confirmed = !_confirmed);

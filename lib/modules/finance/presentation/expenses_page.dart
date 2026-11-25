@@ -111,17 +111,17 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<String>(
-      financeLedgerProvider.select((s) => s.searchQuery),
-      (_, next) {
-        if (_searchCtrl.text != next) {
-          _searchCtrl.value = TextEditingValue(
-            text: next,
-            selection: TextSelection.collapsed(offset: next.length),
-          );
-        }
-      },
-    );
+    ref.listen<String>(financeLedgerProvider.select((s) => s.searchQuery), (
+      _,
+      next,
+    ) {
+      if (_searchCtrl.text != next) {
+        _searchCtrl.value = TextEditingValue(
+          text: next,
+          selection: TextSelection.collapsed(offset: next.length),
+        );
+      }
+    });
     final state = ref.watch(financeLedgerProvider);
     final notifier = ref.read(financeLedgerProvider.notifier);
     final p = FinancePalette.of(context);
@@ -283,7 +283,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 36),
       decoration: BoxDecoration(
         color: p.card,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         children: [
@@ -316,7 +316,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 28),
       decoration: BoxDecoration(
         color: p.card,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         children: [
@@ -512,11 +512,14 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
     final delta = summary.deltaPill;
     final grpBtnActive = state.grpOpen || state.fltGroup != null;
 
+    // Khối tổng (spec §3.4): thẻ bo 16, số tiền 30/800 lớn nhất màn, số phụ
+    // (Đã trả / Phải trả) ở dưới cách một đường kẻ. Giữ bộ chọn tháng trên
+    // số nên không dùng thẳng OmniTotalCard (nhãn của nó chỉ là chữ).
     return OmniGroupSection(
-      dividerIndent: 14,
+      dividerIndent: 16,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(14, 7, 14, 11),
+          padding: const EdgeInsets.fromLTRB(16, 7, 16, 14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -547,7 +550,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                                 child: InkWell(
                                   key: _monthBtnKey,
                                   onTap: _openMonthPickerMenu,
-                                  borderRadius: BorderRadius.circular(8),
+                                  borderRadius: BorderRadius.circular(10),
                                   child: Padding(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 4,
@@ -639,7 +642,9 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                           softWrap: false,
                           style: OmniType.displayLg.copyWith(
                             color: p.ink,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w800,
+                            height: 1.25,
+                            letterSpacing: -0.6,
                             fontFeatures: const [FontFeature.tabularFigures()],
                           ),
                         ),
@@ -654,26 +659,14 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                       ],
                     ),
                   ),
+                  // Biến động so tháng trước = nhãn trạng thái (bo 6): tăng
+                  // vàng, giảm xanh lá.
                   if (delta != null)
-                    Container(
-                      height: 24,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      constraints: const BoxConstraints(),
-                      decoration: BoxDecoration(
-                        color: delta.isIncrease ? p.amberSoft : p.okSoft,
-                        borderRadius: BorderRadius.circular(99),
-                      ),
-                      child: Center(
-                        widthFactor: 1,
-                        child: Text(
-                          delta.text,
-                          style: OmniType.micro.copyWith(
-                            color: delta.isIncrease ? p.amber : p.ok,
-                            fontWeight: FontWeight.w600,
-                            fontFeatures: const [FontFeature.tabularFigures()],
-                          ),
-                        ),
-                      ),
+                    OmniStatusLabel(
+                      label: delta.text,
+                      tone: delta.isIncrease
+                          ? OmniTone.warning
+                          : OmniTone.success,
                     ),
                 ],
               ),
@@ -707,32 +700,33 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
             ],
           ),
         ),
-        OmniGroupRow(
-          key: const ValueKey('finance-flt-paid'),
-          title: 'Đã trả',
-          selected: state.fltStatus == 'paid',
-          onTap: () => notifier.toggleStatusFilter('paid'),
-          trailing: Text(
-            FinanceMonthUtils.formatVndSpace(summary.paid),
-            maxLines: 1,
-            style: OmniType.bodyStrong.copyWith(
-              color: p.ink,
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
-          ),
-        ),
-        OmniGroupRow(
-          key: const ValueKey('finance-flt-owe'),
-          title: 'Phải trả',
-          selected: state.fltStatus == 'owe',
-          onTap: () => notifier.toggleStatusFilter('owe'),
-          trailing: Text(
-            FinanceMonthUtils.formatVndSpace(summary.outstanding),
-            maxLines: 1,
-            style: OmniType.bodyStrong.copyWith(
-              color: summary.outstanding > 0 ? p.amber : p.ink2,
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
+        // Số phụ của khối tổng: chạm để lọc theo trạng thái trả.
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _TotalStat(
+                  key: const ValueKey('finance-flt-paid'),
+                  label: 'Đã trả',
+                  value: FinanceMonthUtils.formatVndSpace(summary.paid),
+                  active: state.fltStatus == 'paid',
+                  onTap: () => notifier.toggleStatusFilter('paid'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _TotalStat(
+                  key: const ValueKey('finance-flt-owe'),
+                  label: 'Phải trả',
+                  value: FinanceMonthUtils.formatVndSpace(summary.outstanding),
+                  warning: summary.outstanding > 0,
+                  active: state.fltStatus == 'owe',
+                  onTap: () => notifier.toggleStatusFilter('owe'),
+                ),
+              ),
+            ],
           ),
         ),
         // Expandable group breakdown (grp-panel)
@@ -744,22 +738,14 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
               children: [
                 Padding(
                   padding: const EdgeInsets.only(bottom: 7),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'TỶ TRỌNG THEO NHÓM',
-                        style: OmniType.overline.copyWith(
-                          color: p.muted,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.4,
-                        ),
-                      ),
-                      Text(
-                        'Chạm nhóm để lọc',
-                        style: OmniType.micro.copyWith(color: p.muted),
-                      ),
-                    ],
+                  // Không chữ giải thích "chạm để lọc": dòng nhóm tự là nút.
+                  child: Text(
+                    'TỶ TRỌNG THEO NHÓM',
+                    style: OmniType.overline.copyWith(
+                      color: p.muted,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.4,
+                    ),
                   ),
                 ),
                 if (summary.byGroup.isEmpty)
@@ -802,13 +788,13 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(9),
+      borderRadius: BorderRadius.circular(10),
       child: Container(
         margin: const EdgeInsets.only(top: 2),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
         decoration: BoxDecoration(
           color: selected ? p.primarySoft : Colors.transparent,
-          borderRadius: BorderRadius.circular(9),
+          borderRadius: BorderRadius.circular(10),
         ),
         child: Column(
           children: [
@@ -932,7 +918,11 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                     height: 32,
                     padding: const EdgeInsets.symmetric(horizontal: 11),
                     alignment: Alignment.center,
-                    decoration: OmniGlass.buttonDecoration(context),
+                    // Nút phụ (spec §3.2): nền xanh nhạt, chữ xanh.
+                    decoration: BoxDecoration(
+                      color: p.primary.withValues(alpha: .10),
+                      borderRadius: BorderRadius.circular(99),
+                    ),
                     child: Text(
                       allSum > 0 ? 'Ghi tất cả' : 'Mở nhập',
                       style: OmniType.caption.copyWith(
@@ -1024,13 +1014,13 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                           suggestions[i],
                           state.recurAmt[i],
                         ),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(10),
                         child: Container(
                           height: 29,
                           padding: const EdgeInsets.symmetric(horizontal: 9),
                           decoration: BoxDecoration(
                             color: p.control,
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(10),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -1157,7 +1147,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 28),
           decoration: BoxDecoration(
             color: p.card,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(16),
           ),
           alignment: Alignment.center,
           child: Text(
@@ -1210,9 +1200,10 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
               decoration: BoxDecoration(
                 color: p.card,
                 borderRadius: BorderRadius.vertical(
-                  top: i == 0 ? const Radius.circular(18) : Radius.zero,
+                  // Nhóm bo 16 (spec §3.5).
+                  top: i == 0 ? const Radius.circular(16) : Radius.zero,
                   bottom: i == len - 1
-                      ? const Radius.circular(18)
+                      ? const Radius.circular(16)
                       : Radius.zero,
                 ),
               ),
@@ -1237,7 +1228,8 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
       decoration: BoxDecoration(
         color: OmniColors.ink.withValues(alpha: 0.94),
-        borderRadius: BorderRadius.circular(14),
+        // Lớp nổi trên nội dung: giữ bóng, bo 16 (spec §3.5).
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
             color: OmniColors.ink.withValues(alpha: 0.24),
@@ -1279,6 +1271,77 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// Số phụ dưới khối tổng (cùng khuôn `OmniTotalCard`): số 15/700 trên, nhãn
+/// 12 xám dưới. Đang lọc → xanh; còn nợ → vàng. Không bao giờ cắt số.
+class _TotalStat extends StatelessWidget {
+  const _TotalStat({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.onTap,
+    this.active = false,
+    this.warning = false,
+  });
+
+  final String label;
+  final String value;
+  final VoidCallback onTap;
+  final bool active;
+  final bool warning;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final color = active
+        ? scheme.primary
+        : warning
+        ? OmniColors.warningTextOf(context)
+        : scheme.onSurface;
+    return Semantics(
+      button: true,
+      selected: active,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Align(
+            alignment: Alignment.topLeft,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    value,
+                    maxLines: 1,
+                    softWrap: false,
+                    style: OmniType.bodyStrong.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: color,
+                      fontFeatures: OmniType.tabular,
+                    ),
+                  ),
+                ),
+                Text(
+                  label,
+                  maxLines: 1,
+                  style: OmniType.micro.copyWith(
+                    fontWeight: FontWeight.w400,
+                    color: active ? scheme.primary : scheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

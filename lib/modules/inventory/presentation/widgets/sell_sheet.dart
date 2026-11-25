@@ -677,9 +677,14 @@ class _SellSheetState extends ConsumerState<SellSheet> {
     final results = ref.watch(customerSearchProvider(_query.trim()));
     final q = _query.trim();
     return [
-      OmniGlass(
-        blur: false,
-        radius: 22,
+      // Ô tìm nền xám đặc bo 10, không kính (spec §3.4).
+      DecoratedBox(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.onSurface.withValues(
+            alpha: Theme.of(context).brightness == Brightness.dark ? .12 : .06,
+          ),
+          borderRadius: BorderRadius.circular(10),
+        ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 6),
           child: OmniSearchField(

@@ -14,11 +14,11 @@ class DetailCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    // Thẻ nhóm lồng bo 18 trên nền xám (viomni-apple-uiux.html `.group`).
+    // Thẻ nhóm lồng bo 16 trên nền xám (viomni-apple-uiux.html `.group`).
     return Container(
       decoration: BoxDecoration(
         color: scheme.surface,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         border: flat ? null : Border.all(color: scheme.outlineVariant),
       ),
       clipBehavior: Clip.antiAlias,

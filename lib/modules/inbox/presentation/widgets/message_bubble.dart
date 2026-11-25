@@ -131,13 +131,14 @@ class MessageBubble extends StatelessWidget {
         : outbound && !failed
         ? Colors.white.withValues(alpha: 0.9)
         : OmniColors.chatMeta;
-    // Góc ngoài 20; phía "đuôi" (phải với tin ra, trái với tin vào) chỉ bo 4
-    // khi tin nằm trong một nhóm: đầu nhóm giữ 20 ở trên, cuối nhóm giữ 20 ở
-    // dưới, tin giữa nhóm cả hai góc 4. Tin một dòng ra dáng viên thuốc.
+    // Góc ngoài 16; phía "đuôi" (phải với tin ra, trái với tin vào) chỉ bo 6
+    // khi tin nằm trong một nhóm: đầu nhóm giữ 16 ở trên, cuối nhóm giữ 16 ở
+    // dưới, tin giữa nhóm cả hai góc 6 (thang bo góc, spec phong cách iOS
+    // §3.5).
     final onPrimaryBubble = outbound && !dark && !failed;
-    final tailTop = Radius.circular(groupedWithPrevious ? 4 : 20);
-    final tailBottom = Radius.circular(isLastInGroup ? 20 : 4);
-    const round = Radius.circular(20);
+    final tailTop = Radius.circular(groupedWithPrevious ? 6 : 16);
+    final tailBottom = Radius.circular(isLastInGroup ? 16 : 6);
+    const round = Radius.circular(16);
     final bubbleRadius = outbound
         ? BorderRadius.only(
             topLeft: round,
@@ -216,18 +217,9 @@ class MessageBubble extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
         color: bubbleColor,
+        // Không bóng: bong bóng là nội dung, không nổi (spec phong cách iOS
+        // §3.2).
         borderRadius: bubbleRadius,
-        // Chỉ tin vào (sáng) có bóng nhẹ để nổi khỏi nền; tin ra đã đủ tương
-        // phản bằng màu.
-        boxShadow: !outbound && !dark && !failed
-            ? [
-                BoxShadow(
-                  color: OmniColors.ink.withValues(alpha: 0.08),
-                  blurRadius: 2,
-                  offset: const Offset(0, 1),
-                ),
-              ]
-            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -887,7 +879,7 @@ class _QuotedMessage extends StatelessWidget {
         color: onPrimary
             ? Colors.white.withValues(alpha: 0.16)
             : scheme.onSurface.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(10),
         border: Border(
           left: BorderSide(color: accent.withValues(alpha: 0.85), width: 3),
         ),

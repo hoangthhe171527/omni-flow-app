@@ -1046,9 +1046,13 @@ class _NoComposerBar extends StatelessWidget {
       top: false,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
-        child: OmniGlass(
-          radius: 24,
-          blur: false,
+        // Chỗ ô soạn tin: nền đặc bo 16 (spec phong cách iOS §3.1 — kính chỉ
+        // cho điều hướng).
+        child: Container(
+          decoration: BoxDecoration(
+            color: scheme.surface,
+            borderRadius: OmniRadius.xxlAll,
+          ),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
             children: [

@@ -290,10 +290,14 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
                           labels: [
                             'Tổng quan',
                             if (activityOn) 'Hoạt động',
-                            if (oppsOn)
-                              oppCount == null
-                                  ? 'Cơ hội'
-                                  : 'Cơ hội · $oppCount',
+                            if (oppsOn) 'Cơ hội',
+                          ],
+                          // Số đếm cạnh nhãn, không ghép vào chữ (spec
+                          // phong cách iOS §3.4).
+                          counts: [
+                            null,
+                            if (activityOn) null,
+                            if (oppsOn) oppCount,
                           ],
                           index: tabs.indexOf(tab),
                           onChanged: (i) => setState(() {
@@ -517,7 +521,9 @@ class _Actions extends StatelessWidget {
   }
 }
 
-/// `.act`: nút cao 36 bo 6 trong vùng chạm 44. Nút chính tô nền primary.
+/// `.act`: nút viên thuốc cao 36 trong vùng chạm 44 (spec phong cách iOS
+/// §3.2): [primary] = bậc Phụ (nền xanh nhạt, chữ xanh), còn lại bậc Nhẹ
+/// (nền xám đặc, chữ mực).
 class _ActButton extends StatelessWidget {
   const _ActButton({
     required this.icon,
@@ -535,9 +541,8 @@ class _ActButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final enabled = onTap != null;
-    // Nút kính (liquid-buttons-uiux.html B): nút chính chữ màu chủ đạo, nút
-    // phụ chữ mực; không viền màu, dạng viên thuốc.
     final foreground = primary ? scheme.primary : scheme.onSurface;
+    final dark = Theme.of(context).brightness == Brightness.dark;
 
     return Semantics(
       button: true,
@@ -547,7 +552,7 @@ class _ActButton extends StatelessWidget {
       onTap: onTap,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: OmniRadius.pillAll,
         child: SizedBox(
           height: 44,
           child: Center(
@@ -556,7 +561,14 @@ class _ActButton extends StatelessWidget {
               child: Container(
                 height: 36,
                 alignment: Alignment.center,
-                decoration: OmniGlass.buttonDecoration(context, radius: 18),
+                decoration: primary
+                    ? BoxDecoration(
+                        color: scheme.primary.withValues(
+                          alpha: dark ? .16 : .10,
+                        ),
+                        borderRadius: OmniRadius.pillAll,
+                      )
+                    : OmniGlass.buttonDecoration(context),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -857,10 +869,15 @@ class _TagsValue extends StatelessWidget {
       runSpacing: 6,
       children: [
         for (final tag in tags)
-          OmniGlass(
-            blur: false,
-            radius: 999,
+          // Nhãn thẻ nền xám đặc bo 6 (spec phong cách iOS §3.1, §3.5).
+          Container(
             padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+            decoration: BoxDecoration(
+              color: scheme.onSurface.withValues(
+                alpha: theme.brightness == Brightness.dark ? .12 : .06,
+              ),
+              borderRadius: OmniRadius.smAll,
+            ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [

@@ -308,7 +308,7 @@ Future<void> launchWithToast(
   messenger.showSnackBar(SnackBar(content: Text(failure)));
 }
 
-/// Nút kính tròn + nhãn nhỏ w600; `onTap` null = tắt (không số điện thoại).
+/// Nút icon tròn trơn + nhãn nhỏ w600; `onTap` null = tắt (không số điện thoại).
 class _Action extends StatelessWidget {
   const _Action({required this.icon, required this.label, required this.onTap});
 
@@ -325,7 +325,7 @@ class _Action extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(10),
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 56),
         child: Column(

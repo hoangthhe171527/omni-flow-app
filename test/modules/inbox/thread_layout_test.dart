@@ -174,33 +174,39 @@ void main() {
     await closeThread(tester);
   });
 
-  testWidgets('bong bóng 20/4: đầu, giữa và cuối nhóm tin ra', (tester) async {
-    api.history = [
-      _serverMessage('m1', 'AAA', from: 'agent'),
-      _serverMessage('m2', 'BBB', from: 'agent'),
-      _serverMessage('m3', 'CCC', from: 'agent'),
-    ];
-    await openThread(tester);
+  testWidgets(
+    'bong bóng 16/6 (phong cách iOS §3.5): đầu, giữa và cuối nhóm tin ra',
+    (tester) async {
+      api.history = [
+        _serverMessage('m1', 'AAA', from: 'agent'),
+        _serverMessage('m2', 'BBB', from: 'agent'),
+        _serverMessage('m3', 'CCC', from: 'agent'),
+      ];
+      await openThread(tester);
 
-    BorderRadius radius(String text) {
-      final box = tester.widget<DecoratedBox>(
-        find
-            .ancestor(of: find.text(text), matching: find.byType(DecoratedBox))
-            .first,
-      );
-      return (box.decoration as BoxDecoration).borderRadius! as BorderRadius;
-    }
+      BorderRadius radius(String text) {
+        final box = tester.widget<DecoratedBox>(
+          find
+              .ancestor(
+                of: find.text(text),
+                matching: find.byType(DecoratedBox),
+              )
+              .first,
+        );
+        return (box.decoration as BoxDecoration).borderRadius! as BorderRadius;
+      }
 
-    // Danh sách vẽ ngược nhưng nhóm tính theo thời gian: m1 đầu nhóm.
-    expect(radius('AAA').topRight.x, 20);
-    expect(radius('AAA').bottomRight.x, 4);
-    expect(radius('BBB').topRight.x, 4);
-    expect(radius('BBB').bottomRight.x, 4);
-    expect(radius('CCC').topRight.x, 4);
-    expect(radius('CCC').bottomRight.x, 20);
-    expect(radius('CCC').topLeft.x, 20);
-    await closeThread(tester);
-  });
+      // Danh sách vẽ ngược nhưng nhóm tính theo thời gian: m1 đầu nhóm.
+      expect(radius('AAA').topRight.x, 16);
+      expect(radius('AAA').bottomRight.x, 6);
+      expect(radius('BBB').topRight.x, 6);
+      expect(radius('BBB').bottomRight.x, 6);
+      expect(radius('CCC').topRight.x, 6);
+      expect(radius('CCC').bottomRight.x, 16);
+      expect(radius('CCC').topLeft.x, 16);
+      await closeThread(tester);
+    },
+  );
 }
 
 Message _serverMessage(

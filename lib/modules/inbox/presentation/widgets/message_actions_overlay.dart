@@ -156,7 +156,7 @@ class _MessageActionsOverlay extends StatelessWidget {
                         child: IgnorePointer(
                           child: DecoratedBox(
                             decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(18),
+                              borderRadius: BorderRadius.circular(16),
                               boxShadow: [
                                 BoxShadow(
                                   color: OmniColors.ink.withValues(
@@ -355,8 +355,9 @@ class _GlassMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: _menuWidth,
+      // Menu đang mở: GIỮ kính (spec phong cách iOS §3.1), bo 16.
       child: OmniGlass(
-        radius: 18,
+        radius: 16,
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Material(
           type: MaterialType.transparency,

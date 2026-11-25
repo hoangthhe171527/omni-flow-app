@@ -98,13 +98,13 @@ class _LinkPreviewCardState extends State<MessageLinkPreview> {
           child: Material(
             color: cardColor,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(10),
               side: BorderSide(color: borderColor, width: 0.5),
             ),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
               onTap: _open,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

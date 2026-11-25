@@ -95,25 +95,9 @@ class _TagPickerSheetState extends State<_TagPickerSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
     return OmniSheetBody(
-      header: OmniSheetHeader(
-        title: 'Chọn nhãn',
-        trailing: OmniGlassCircle(
-          child: IconButton(
-            tooltip: 'Đóng',
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-            onPressed: () => Navigator.of(context).pop(),
-            icon: Icon(
-              Icons.close_rounded,
-              size: OmniIconSize.md,
-              color: scheme.onSurface,
-            ),
-          ),
-        ),
-      ),
+      // Đầu sheet tự có nút ✕ tròn xám (spec phong cách iOS §3.4).
+      header: const OmniSheetHeader(title: 'Chọn nhãn'),
       footer: FilledButton(
         onPressed: () => Navigator.of(context).pop(List<String>.of(_selected)),
         child: const Text('Xong'),

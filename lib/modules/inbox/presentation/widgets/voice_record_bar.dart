@@ -73,7 +73,9 @@ class VoiceRecordBar extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 14),
               decoration: BoxDecoration(
                 color: fill,
-                borderRadius: const BorderRadius.all(Radius.circular(18)),
+                // Viên thuốc tròn hẳn trong khung soạn (spec phong cách iOS
+                // §3.5).
+                borderRadius: OmniRadius.pillAll,
               ),
               child: Row(
                 children: [

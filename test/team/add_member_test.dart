@@ -96,7 +96,7 @@ void main() {
         .widget<TextField>(field('Mật khẩu tạm'))
         .controller!
         .text;
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Tạo tài khoản'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Tạo tài khoản'));
     await tester.pumpAndSettle();
 
     final request = adapter.single;
@@ -122,7 +122,7 @@ void main() {
 
       await tester.enterText(field('Họ tên'), 'Lê Na');
       await tester.enterText(field('Email đăng nhập'), 'na@xuong.vn');
-      await tester.tap(find.widgetWithText(OutlinedButton, 'Tạo tài khoản'));
+      await tester.tap(find.widgetWithText(FilledButton, 'Tạo tài khoản'));
       await tester.pumpAndSettle();
 
       expect(find.textContaining('mật khẩu cũ'), findsOneWidget);
@@ -139,7 +139,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Họ tên'), findsNothing);
     await tester.enterText(field('Email đăng nhập'), 'moi@xuong.vn');
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Gửi lời mời'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Gửi lời mời'));
     await tester.pumpAndSettle();
 
     expect(adapter.single.uri.path, '/api/v1/memberships/invite');
@@ -156,7 +156,7 @@ void main() {
 
     await tester.enterText(field('Họ tên'), 'A');
     await tester.enterText(field('Email đăng nhập'), 'khong-phai-email');
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Tạo tài khoản'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Tạo tài khoản'));
     await tester.pumpAndSettle();
 
     expect(find.text('Email chưa đúng.'), findsOneWidget);

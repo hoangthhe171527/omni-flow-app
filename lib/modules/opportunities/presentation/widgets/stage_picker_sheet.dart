@@ -93,16 +93,8 @@ class StagePickerSheet extends StatelessWidget {
     }
 
     return OmniSheetBody(
-      header: OmniSheetHeader(
-        title: 'Chuyển giai đoạn',
-        trailing: OmniGlassCircle(
-          child: IconButton(
-            tooltip: 'Đóng',
-            onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(Icons.close_rounded),
-          ),
-        ),
-      ),
+      // Đầu sheet tự có nút ✕ tròn xám (spec phong cách iOS §3.4).
+      header: const OmniSheetHeader(title: 'Chuyển giai đoạn'),
       children: [
         OmniGroupSection(children: [for (final stage in working) row(stage)]),
         OmniGroupSection(children: [for (final stage in outcomes) row(stage)]),

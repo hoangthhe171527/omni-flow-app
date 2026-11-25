@@ -551,7 +551,7 @@ class _FilterSection extends StatelessWidget {
   );
 }
 
-/// "Hiển thị" (chọn một): hàng chip kính, không còn lưới radio nền xanh.
+/// "Hiển thị" (chọn một): hàng chip chọn, không còn lưới radio nền xanh.
 class _QuickFilterGrid extends StatelessWidget {
   const _QuickFilterGrid({
     required this.items,
@@ -581,8 +581,8 @@ class _QuickFilterGrid extends StatelessWidget {
   );
 }
 
-/// Chip lựa chọn kính: chọn = trắng mờ (`OmniChoicePill`). Hộp bọc cao 44 để
-/// đủ vùng chạm dù chip kính cao 36.
+/// Chip lựa chọn (`OmniChoicePill`, spec phong cách iOS §3.4: chọn = xanh
+/// nhạt). Hộp bọc cao 44 để đủ vùng chạm dù chip cao 36.
 class _ChoiceChip extends StatelessWidget {
   const _ChoiceChip({
     required this.label,

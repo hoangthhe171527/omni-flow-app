@@ -106,15 +106,19 @@ class _MoneyKeypadState extends State<_MoneyKeypad> {
           childAspectRatio: 2.2,
           children: [
             for (final k in keys)
-              OmniGlass(
-                radius: 16,
-                // 12 phím: không làm mờ thật (bậc hiệu năng), chỉ nền kính.
-                blur: false,
+              // Phím: nền xám đặc bo 10, không kính (spec §3.1, §3.5).
+              Material(
+                color: scheme.onSurface.withValues(
+                  alpha: Theme.of(context).brightness == Brightness.dark
+                      ? .12
+                      : .06,
+                ),
+                borderRadius: BorderRadius.circular(10),
                 child: Material(
                   type: MaterialType.transparency,
                   child: InkWell(
                     key: ValueKey('inv-key-$k'),
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(10),
                     onTap: () => _key(k),
                     child: Center(
                       child: k == 'del'

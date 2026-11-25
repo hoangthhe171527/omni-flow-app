@@ -196,7 +196,7 @@ class _AccountPageState extends ConsumerState<AccountPage> {
           ),
           const SizedBox(width: OmniSpacing.sm),
           ExcludeSemantics(
-            child: _GlassActionPill(
+            child: _SoftActionPill(
               icon: Icons.photo_camera_outlined,
               label: 'Ảnh',
               onTap: _busy ? null : () => _openAvatarMenu(avatarUrl),
@@ -237,7 +237,7 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                   label: 'Đổi không gian làm việc',
                   excludeSemantics: true,
                   onTap: switchWorkspace,
-                  child: _GlassActionPill(label: 'Đổi', onTap: switchWorkspace),
+                  child: _SoftActionPill(label: 'Đổi', onTap: switchWorkspace),
                 )
               : null,
         ),
@@ -437,8 +437,9 @@ class _CameraBadge extends StatelessWidget {
   }
 }
 
-class _GlassActionPill extends StatelessWidget {
-  const _GlassActionPill({required this.label, required this.onTap, this.icon});
+/// Nút bậc "Phụ" (spec iOS §3.2): nền xanh nhạt đặc + chữ xanh, không kính.
+class _SoftActionPill extends StatelessWidget {
+  const _SoftActionPill({required this.label, required this.onTap, this.icon});
 
   final String label;
   final VoidCallback? onTap;
@@ -447,6 +448,7 @@ class _GlassActionPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
 
     return InkWell(
       onTap: onTap,
@@ -455,7 +457,10 @@ class _GlassActionPill extends StatelessWidget {
         constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
         child: Center(
           child: DecoratedBox(
-            decoration: OmniGlass.buttonDecoration(context),
+            decoration: BoxDecoration(
+              color: scheme.primary.withValues(alpha: dark ? .16 : .10),
+              borderRadius: BorderRadius.circular(999),
+            ),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               child: Row(
