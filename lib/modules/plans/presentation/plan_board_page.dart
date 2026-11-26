@@ -87,10 +87,8 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
 
   /// Đang mở ô tìm trong header.
   bool _searching = false;
-  final _searchField = TextEditingController();
-  Timer? _debounce;
 
-  /// Chuỗi tìm đã qua debounce 300ms; rỗng = không lọc.
+  /// Chuỗi tìm đã qua debounce 300ms của ô tìm; rỗng = không lọc.
   String _query = '';
 
   /// Đã qua khung đầu có thẻ. Chỉ thẻ vào cây ở khung đó mới "rise": cột và
@@ -274,8 +272,6 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
     _edgeSide.dispose();
     _drag.dispose();
     _liftable.dispose();
-    _debounce?.cancel();
-    _searchField.dispose();
     _track.dispose();
     super.dispose();
   }
@@ -395,7 +391,6 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
                   title: loaded?.name ?? 'Kế hoạch',
                   subtitle: _subtitle(loaded, visible),
                   searching: _searching,
-                  searchField: _searchField,
                   onSearchChanged: _onSearchChanged,
                   onBack: _back,
                   onOpenSearch: () {
@@ -956,18 +951,14 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
     }
   }
 
+  /// Ô tìm chuẩn đã chờ 300ms và bỏ khoảng trắng hai đầu.
   void _onSearchChanged(String value) {
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 300), () {
-      if (!mounted) return;
-      setState(() => _query = value.trim());
-    });
+    if (mounted) setState(() => _query = value);
   }
 
   void _closeSearch() {
     HapticFeedback.selectionClick();
-    _debounce?.cancel();
-    _searchField.clear();
+    // Ô tìm rời cây khi đóng nên tự mất chữ và lượt gõ đang chờ.
     setState(() {
       _searching = false;
       _query = '';
@@ -1600,7 +1591,6 @@ class _GlassHeader extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.searching,
-    required this.searchField,
     required this.onSearchChanged,
     required this.onBack,
     required this.onOpenSearch,
@@ -1615,7 +1605,6 @@ class _GlassHeader extends StatelessWidget {
   final String title;
   final String subtitle;
   final bool searching;
-  final TextEditingController searchField;
   final ValueChanged<String> onSearchChanged;
   final VoidCallback onBack;
   final VoidCallback onOpenSearch;
@@ -1670,8 +1659,11 @@ class _GlassHeader extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: searching
-                    ? _HeaderSearch(
-                        controller: searchField,
+                    ? OmniSearchField(
+                        hint: 'Tìm trong kế hoạch',
+                        onCover: true,
+                        autofocus: true,
+                        debounce: const Duration(milliseconds: 300),
                         onChanged: onSearchChanged,
                       )
                     : _HeaderTitle(title: title, subtitle: subtitle),
@@ -1757,65 +1749,6 @@ class _HeaderTitle extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _HeaderSearch extends StatelessWidget {
-  const _HeaderSearch({required this.controller, required this.onChanged});
-
-  final TextEditingController controller;
-  final ValueChanged<String> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final solid = MediaQuery.highContrastOf(context);
-    return Center(
-      child: Container(
-        height: 38,
-        padding: const EdgeInsets.symmetric(horizontal: 13),
-        decoration: BoxDecoration(
-          borderRadius: OmniRadius.pillAll,
-          color: solid ? OmniCovers.glass : Colors.white.withValues(alpha: .20),
-          border: Border.all(color: Colors.white.withValues(alpha: .36)),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              LucideIcons.search,
-              size: OmniIconSize.md,
-              color: Colors.white.withValues(alpha: .9),
-            ),
-            const SizedBox(width: 7),
-            Expanded(
-              child: TextField(
-                controller: controller,
-                autofocus: true,
-                onChanged: onChanged,
-                textInputAction: TextInputAction.search,
-                textAlignVertical: TextAlignVertical.center,
-                cursorColor: Colors.white,
-                style: OmniType.search.copyWith(
-                  color: Colors.white,
-                  fontStyle: FontStyle.normal,
-                ),
-                decoration: InputDecoration(
-                  isDense: true,
-                  contentPadding: EdgeInsets.zero,
-                  filled: false,
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  hintText: 'Tìm trong kế hoạch',
-                  hintStyle: OmniType.searchHint.copyWith(
-                    color: Colors.white.withValues(alpha: .78),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -2110,11 +2043,7 @@ class _TruncatedNotice extends StatelessWidget {
           padding: const EdgeInsets.all(OmniSpacing.md),
           child: Row(
             children: [
-              Icon(
-                LucideIcons.info,
-                size: OmniIconSize.sm,
-                color: warning,
-              ),
+              Icon(LucideIcons.info, size: OmniIconSize.sm, color: warning),
               const SizedBox(width: OmniSpacing.sm),
               Expanded(
                 child: Text(

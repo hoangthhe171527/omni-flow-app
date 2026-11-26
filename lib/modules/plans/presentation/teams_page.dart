@@ -49,7 +49,6 @@ class TeamsPage extends ConsumerStatefulWidget {
 }
 
 class _TeamsPageState extends ConsumerState<TeamsPage> {
-  final _search = TextEditingController();
   String _query = '';
 
   /// Team đang mở, theo id. Mặc định đóng để màn Việc chỉ hiện cấu trúc cấp
@@ -115,12 +114,6 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
     } finally {
       if (mounted) setState(() => _favoriteInFlight.remove(plan.id));
     }
-  }
-
-  @override
-  void dispose() {
-    _search.dispose();
-    super.dispose();
   }
 
   Future<void> _create(Rect anchor, {required bool canCreateTeam}) async {
@@ -193,7 +186,6 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
       appBar: OmniTopBar(
         semanticsTitle: 'Việc',
         bottom: TeamsSearchRow(
-          controller: _search,
           onChanged: (value) => setState(() => _query = value),
           // Dấu + chuyển xuống nút kính lỏng góc dưới phải.
           showAdd: false,
