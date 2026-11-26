@@ -282,10 +282,8 @@ class _AppsGreeting extends ConsumerWidget {
             maxLines: 2,
             textAlign: TextAlign.center,
             // `greeting` 26/600 (Chuẩn Mobile UI, gói Viomni).
-            style: OmniType.title.copyWith(
-              fontSize: 26,
+            style: OmniType.greeting.copyWith(
               height: 1.25,
-              letterSpacing: -0.5,
               color: scheme.onSurface,
             ),
           ),
