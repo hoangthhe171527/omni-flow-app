@@ -29,7 +29,7 @@ void main() {
           home: Scaffold(
             appBar: CustomerSearchRow(
               filtersOpen: false,
-              onToggleFilters: () {},
+              onOpenFilters: (_) {},
             ),
           ),
         ),

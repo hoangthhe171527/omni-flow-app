@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -39,11 +41,11 @@ void main() {
           builder: (_, _) => Scaffold(
             appBar: withSearch
                 ? OpportunitySearchRow(
-                    filtersOpen: true,
-                    onToggleFilters: () {},
+                    filtersOpen: false,
+                    onOpenFilters: (_) {},
                   )
                 : null,
-            body: const OpportunitiesSegment(filtersOpen: true),
+            body: const OpportunitiesSegment(),
           ),
         ),
         GoRoute(
@@ -71,6 +73,17 @@ void main() {
         routerConfig: router,
       ),
     );
+  }
+
+  /// Mở menu lọc Cơ hội (bản đang dùng ở màn Khách và màn Cơ hội).
+  Future<void> openFilters(WidgetTester t) async {
+    unawaited(
+      showOpportunityFilterMenu(
+        context: t.element(find.byType(OpportunitiesSegment)),
+        anchor: const Rect.fromLTWH(700, 8, 44, 44),
+      ),
+    );
+    await t.pumpAndSettle();
   }
 
   testWidgets('mặc định tải tất cả giai đoạn mở, không gửi stage', (t) async {
@@ -119,13 +132,14 @@ void main() {
     expect(api.calls.last.stageCode, isNull);
   });
 
-  testWidgets('"Đã đóng" → liệt kê giai đoạn thắng/thua, dải đổi sang ô đóng', (
+  testWidgets('"Cơ hội đã đóng" → liệt kê giai đoạn thắng/thua, dải đổi ô', (
     t,
   ) async {
     await t.pumpWidget(host());
     await t.pumpAndSettle();
+    await openFilters(t);
 
-    await t.tap(find.text('Đã đóng'));
+    await t.tap(find.text('Cơ hội đã đóng'));
     await t.pumpAndSettle();
     // Giai đoạn đóng đầu tiên được chọn sẵn; không gửi status=OPEN.
     expect(api.calls.last.stageCode, 'da_mua');
@@ -135,7 +149,7 @@ void main() {
     expect(find.text('Bỏ lọc'), findsNothing);
     expect(find.textContaining('Đã mua · 2'), findsOneWidget);
 
-    await t.tap(find.text('Đã đóng'));
+    await t.tap(find.text('Cơ hội đã đóng'));
     await t.pumpAndSettle();
     expect(api.calls.last.stageCode, isNull);
     expect(api.calls.last.status, 'OPEN');
@@ -147,8 +161,9 @@ void main() {
     await t.pumpAndSettle();
     await t.tap(find.text('Báo giá').first);
     await t.pumpAndSettle();
+    await openFilters(t);
 
-    await t.tap(find.text('Bán lẻ'));
+    await t.tap(find.text('Quy trình'));
     await t.pumpAndSettle();
     await t.tap(find.text('Bán hàng chuẩn'));
     await t.pumpAndSettle();
@@ -224,10 +239,11 @@ void main() {
     expect(api.calls.last.stageCode, isNull);
   });
 
-  testWidgets('"Của tôi" → tải lại với owner=me', (t) async {
+  testWidgets('"Chỉ cơ hội của tôi" → tải lại với owner=me', (t) async {
     await t.pumpWidget(host());
     await t.pumpAndSettle();
-    await t.tap(find.text('Của tôi'));
+    await openFilters(t);
+    await t.tap(find.text('Chỉ cơ hội của tôi'));
     await t.pumpAndSettle();
     expect(api.calls.last.mine, isTrue);
     expect(api.summaryMine.last, isTrue);

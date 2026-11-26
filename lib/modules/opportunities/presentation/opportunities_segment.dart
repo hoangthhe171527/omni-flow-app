@@ -7,7 +7,6 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/module/extra_segment.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../design/components/components.dart';
-import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../security/permissions/access_scope.dart';
 import '../../../security/session/session_controller.dart';
@@ -18,17 +17,14 @@ import '../opportunities_module.dart';
 import 'widgets/opportunity_row.dart';
 import 'widgets/stage_strip.dart';
 
-/// Thân của đoạn "Cơ hội": panel lọc (khi mở), dải ô giai đoạn, dòng mục và
-/// danh sách có vòng %. Không có Scaffold — nhúng được vào màn Khách lẫn
+/// Thân của đoạn "Cơ hội": dải ô giai đoạn, dòng mục và danh sách có vòng %.
+/// Bộ lọc mở bằng menu neo ([showOpportunityFilterMenu]). Không có Scaffold — nhúng được vào màn Khách lẫn
 /// [PipelinePage].
 ///
 /// Cột là giai đoạn THẬT của quy trình tenant (`/pipelines`), không phải danh
 /// sách cố định.
 class OpportunitiesSegment extends ConsumerStatefulWidget {
-  const OpportunitiesSegment({super.key, this.filtersOpen = false});
-
-  /// Panel lọc (đổi quy trình, "Của tôi") đang mở.
-  final bool filtersOpen;
+  const OpportunitiesSegment({super.key});
 
   @override
   ConsumerState<OpportunitiesSegment> createState() =>
@@ -81,7 +77,6 @@ class _OpportunitiesSegmentState extends ConsumerState<OpportunitiesSegment> {
           : null,
       body: Column(
         children: [
-          OpportunityFilterPanel(open: widget.filtersOpen),
           Expanded(
             child: pipeline == null || pipeline.openStages.isEmpty
                 ? OmniAsyncView(
@@ -389,13 +384,11 @@ class OpportunitySearchRow extends ConsumerWidget
   const OpportunitySearchRow({
     super.key,
     required this.filtersOpen,
-    this.onToggleFilters,
-    this.onOpenFilters,
-  }) : assert(onToggleFilters != null || onOpenFilters != null);
+    required this.onOpenFilters,
+  });
 
   final bool filtersOpen;
-  final VoidCallback? onToggleFilters;
-  final ValueChanged<Rect>? onOpenFilters;
+  final ValueChanged<Rect> onOpenFilters;
 
   @override
   // Nằm trong viên kính của OmniTopBar: cao 44, lề ngang nhỏ.
@@ -429,14 +422,9 @@ class OpportunitySearchRow extends ConsumerWidget
                 count: count,
                 onTap: () {
                   HapticFeedback.selectionClick();
-                  final anchored = onOpenFilters;
-                  if (anchored == null) {
-                    onToggleFilters?.call();
-                    return;
-                  }
                   final box = buttonContext.findRenderObject() as RenderBox?;
                   if (box == null || !box.hasSize) return;
-                  anchored(box.localToGlobal(Offset.zero) & box.size);
+                  onOpenFilters(box.localToGlobal(Offset.zero) & box.size);
                 },
               ),
             ),
@@ -541,35 +529,6 @@ class _FilterButton extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-/// Panel lọc của đoạn: đổi quy trình (khi có hơn một) và "Của tôi". Đóng thì
-/// cao 0.
-class OpportunityFilterPanel extends ConsumerWidget {
-  const OpportunityFilterPanel({super.key, required this.open});
-
-  final bool open;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    if (!OmniMotion.enabled(context)) {
-      return open ? const _PanelBody() : const SizedBox(width: double.infinity);
-    }
-    return AnimatedSize(
-      duration: const Duration(milliseconds: 400),
-      curve: OmniCurves.standard,
-      alignment: Alignment.topCenter,
-      child: open
-          ? TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: 1),
-              duration: const Duration(milliseconds: 300),
-              builder: (context, value, child) =>
-                  Opacity(opacity: value, child: child),
-              child: const _PanelBody(),
-            )
-          : const SizedBox(width: double.infinity),
     );
   }
 }
@@ -786,83 +745,6 @@ Future<void> _pickOpportunityPipeline(
   container.read(selectedPipelineProvider.notifier).state = code;
 }
 
-class _PanelBody extends ConsumerWidget {
-  const _PanelBody();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final pipeline = ref.watch(boardPipelineProvider);
-    final pipelines =
-        ref.watch(pipelineCatalogProvider).valueOrNull?.pipelines ??
-        const <PipelineDef>[];
-    final mine = ref.watch(pipelineMineProvider);
-    final closed = ref.watch(segmentClosedProvider);
-    final hasClosedStage = pipeline?.stages.any((s) => s.isClosed) ?? false;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-      // Thẻ nền đặc bo 16 (spec phong cách iOS §3.1: kính chỉ cho điều hướng).
-      child: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: OmniRadius.xxlAll,
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: SizedBox(
-          width: double.infinity,
-          child: Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              if (pipelines.length > 1 && pipeline != null)
-                OmniFilterPill(
-                  label: pipeline.label,
-                  selected: false,
-                  onTap: () =>
-                      _pickPipeline(context, ref, pipelines, pipeline.code),
-                ),
-              OmniFilterPill(
-                label: 'Của tôi',
-                selected: mine,
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  ref.read(pipelineMineProvider.notifier).state = !mine;
-                },
-              ),
-              // Xem cơ hội đã thắng/thua thay vì đang mở.
-              if (hasClosedStage)
-                OmniFilterPill(
-                  label: 'Đã đóng',
-                  selected: closed,
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    ref.read(segmentClosedProvider.notifier).state = !closed;
-                  },
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _pickPipeline(
-    BuildContext context,
-    WidgetRef ref,
-    List<PipelineDef> pipelines,
-    String current,
-  ) async {
-    final container = ProviderScope.containerOf(context);
-    final code = await showOmniSheet<String>(
-      context: context,
-      builder: (_) =>
-          PipelinePickerSheet(pipelines: pipelines, current: current),
-    );
-    if (code == null || code == current) return;
-    container.read(selectedPipelineProvider.notifier).state = code;
-  }
-}
-
 /// Chọn quy trình khi tenant có nhiều hơn một. Trả về mã quy trình.
 class PipelinePickerSheet extends StatelessWidget {
   const PipelinePickerSheet({
@@ -912,8 +794,5 @@ final opportunitiesKhachSegment = ExtraSegment(
   searchRow: (open, onOpen) =>
       OpportunitySearchRow(filtersOpen: open, onOpenFilters: onOpen),
   filterContent: () => const OpportunityFilterMenuContent(),
-  body: (_) => const OpportunitiesSegment(
-    key: ValueKey('khach-seg-co-hoi'),
-    filtersOpen: false,
-  ),
+  body: (_) => const OpportunitiesSegment(key: ValueKey('khach-seg-co-hoi')),
 );
