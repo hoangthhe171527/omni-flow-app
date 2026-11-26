@@ -2031,12 +2031,14 @@ class _TruncatedNotice extends StatelessWidget {
       ),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: solid
-              ? scheme.surface
-              : scheme.surface.withValues(alpha: dark ? .84 : .86),
+          color: scheme.surface,
           borderRadius: const BorderRadius.all(Radius.circular(16)),
           border: Border.all(
-            color: Colors.white.withValues(alpha: dark ? .12 : .65),
+            color: solid
+                ? scheme.outline
+                : dark
+                ? Colors.white.withValues(alpha: .08)
+                : OmniColors.ink.withValues(alpha: .06),
           ),
         ),
         child: Padding(
@@ -2086,12 +2088,14 @@ class _ClosedBanner extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(12, 0, 4, 0),
       constraints: const BoxConstraints(minHeight: 44),
       decoration: BoxDecoration(
-        color: solid
-            ? scheme.surface
-            : scheme.surface.withValues(alpha: dark ? .84 : .86),
+        color: scheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Colors.white.withValues(alpha: dark ? .12 : .65),
+          color: solid
+              ? scheme.outline
+              : dark
+              ? Colors.white.withValues(alpha: .08)
+              : OmniColors.ink.withValues(alpha: .06),
         ),
       ),
       child: Row(

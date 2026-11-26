@@ -615,15 +615,10 @@ class _ColumnDropBuilder extends ValueListenableBuilder<BoardColumnDrop> {
         ? const Duration(milliseconds: 200)
         : Duration.zero;
 
-    // Khung kính trên ảnh bìa (viomni-apple-uiux.html `.col.glass`, duyệt
-    // 07/11 — thay rãnh phẳng bản 0.1.6): bo 16, nền trắng mờ. Không nhoè
-    // phía sau: cột cuộn ngang cả bảng, nhoè từng khung là tốn khung hình.
+    // Cột nền xám nhạt ĐẶC trên ảnh bìa (bớt kính mờ 26/11/2026 — nền trắng
+    // .62 cũ loang màu ảnh bìa thành be/nâu): bo 16, thẻ trắng nổi trên cột.
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final glass = MediaQuery.highContrastOf(context)
-        ? scheme.surfaceContainerHighest
-        : dark
-        ? OmniColors.darkMuted.withValues(alpha: .62)
-        : Colors.white.withValues(alpha: .62);
+    final glass = scheme.surfaceContainerHighest;
     return AnimatedContainer(
       duration: duration,
       clipBehavior: Clip.antiAlias,
@@ -631,7 +626,9 @@ class _ColumnDropBuilder extends ValueListenableBuilder<BoardColumnDrop> {
         color: hot ? OmniTaskTones.of(context).today.background : glass,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Colors.white.withValues(alpha: dark ? .12 : .55),
+          color: dark
+              ? Colors.white.withValues(alpha: .08)
+              : OmniColors.ink.withValues(alpha: .06),
         ),
       ),
       child: Stack(

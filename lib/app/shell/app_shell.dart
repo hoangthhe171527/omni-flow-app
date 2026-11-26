@@ -567,9 +567,6 @@ class _ShellNavItem extends ConsumerWidget {
   }
 }
 
-/// Viên chọn của thanh tab: "kính trong kính" — sáng hơn nền kính, viền
-/// sáng, vệt sáng trên, bóng nhỏ; không phải khối trắng đặc.
-
 /// Ô cuối của thanh dưới: "Tất cả" (danh bạ, khi không có khung ứng dụng)
 /// hoặc "Thêm" (sheet mục còn lại của ứng dụng đang mở).
 class _MoreSlot {

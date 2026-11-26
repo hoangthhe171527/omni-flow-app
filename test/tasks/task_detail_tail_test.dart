@@ -274,7 +274,7 @@ void main() {
   });
 
   tw(
-    'ô bình luận đáy: viên kính nền .92, KHÔNG BackdropFilter, không TaskActionBar',
+    'ô bình luận đáy: khay nền đặc, KHÔNG BackdropFilter, không TaskActionBar',
     (t) async {
       await pump(t, host(task: task(), perms: worker));
       // Bỏ blur (rà soát Task 9): một BackdropFilter cố định đáy dựng lại lớp
@@ -296,7 +296,8 @@ void main() {
             .first,
       );
       final deco = bar.decoration as BoxDecoration;
-      expect(deco.color!.a, closeTo(0.92, 0.01));
+      // Nền đặc (bớt kính mờ 26/11): chữ cuộn bên dưới không lộ qua.
+      expect(deco.color!.a, 1);
       expect(deco.borderRadius, BorderRadius.circular(27));
       expect(find.bySemanticsLabel('Chụp ảnh'), findsNothing);
       // Nhóm 2: nút ảnh đính kèm bình luận chưa có khoá API.

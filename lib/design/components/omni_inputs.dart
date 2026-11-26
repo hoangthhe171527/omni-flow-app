@@ -388,8 +388,9 @@ class OmniField extends StatelessWidget {
   }
 }
 
-/// Thanh hành động đáy của form và màn chi tiết — viên kính nổi
-/// (viomni-apple-uiux.html `.actbar.glass`): cách mép 12, bo 30, đệm 7.
+/// Thanh hành động đáy của form và màn chi tiết — khay nổi nền đặc + bóng
+/// (bớt kính mờ 26/11/2026; trước là viên kính `.actbar.glass`): cách mép 12,
+/// bo 30, đệm 7.
 ///
 /// Nút trong thanh là nút VIỀN (gu người dùng: không nút tô đặc): nút chính
 /// (FilledButton) viền + chữ màu chủ đạo, nút phụ (OutlinedButton) viền nhạt
@@ -458,6 +459,7 @@ class OmniActionBar extends StatelessWidget {
         14 + MediaQuery.paddingOf(context).bottom,
       ),
       child: OmniGlass(
+        opaque: true,
         radius: 30,
         padding: const EdgeInsets.all(7),
         child: FilledButtonTheme(

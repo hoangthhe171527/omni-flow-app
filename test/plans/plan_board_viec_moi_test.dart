@@ -229,9 +229,9 @@ void main() {
           )
           .first,
     );
-    // Khung kính trên ảnh bìa (viomni-apple-uiux.html): trắng mờ, bo 20.
+    // Cột nền xám nhạt đặc (bớt kính mờ 26/11): ảnh bìa không loang qua.
     final deco = groove.decoration as BoxDecoration;
-    expect(deco.color, Colors.white.withValues(alpha: .62));
+    expect(deco.color, OmniColors.muted);
     expect(deco.borderRadius, BorderRadius.circular(16));
   });
 
@@ -761,8 +761,8 @@ void main() {
     );
     expect(
       (groove.decoration as BoxDecoration).color,
-      OmniColors.darkMuted.withValues(alpha: .62),
-      reason: 'khung kính tối theo theme (${Theme.of(ctx).brightness})',
+      OmniColors.darkMuted,
+      reason: 'cột nền đặc tối theo theme (${Theme.of(ctx).brightness})',
     );
   });
 }
