@@ -1,0 +1,196 @@
+<title>Icon thanh tab Viomni</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap">
+<style>
+/* Bố cục: một cột hẹp như màn điện thoại; thanh tab vẽ đúng tỉ lệ 390pt, phần nhận xét là danh sách ngắn. */
+:root{
+  --bg:#F5F7FA; --card:#FFFFFF; --ink:#0B1A33; --muted:#56637A; --line:#E3E8EF;
+  --primary:#0159DB; --sel:rgba(1,89,219,.10); --pill:rgba(255,255,255,.86); --pill-line:rgba(11,26,51,.08);
+  --ghost:#E9EDF3; --ok:#12805C; --ok-bg:#E3F5EE; --fix:#B45309; --fix-bg:#FDF1E1; --on-fill:#FFFFFF;
+  --font:"Be Vietnam Pro",-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0B1A33; --card:#132744; --ink:#EEF3FA; --muted:#A9B6CA; --line:#1F3A5F;
+  --primary:#5B9BFF; --sel:rgba(91,155,255,.16); --pill:rgba(19,39,68,.88); --pill-line:rgba(255,255,255,.08);
+  --ghost:#1A3253; --ok:#5DD3A6; --ok-bg:#123B33; --fix:#F5B460; --fix-bg:#3A2A14; --on-fill:#0B1A33; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0B1A33; --card:#132744; --ink:#EEF3FA; --muted:#A9B6CA; --line:#1F3A5F;
+  --primary:#5B9BFF; --sel:rgba(91,155,255,.16); --pill:rgba(19,39,68,.88); --pill-line:rgba(255,255,255,.08);
+  --ghost:#1A3253; --ok:#5DD3A6; --ok-bg:#123B33; --fix:#F5B460; --fix-bg:#3A2A14; --on-fill:#0B1A33; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 48px}
+.wrap{max-width:440px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+h1{font-size:28px;font-weight:800;letter-spacing:-.02em;margin:0;text-wrap:balance}
+.sub{color:var(--muted);margin:4px 0 0}
+h2{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+.stage{display:flex;flex-direction:column;gap:14px}
+.variant{background:var(--card);border-radius:16px;padding:14px 0 6px;display:flex;flex-direction:column;gap:6px}
+.vhead{display:flex;flex-direction:column;gap:0;padding:0 16px}
+.vname{font-weight:700;font-size:16px}
+.vmeta{color:var(--muted);font-size:13px}
+.bar{display:block;width:100%;height:auto;max-width:100%}
+.bar .hit{cursor:pointer}
+.bar .hit:focus-visible{outline:none}
+.bar .hit:focus-visible .ring{stroke:var(--primary);stroke-width:2}
+.refs{display:flex;flex-direction:column;gap:12px}
+.ref{background:var(--card);border-radius:16px;overflow:hidden}
+.ref img{display:block;width:100%}
+.ref p{margin:0;padding:8px 14px 10px;font-size:13px;color:var(--muted)}
+.ref b{color:var(--ink);font-weight:600}
+.notes{background:var(--card);border-radius:16px;display:flex;flex-direction:column}
+.note{display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:12px 16px;border-top:1px solid var(--line)}
+.note:first-child{border-top:0}
+.note h3{margin:0;font-size:15px;font-weight:600}
+.note p{margin:0;grid-column:1/-1;color:var(--muted);font-size:14px}
+.chip{font-size:12px;font-weight:700;padding:2px 10px;border-radius:999px;align-self:start;white-space:nowrap}
+.chip.ok{color:var(--ok);background:var(--ok-bg)}
+.chip.fix{color:var(--fix);background:var(--fix-bg)}
+.dups{background:var(--card);border-radius:16px;display:flex;flex-direction:column}
+.dup{display:grid;grid-template-columns:minmax(0,1fr) 28px 14px 28px;align-items:center;gap:10px;padding:10px 16px;border-top:1px solid var(--line)}
+.dup:first-child{border-top:0}
+.dup .who{font-size:14px}
+.dup .who small{display:block;color:var(--muted);font-size:12px}
+.dup svg{width:24px;height:24px;color:var(--muted)}
+.dup svg.new{color:var(--primary)}
+.dup .arr{color:var(--muted);font-size:13px;text-align:center}
+.foot{color:var(--muted);font-size:13px;margin:0}
+@media (prefers-reduced-motion:no-preference){.mark{transition:x .26s cubic-bezier(.2,.8,.2,1)}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Icon thanh tab</h1>
+    <p class="sub">Thanh mặc định của app, đặt cạnh 5 app top trên Appllama. Chạm icon để đổi mục đang chọn.</p>
+  </header>
+
+  <section>
+    <h2>Thanh tab mặc định</h2>
+    <div class="stage" id="stage"></div>
+  </section>
+
+  <section>
+    <h2>Nhận xét</h2>
+    <div class="notes">
+      <div class="note"><h3>Cỡ 26</h3><span class="chip ok">Giữ</span>
+        <p>Hình vẽ thực ~22pt, bằng tham chiếu (21–23pt).</p></div>
+      <div class="note"><h3>Nét 2 → dày</h3><span class="chip fix">Nên sửa</span>
+        <p>Ở cỡ 26 nét thành 2,2pt, dày hơn iOS (~1,7). Mục thường: Lucide 300 (nét 1,55).</p></div>
+      <div class="note"><h3>Mục chọn chỉ đổi màu</h3><span class="chip fix">Nên sửa</span>
+        <p>Cùng một hình cho cả hai trạng thái. 4/5 tham chiếu chuyển sang icon đặc khi chọn.</p></div>
+      <div class="note"><h3>Ô chọn 52×46 gần tròn</h3><span class="chip fix">Nên sửa</span>
+        <p>Bó sát icon. Tham chiếu là viên ngang ~1,6:1 → 62×46.</p></div>
+      <div class="note"><h3>Độ nặng không đều</h3><span class="chip fix">Nên sửa</span>
+        <p>Việc (3 khối hộp) và Hộp thư (2 bong bóng) đậm hơn hẳn Tổng quan. Khối hộp còn giống Kho.</p></div>
+      <div class="note"><h3>Trùng icon</h3><span class="chip fix">Nên sửa</span>
+        <p>5 icon dùng cho 2–3 mục khác nhau, xem bảng dưới.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Tham chiếu Appllama</h2>
+    <p class="foot">Ảnh tham chiếu (Plan Joy, Fing, Scout, AllTrails, 5 Minute Journal) chỉ có trong artifact: https://claude.ai/artifact/AvwFqvdjEpuYdnhqYvqeqq</p>
+  </section>
+
+  <section>
+    <h2>Icon trùng trong menu</h2>
+    <div class="dups" id="dups"></div>
+  </section>
+
+  <p class="foot">C: chỉ thanh tab dùng icon đặc (gói phosphor_flutter, bản Fill); mọi chỗ khác giữ Lucide nét. Thanh tab cho ghim mọi mục, nên cần bản đặc cho khoảng 25 mục. Chọn phương án rồi mới sửa code.</p>
+</div>
+
+<script>
+const IC = {
+ "chartColumn": "<path d=\"M3 3v16a2 2 0 0 0 2 2h16\" /> <path d=\"M18 17V9\" /> <path d=\"M13 17V5\" /> <path d=\"M8 17v-3\" />",
+ "messagesSquare": "<path d=\"M16 10a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 14.286V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z\" /> <path d=\"M20 9a2 2 0 0 1 2 2v10.286a.71.71 0 0 1-1.212.502l-2.202-2.202A2 2 0 0 0 17.172 19H10a2 2 0 0 1-2-2v-1\" />",
+ "users": "<path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\" /> <path d=\"M16 3.128a4 4 0 0 1 0 7.744\" /> <path d=\"M22 21v-2a4 4 0 0 0-3-3.87\" /> <circle cx=\"9\" cy=\"7\" r=\"4\" />",
+ "boxes": "<path d=\"M2.97 12.92A2 2 0 0 0 2 14.63v3.24a2 2 0 0 0 .97 1.71l3 1.8a2 2 0 0 0 2.06 0L12 19v-5.5l-5-3-4.03 2.42Z\" /> <path d=\"m7 16.5-4.74-2.85\" /> <path d=\"m7 16.5 5-3\" /> <path d=\"M7 16.5v5.17\" /> <path d=\"M12 13.5V19l3.97 2.38a2 2 0 0 0 2.06 0l3-1.8a2 2 0 0 0 .97-1.71v-3.24a2 2 0 0 0-.97-1.71L17 10.5l-5 3Z\" /> <path d=\"m17 16.5-5-3\" /> <path d=\"m17 16.5 4.74-2.85\" /> <path d=\"M17 16.5v5.17\" /> <path d=\"M7.97 4.42A2 2 0 0 0 7 6.13v4.37l5 3 5-3V6.13a2 2 0 0 0-.97-1.71l-3-1.8a2 2 0 0 0-2.06 0l-3 1.8Z\" /> <path d=\"M12 8 7.26 5.15\" /> <path d=\"m12 8 4.74-2.85\" /> <path d=\"M12 13.5V8\" />",
+ "layoutGrid": "<rect width=\"7\" height=\"7\" x=\"3\" y=\"3\" rx=\"1\" /> <rect width=\"7\" height=\"7\" x=\"14\" y=\"3\" rx=\"1\" /> <rect width=\"7\" height=\"7\" x=\"14\" y=\"14\" rx=\"1\" /> <rect width=\"7\" height=\"7\" x=\"3\" y=\"14\" rx=\"1\" />",
+ "chartNoAxesColumn": "<path d=\"M5 21v-6\" /> <path d=\"M12 21V3\" /> <path d=\"M19 21V9\" />",
+ "messageCircle": "<path d=\"M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719\" />",
+ "userRound": "<circle cx=\"12\" cy=\"8\" r=\"5\" /> <path d=\"M20 21a8 8 0 0 0-16 0\" />",
+ "squareKanban": "<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" /> <path d=\"M8 7v7\" /> <path d=\"M12 7v4\" /> <path d=\"M16 7v9\" />",
+ "contactRound": "<path d=\"M16 2v2\" /> <path d=\"M17.915 21a6 6 0 10-12 0\" /> <path d=\"M8 2v2\" /> <circle cx=\"12\" cy=\"11\" r=\"4\" /> <rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"2\" />",
+ "bell": "<path d=\"M10.268 21a2 2 0 0 0 3.464 0\" /> <path d=\"M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326\" />",
+ "bellRing": "<path d=\"M10.268 21a2 2 0 0 0 3.464 0\" /> <path d=\"M22 8c0-2.3-.8-4.3-2-6\" /> <path d=\"M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326\" /> <path d=\"M4 2C2.8 3.7 2 5.7 2 8\" />",
+ "package": "<path d=\"M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z\" /> <path d=\"M12 22V12\" /> <polyline points=\"3.29 7 12 12 20.71 7\" /> <path d=\"m7.5 4.27 9 5.15\" />",
+ "archive": "<rect width=\"20\" height=\"5\" x=\"2\" y=\"3\" rx=\"1\" /> <path d=\"M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8\" /> <path d=\"M10 12h4\" />",
+ "clipboardCheck": "<rect width=\"8\" height=\"4\" x=\"8\" y=\"2\" rx=\"1\" ry=\"1\" /> <path d=\"M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2\" /> <path d=\"m9 14 2 2 4-4\" />",
+ "packageCheck": "<path d=\"M12 22V12\" /> <path d=\"m16 17 2 2 4-4\" /> <path d=\"M21 11.127V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.729l7 4a2 2 0 0 0 2 .001l1.32-.753\" /> <path d=\"M3.29 7 12 12l8.71-5\" /> <path d=\"m7.5 4.27 8.997 5.148\" />",
+ "clipboardList": "<rect width=\"8\" height=\"4\" x=\"8\" y=\"2\" rx=\"1\" ry=\"1\" /> <path d=\"M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2\" /> <path d=\"M12 11h4\" /> <path d=\"M12 16h4\" /> <path d=\"M8 11h.01\" /> <path d=\"M8 16h.01\" />",
+ "fileCheck": "<path d=\"M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z\" /> <path d=\"M14 2v5a1 1 0 0 0 1 1h5\" /> <path d=\"m9 15 2 2 4-4\" />",
+ "receiptText": "<path d=\"M13 16H8\" /> <path d=\"M14 8H8\" /> <path d=\"M16 12H8\" /> <path d=\"M4 3a1 1 0 0 1 1-1 1.3 1.3 0 0 1 .7.2l.933.6a1.3 1.3 0 0 0 1.4 0l.934-.6a1.3 1.3 0 0 1 1.4 0l.933.6a1.3 1.3 0 0 0 1.4 0l.933-.6a1.3 1.3 0 0 1 1.4 0l.934.6a1.3 1.3 0 0 0 1.4 0l.933-.6A1.3 1.3 0 0 1 19 2a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1 1.3 1.3 0 0 1-.7-.2l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.934.6a1.3 1.3 0 0 1-1.4 0l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-1.4 0l-.934-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-.7.2 1 1 0 0 1-1-1z\" />",
+ "banknote": "<rect width=\"20\" height=\"12\" x=\"2\" y=\"6\" rx=\"2\" /> <circle cx=\"12\" cy=\"12\" r=\"2\" /> <path d=\"M6 12h.01M18 12h.01\" />",
+ "activity": "<path d=\"M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2\" />",
+ "chartGantt": "<path d=\"M10 6h8\" /> <path d=\"M12 16h6\" /> <path d=\"M3 3v16a2 2 0 0 0 2 2h16\" /> <path d=\"M8 11h7\" />"
+}
+;
+const FILLED = {
+  chartNoAxesColumn:'<path d="M5 21v-6"/><path d="M12 21V3"/><path d="M19 21V9"/>',
+  messageCircle:'<path fill="currentColor" d="M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719"/>',
+  userRound:'<circle fill="currentColor" cx="12" cy="8" r="5"/><path fill="currentColor" d="M20 21a8 8 0 0 0-16 0z"/>',
+  squareKanban:'<rect fill="currentColor" width="18" height="18" x="3" y="3" rx="3"/><g stroke="var(--on-fill)"><path d="M8 7v7"/><path d="M12 7v4"/><path d="M16 7v9"/></g>',
+  layoutGrid:'<g fill="currentColor"><rect width="7" height="7" x="3" y="3" rx="1.5"/><rect width="7" height="7" x="14" y="3" rx="1.5"/><rect width="7" height="7" x="14" y="14" rx="1.5"/><rect width="7" height="7" x="3" y="14" rx="1.5"/></g>'
+};
+const FILLED_STROKE = {chartNoAxesColumn:3.6};
+const LABELS = ['Tổng quan','Hộp thư','Khách','Việc','Tất cả'];
+const PH = {"chart-bar": "<path d=\"M232,208a8,8,0,0,1-8,8H32a8,8,0,0,1,0-16h8V136a8,8,0,0,1,8-8H72a8,8,0,0,1,8,8v64H96V88a8,8,0,0,1,8-8h32a8,8,0,0,1,8,8V200h16V40a8,8,0,0,1,8-8h40a8,8,0,0,1,8,8V200h8A8,8,0,0,1,232,208Z\"/>", "chart-pie-slice": "<path d=\"M100,116.43a8,8,0,0,0,4-6.93v-72A8,8,0,0,0,93.34,30,104.06,104.06,0,0,0,25.73,147a8,8,0,0,0,4.52,5.81,7.86,7.86,0,0,0,3.35.74,8,8,0,0,0,4-1.07ZM88,49.62v55.26L40.12,132.51C40,131,40,129.48,40,128A88.12,88.12,0,0,1,88,49.62ZM232,128A104,104,0,0,1,38.32,180.7a8,8,0,0,1,2.87-11L120,123.83V32a8,8,0,0,1,8-8,104.05,104.05,0,0,1,89.74,51.48c.11.16.21.32.31.49s.2.37.29.55A103.34,103.34,0,0,1,232,128Z\"/>", "chat-circle-dots": "<path d=\"M128,24A104,104,0,0,0,36.18,176.88L24.83,210.93a16,16,0,0,0,20.24,20.24l34.05-11.35A104,104,0,1,0,128,24ZM84,140a12,12,0,1,1,12-12A12,12,0,0,1,84,140Zm44,0a12,12,0,1,1,12-12A12,12,0,0,1,128,140Zm44,0a12,12,0,1,1,12-12A12,12,0,0,1,172,140Z\"/>", "chat-circle": "<path d=\"M232,128A104,104,0,0,1,79.12,219.82L45.07,231.17a16,16,0,0,1-20.24-20.24l11.35-34.05A104,104,0,1,1,232,128Z\"/>", "chat-teardrop-text": "<path d=\"M132,24A100.11,100.11,0,0,0,32,124v84a16,16,0,0,0,16,16h84a100,100,0,0,0,0-200Zm32,128H96a8,8,0,0,1,0-16h68a8,8,0,0,1,0,16Zm0-32H96a8,8,0,0,1,0-16h68a8,8,0,0,1,0,16Z\"/>", "check-square": "<path d=\"M208,32H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32Zm-34.34,77.66-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35a8,8,0,0,1,11.32,11.32Z\"/>", "dots-three-circle": "<path d=\"M128,24A104,104,0,1,0,232,128,104.13,104.13,0,0,0,128,24ZM84,140a12,12,0,1,1,12-12A12,12,0,0,1,84,140Zm44,0a12,12,0,1,1,12-12A12,12,0,0,1,128,140Zm44,0a12,12,0,1,1,12-12A12,12,0,0,1,172,140Z\"/>", "house": "<path d=\"M224,120v96a8,8,0,0,1-8,8H160a8,8,0,0,1-8-8V164a4,4,0,0,0-4-4H108a4,4,0,0,0-4,4v52a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V120a16,16,0,0,1,4.69-11.31l80-80a16,16,0,0,1,22.62,0l80,80A16,16,0,0,1,224,120Z\"/>", "kanban": "<path d=\"M160,56v96a8,8,0,0,1-8,8H112a8,8,0,0,1-8-8V56a8,8,0,0,1,8-8h40A8,8,0,0,1,160,56Zm64-8H184a8,8,0,0,0-8,8v52a4,4,0,0,0,4,4h48a4,4,0,0,0,4-4V56A8,8,0,0,0,224,48Zm4,80H180a4,4,0,0,0-4,4v44a16,16,0,0,0,16,16h24a16,16,0,0,0,16-16V132A4,4,0,0,0,228,128ZM80,48H40a8,8,0,0,0-8,8v52a4,4,0,0,0,4,4H84a4,4,0,0,0,4-4V56A8,8,0,0,0,80,48Zm4,80H36a4,4,0,0,0-4,4v76a16,16,0,0,0,16,16H72a16,16,0,0,0,16-16V132A4,4,0,0,0,84,128Z\"/>", "squares-four": "<path d=\"M120,56v48a16,16,0,0,1-16,16H56a16,16,0,0,1-16-16V56A16,16,0,0,1,56,40h48A16,16,0,0,1,120,56Zm80-16H152a16,16,0,0,0-16,16v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V56A16,16,0,0,0,200,40Zm-96,96H56a16,16,0,0,0-16,16v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V152A16,16,0,0,0,104,136Zm96,0H152a16,16,0,0,0-16,16v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V152A16,16,0,0,0,200,136Z\"/>", "user-circle": "<path d=\"M172,120a44,44,0,1,1-44-44A44.05,44.05,0,0,1,172,120Zm60,8A104,104,0,1,1,128,24,104.11,104.11,0,0,1,232,128Zm-16,0a88.09,88.09,0,0,0-91.47-87.93C77.43,41.89,39.87,81.12,40,128.25a87.65,87.65,0,0,0,22.24,58.16A79.71,79.71,0,0,1,84,165.1a4,4,0,0,1,4.83.32,59.83,59.83,0,0,0,78.28,0,4,4,0,0,1,4.83-.32,79.71,79.71,0,0,1,21.79,21.31A87.62,87.62,0,0,0,216,128Z\"/>", "user": "<path d=\"M230.93,220a8,8,0,0,1-6.93,4H32a8,8,0,0,1-6.92-12c15.23-26.33,38.7-45.21,66.09-54.16a72,72,0,1,1,73.66,0c27.39,8.95,50.86,27.83,66.09,54.16A8,8,0,0,1,230.93,220Z\"/>", "users": "<path d=\"M164.47,195.63a8,8,0,0,1-6.7,12.37H10.23a8,8,0,0,1-6.7-12.37,95.83,95.83,0,0,1,47.22-37.71,60,60,0,1,1,66.5,0A95.83,95.83,0,0,1,164.47,195.63Zm87.91-.15a95.87,95.87,0,0,0-47.13-37.56A60,60,0,0,0,144.7,54.59a4,4,0,0,0-1.33,6A75.83,75.83,0,0,1,147,150.53a4,4,0,0,0,1.07,5.53,112.32,112.32,0,0,1,29.85,30.83,23.92,23.92,0,0,1,3.65,16.47,4,4,0,0,0,3.95,4.64h60.3a8,8,0,0,0,7.73-5.93A8.22,8.22,0,0,0,252.38,195.48Z\"/>"};
+const PH_ICONS = ['chart-bar','chat-circle-dots','user','kanban','squares-four'];
+const VARIANTS = [
+  {name:'C · đặc toàn bộ', meta:'Phosphor Fill · chưa chọn màu mực, chọn màu xanh', ph:true, icons:PH_ICONS, mark:[62,46], size:28},
+  {name:'C · đặc + nhãn', meta:'Như 5 Minute Journal', ph:true, labels:true, icons:PH_ICONS, mark:[64,54], size:26},
+  {name:'Hiện tại', meta:'Lucide 400 · chọn = đổi màu', icons:['chartColumn','messagesSquare','users','boxes','layoutGrid'], off:2, on:2, mark:[52,46]},
+  {name:'A · nét đậm', meta:'Lucide 300 → 500 khi chọn', icons:['chartNoAxesColumn','messageCircle','userRound','squareKanban','layoutGrid'], off:1.55, on:2.5, mark:[62,46]},
+  {name:'B · icon đặc', meta:'Lucide 300 → đặc khi chọn', icons:['chartNoAxesColumn','messageCircle','userRound','squareKanban','layoutGrid'], off:1.55, on:'fill', mark:[62,46]},
+];
+let selected = 0;
+const W=390, PILL_H=66, PAD=16, IN=8, SZ=26;
+function glyph(name, sw, filled){
+  const inner = filled ? FILLED[name] : IC[name];
+  const w = filled ? (FILLED_STROKE[name]||2) : sw;
+  return `<g fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">${inner}</g>`;
+}
+function bar(v, vi){
+  const H = PILL_H+28, top=10, pillW=W-PAD*2, slot=(pillW-IN*2)/5;
+  const [mw,mh]=v.mark, mx=PAD+IN+slot*selected+(slot-mw)/2, my=top+(PILL_H-mh)/2;
+  let s=`<svg class="bar" viewBox="0 0 ${W} ${H}" role="group" aria-label="${v.name}">`;
+  s+=`<rect x="${PAD+18}" y="0" width="${W-PAD*2-36}" height="6" rx="3" fill="var(--ghost)"/>`;
+  s+=`<rect x="${PAD}" y="${top}" width="${pillW}" height="${PILL_H}" rx="${PILL_H/2}" fill="var(--pill)" stroke="var(--pill-line)"/>`;
+  s+=`<rect class="mark" x="${mx}" y="${my}" width="${mw}" height="${mh}" rx="${mh/2}" fill="var(--sel)"/>`;
+  v.icons.forEach((n,i)=>{
+    const on=i===selected, cx=PAD+IN+slot*i+slot/2, sz=v.size||SZ;
+    const cy=top+PILL_H/2-(v.labels?8:0);
+    let color, g, k;
+    if(v.ph){ color=on?'var(--primary)':'var(--ink)'; k=sz/256; g=`<g fill="currentColor">${PH[n]}</g>`; }
+    else { color=on?'var(--primary)':'var(--muted)'; k=sz/24; g = on ? glyph(n, v.on==='fill'?2:v.on, v.on==='fill') : glyph(n, v.off, false); }
+    s+=`<g class="hit" tabindex="0" role="button" aria-pressed="${on}" aria-label="${LABELS[i]}" data-i="${i}">`+
+       `<rect class="ring" x="${cx-slot/2+2}" y="${top+4}" width="${slot-4}" height="${PILL_H-8}" rx="20" fill="transparent" stroke="none"/>`+
+       `<g transform="translate(${cx-sz/2} ${cy-sz/2}) scale(${k})" style="color:${color}">${g}</g>`+
+       (v.labels?`<text x="${cx}" y="${cy+sz/2+14}" text-anchor="middle" style="font:600 11.5px var(--font);fill:${color}">${LABELS[i]}</text>`:'')+
+       `</g>`;
+  });
+  return s+'</svg>';
+}
+function render(){
+  document.getElementById('stage').innerHTML = VARIANTS.map((v,vi)=>
+    `<div class="variant"><div class="vhead"><span class="vname">${v.name}</span><span class="vmeta">${v.meta}</span></div>${bar(v,vi)}</div>`).join('');
+}
+document.getElementById('stage').addEventListener('click',e=>{const h=e.target.closest('.hit'); if(h){selected=+h.dataset.i; render(); document.querySelector(`.variant .hit[data-i="${selected}"]`)?.focus?.();}});
+document.getElementById('stage').addEventListener('keydown',e=>{const h=e.target.closest('.hit'); if(h&&(e.key==='Enter'||e.key===' ')){e.preventDefault(); selected=+h.dataset.i; render();}});
+render();
+
+const DUPS = [
+  ['Khách','Nhân viên dùng chung','users','userRound'],
+  ['Việc','khối hộp = Kho','boxes','squareKanban'],
+  ['Việc đã lưu trữ','trùng Tồn kho','package','archive'],
+  ['Hàng đã giao','trùng Duyệt đơn, Kiểm kê','clipboardCheck','packageCheck'],
+  ['Kiểm kê','trùng Duyệt đơn','clipboardCheck','clipboardList'],
+  ['Phiếu lương','trùng Đơn hàng','receiptText','banknote'],
+  ['Cài đặt thông báo','trùng Thông báo','bell','bellRing'],
+  ['Dòng việc','nhịp tim, dễ hiểu nhầm','activity','chartGantt'],
+];
+const ico=(n,cls='')=>`<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${glyph(n,2,false)}</svg>`;
+document.getElementById('dups').innerHTML = DUPS.map(([a,b,o,n])=>
+  `<div class="dup"><span class="who">${a}<small>${b}</small></span>${ico(o)}<span class="arr">→</span>${ico(n,'new')}</div>`).join('');
+</script>

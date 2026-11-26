@@ -1,0 +1,128 @@
+<title>Viên chọn thanh tab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800&display=swap">
+<style>
+/* Bố cục: một cột; mỗi phương án vẽ thanh tab ở đúng 390 và 360 điểm, thu theo bề rộng thẻ. */
+:root{
+  --bg:#F5F7FA; --card:#FFFFFF; --ink:#0B1A33; --muted:#56637A; --line:#E3E8EF;
+  --primary:#0159DB; --sel:rgba(1,89,219,.10); --pill:rgba(255,255,255,.92); --pill-line:rgba(11,26,51,.08);
+  --content:#EEF1F5; --good:#12805C; --good-bg:#E3F5EE; --warn:#B45309; --warn-bg:#FDF1E1;
+  --font:"Be Vietnam Pro",-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0B1A33; --card:#132744; --ink:#EEF3FA; --muted:#A9B6CA; --line:#1F3A5F;
+  --primary:#5B9BFF; --sel:rgba(91,155,255,.16); --pill:rgba(19,39,68,.94); --pill-line:rgba(255,255,255,.08);
+  --content:#10223D; --good:#5DD3A6; --good-bg:#123B33; --warn:#F5B460; --warn-bg:#3A2A14; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0B1A33; --card:#132744; --ink:#EEF3FA; --muted:#A9B6CA; --line:#1F3A5F;
+  --primary:#5B9BFF; --sel:rgba(91,155,255,.16); --pill:rgba(19,39,68,.94); --pill-line:rgba(255,255,255,.08);
+  --content:#10223D; --good:#5DD3A6; --good-bg:#123B33; --warn:#F5B460; --warn-bg:#3A2A14; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 48px}
+.wrap{max-width:440px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+h1{font-size:28px;font-weight:800;letter-spacing:-.02em;margin:0}
+.sub{color:var(--muted);margin:4px 0 0}
+.opt{background:var(--card);border-radius:16px;padding:14px 0 12px;display:flex;flex-direction:column;gap:8px}
+.ohead{padding:0 16px;display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:start}
+.oname{font-weight:700;font-size:16px}
+.ometa{grid-column:1/-1;color:var(--muted);font-size:13px}
+.chip{font-size:12px;font-weight:700;padding:2px 10px;border-radius:999px;white-space:nowrap}
+.chip.good{color:var(--good);background:var(--good-bg)}
+.chip.warn{color:var(--warn);background:var(--warn-bg)}
+.sizes{display:flex;flex-direction:column;gap:4px}
+.size{font-size:12px;color:var(--muted);padding:0 16px;font-variant-numeric:tabular-nums}
+.fit{width:100%;overflow:hidden}
+.phone{position:relative;height:86px;transform-origin:0 0;background:var(--content)}
+.pill{position:absolute;top:10px;height:66px;border-radius:33px;background:var(--pill);border:1px solid var(--pill-line);
+  box-shadow:0 6px 20px rgba(11,26,51,.10)}
+.mark{position:absolute;background:var(--sel)}
+.item{position:absolute;top:0;height:66px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer}
+.item svg{width:26px;height:26px;display:block}
+.item span{font-weight:600;line-height:1.2;white-space:nowrap}
+.pad{font-size:12px;color:var(--muted);padding:0 16px}
+.pad b{color:var(--ink);font-variant-numeric:tabular-nums}
+.foot{color:var(--muted);font-size:13px;margin:0}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Viên chọn</h1>
+    <p class="sub">Đo bằng font thật. Mỗi phương án vẽ ở khổ 390 và 360 (máy Android nhỏ). Chạm icon để đổi mục chọn.</p>
+  </header>
+  <div id="opts"></div>
+  <p class="foot">Khoảng hở = từ mép chữ "Tổng quan" tới mép viên, mỗi bên.</p>
+</div>
+
+<script>
+const PH = {"chart-bar": "<path d=\"M232,208a8,8,0,0,1-8,8H32a8,8,0,0,1,0-16h8V136a8,8,0,0,1,8-8H72a8,8,0,0,1,8,8v64H96V88a8,8,0,0,1,8-8h32a8,8,0,0,1,8,8V200h16V40a8,8,0,0,1,8-8h40a8,8,0,0,1,8,8V200h8A8,8,0,0,1,232,208Z\"/>", "chart-pie-slice": "<path d=\"M100,116.43a8,8,0,0,0,4-6.93v-72A8,8,0,0,0,93.34,30,104.06,104.06,0,0,0,25.73,147a8,8,0,0,0,4.52,5.81,7.86,7.86,0,0,0,3.35.74,8,8,0,0,0,4-1.07ZM88,49.62v55.26L40.12,132.51C40,131,40,129.48,40,128A88.12,88.12,0,0,1,88,49.62ZM232,128A104,104,0,0,1,38.32,180.7a8,8,0,0,1,2.87-11L120,123.83V32a8,8,0,0,1,8-8,104.05,104.05,0,0,1,89.74,51.48c.11.16.21.32.31.49s.2.37.29.55A103.34,103.34,0,0,1,232,128Z\"/>", "chat-circle-dots": "<path d=\"M128,24A104,104,0,0,0,36.18,176.88L24.83,210.93a16,16,0,0,0,20.24,20.24l34.05-11.35A104,104,0,1,0,128,24ZM84,140a12,12,0,1,1,12-12A12,12,0,0,1,84,140Zm44,0a12,12,0,1,1,12-12A12,12,0,0,1,128,140Zm44,0a12,12,0,1,1,12-12A12,12,0,0,1,172,140Z\"/>", "chat-circle": "<path d=\"M232,128A104,104,0,0,1,79.12,219.82L45.07,231.17a16,16,0,0,1-20.24-20.24l11.35-34.05A104,104,0,1,1,232,128Z\"/>", "chat-teardrop-text": "<path d=\"M132,24A100.11,100.11,0,0,0,32,124v84a16,16,0,0,0,16,16h84a100,100,0,0,0,0-200Zm32,128H96a8,8,0,0,1,0-16h68a8,8,0,0,1,0,16Zm0-32H96a8,8,0,0,1,0-16h68a8,8,0,0,1,0,16Z\"/>", "check-square": "<path d=\"M208,32H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32Zm-34.34,77.66-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35a8,8,0,0,1,11.32,11.32Z\"/>", "dots-three-circle": "<path d=\"M128,24A104,104,0,1,0,232,128,104.13,104.13,0,0,0,128,24ZM84,140a12,12,0,1,1,12-12A12,12,0,0,1,84,140Zm44,0a12,12,0,1,1,12-12A12,12,0,0,1,128,140Zm44,0a12,12,0,1,1,12-12A12,12,0,0,1,172,140Z\"/>", "house": "<path d=\"M224,120v96a8,8,0,0,1-8,8H160a8,8,0,0,1-8-8V164a4,4,0,0,0-4-4H108a4,4,0,0,0-4,4v52a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V120a16,16,0,0,1,4.69-11.31l80-80a16,16,0,0,1,22.62,0l80,80A16,16,0,0,1,224,120Z\"/>", "kanban": "<path d=\"M160,56v96a8,8,0,0,1-8,8H112a8,8,0,0,1-8-8V56a8,8,0,0,1,8-8h40A8,8,0,0,1,160,56Zm64-8H184a8,8,0,0,0-8,8v52a4,4,0,0,0,4,4h48a4,4,0,0,0,4-4V56A8,8,0,0,0,224,48Zm4,80H180a4,4,0,0,0-4,4v44a16,16,0,0,0,16,16h24a16,16,0,0,0,16-16V132A4,4,0,0,0,228,128ZM80,48H40a8,8,0,0,0-8,8v52a4,4,0,0,0,4,4H84a4,4,0,0,0,4-4V56A8,8,0,0,0,80,48Zm4,80H36a4,4,0,0,0-4,4v76a16,16,0,0,0,16,16H72a16,16,0,0,0,16-16V132A4,4,0,0,0,84,128Z\"/>", "squares-four": "<path d=\"M120,56v48a16,16,0,0,1-16,16H56a16,16,0,0,1-16-16V56A16,16,0,0,1,56,40h48A16,16,0,0,1,120,56Zm80-16H152a16,16,0,0,0-16,16v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V56A16,16,0,0,0,200,40Zm-96,96H56a16,16,0,0,0-16,16v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V152A16,16,0,0,0,104,136Zm96,0H152a16,16,0,0,0-16,16v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V152A16,16,0,0,0,200,136Z\"/>", "user-circle": "<path d=\"M172,120a44,44,0,1,1-44-44A44.05,44.05,0,0,1,172,120Zm60,8A104,104,0,1,1,128,24,104.11,104.11,0,0,1,232,128Zm-16,0a88.09,88.09,0,0,0-91.47-87.93C77.43,41.89,39.87,81.12,40,128.25a87.65,87.65,0,0,0,22.24,58.16A79.71,79.71,0,0,1,84,165.1a4,4,0,0,1,4.83.32,59.83,59.83,0,0,0,78.28,0,4,4,0,0,1,4.83-.32,79.71,79.71,0,0,1,21.79,21.31A87.62,87.62,0,0,0,216,128Z\"/>", "user": "<path d=\"M230.93,220a8,8,0,0,1-6.93,4H32a8,8,0,0,1-6.92-12c15.23-26.33,38.7-45.21,66.09-54.16a72,72,0,1,1,73.66,0c27.39,8.95,50.86,27.83,66.09,54.16A8,8,0,0,1,230.93,220Z\"/>", "users": "<path d=\"M164.47,195.63a8,8,0,0,1-6.7,12.37H10.23a8,8,0,0,1-6.7-12.37,95.83,95.83,0,0,1,47.22-37.71,60,60,0,1,1,66.5,0A95.83,95.83,0,0,1,164.47,195.63Zm87.91-.15a95.87,95.87,0,0,0-47.13-37.56A60,60,0,0,0,144.7,54.59a4,4,0,0,0-1.33,6A75.83,75.83,0,0,1,147,150.53a4,4,0,0,0,1.07,5.53,112.32,112.32,0,0,1,29.85,30.83,23.92,23.92,0,0,1,3.65,16.47,4,4,0,0,0,3.95,4.64h60.3a8,8,0,0,0,7.73-5.93A8.22,8.22,0,0,0,252.38,195.48Z\"/>"};
+const ICONS = ['chart-bar','chat-circle-dots','user','kanban','squares-four'];
+const LABELS = ['Tổng quan','Hộp thư','Khách','Việc','Tất cả'];
+const OPTS = [
+  {key:'now', name:'Hiện tại', meta:'Chữ 12 · viên 64×54', chip:['warn','Sát chữ'], fs:12, margin:16, inner:8, mode:'fixed', mw:64, mh:54},
+  {key:'ios', name:'1 · Chữ 10 như iOS, viên phủ ô', meta:'Chữ 10,5 · viên rộng bằng ô (~72) · thanh sát mép hơn', chip:['good','Gọn nhất'], fs:10.5, margin:12, inner:4, mode:'slot', mh:54},
+  {key:'fit', name:'2 · Ô giãn theo chữ', meta:'Chữ 11 · viên = chữ + 12 mỗi bên · ô rộng hẹp theo nhãn', chip:['good','Rộng rãi nhất'], fs:11, margin:12, inner:4, mode:'content', pad:12, mh:54},
+  {key:'fit-worst', name:'2 · trường hợp xấu nhất', meta:'Bốn nhãn dài nhất người dùng có thể ghim · khoảng hở tự co đều', chip:['warn','Vẫn không chạm'], fs:11, margin:12, inner:4, mode:'content', pad:12, mh:54, labels:['Tổng quan','Thông báo','Chấm công','Danh mục','Tất cả']},
+  {key:'icon', name:'3 · Viên chỉ sau icon', meta:'Chữ 11 màu xanh dưới viên 56×30 · không bao giờ sát', chip:['warn','Khác mẫu Journal'], fs:11, margin:12, inner:4, mode:'icon'},
+];
+let selected = 0;
+const ctx = document.createElement('canvas').getContext('2d');
+const textW = (t, fs) => { ctx.font = `600 ${fs}px "Be Vietnam Pro"`; return ctx.measureText(t).width; };
+
+function layout(o, W){
+  const pillW = W - o.margin*2, inner = pillW - o.inner*2;
+  const tw = (o.labels||LABELS).map(l => textW(l, o.fs));
+  let widths;
+  if (o.mode === 'content'){
+    // Ô = chữ + đệm; thừa chỗ thì chia đều; thiếu chỗ thì co đệm đều (đệm tối thiểu 0).
+    const core = tw.map(w => Math.max(w, 26)), coreSum = core.reduce((a,b)=>a+b,0);
+    const pad = Math.max(0, Math.min(o.pad, (inner - coreSum) / 10));
+    const base = core.map(c => c + pad*2);
+    const extra = Math.max(0, (inner - base.reduce((a,b)=>a+b,0)) / 5);
+    widths = base.map(b => b + extra);
+  } else widths = Array(5).fill(inner/5);
+  const xs = []; let x = o.margin + o.inner; widths.forEach(w => { xs.push(x); x += w; });
+  return {pillW, tw, widths, xs};
+}
+function markRect(o, L, i){
+  const w = L.widths[i], x = L.xs[i];
+  if (o.mode === 'fixed'){ const mw = Math.min(o.mw, w); return [x+(w-mw)/2, 10+(66-o.mh)/2, mw, o.mh, o.mh/2]; }
+  if (o.mode === 'slot' || o.mode === 'content'){ return [x+1, 10+(66-o.mh)/2, w-2, o.mh, o.mh/2]; }
+  return [x+(w-56)/2, 10+9, 56, 30, 15];
+}
+function gapOf(o, L){ const [mx,,mw] = markRect(o, L, 0); if (o.mode==='icon') return null; return (mw - L.tw[0]) / 2; }
+function bar(o, W){
+  const L = layout(o, W);
+  const [mx,my,mw,mh,mr] = markRect(o, L, selected);
+  let h = `<div class="phone" style="width:${W}px" data-w="${W}"><div class="pill" style="left:${o.margin}px;width:${L.pillW}px"></div>`;
+  h += `<div class="mark" style="left:${mx}px;top:${my}px;width:${mw}px;height:${mh}px;border-radius:${mr}px"></div>`;
+  ICONS.forEach((n,i)=>{
+    const on = i===selected, c = on ? 'var(--primary)' : 'var(--ink)';
+    const icTop = o.mode==='icon' ? 'margin-top:-1px' : '';
+    h += `<div class="item" data-i="${i}" role="button" tabindex="0" aria-label="${LABELS[i]}" style="left:${L.xs[i]}px;width:${L.widths[i]}px;top:10px;color:${c};${o.mode==='icon'?'gap:7px':''}">`+
+         `<svg viewBox="0 0 256 256" fill="currentColor" style="${icTop}">${PH[n]}</svg><span style="font-size:${o.fs}px">${(o.labels||LABELS)[i]}</span></div>`;
+  });
+  return {html: h + '</div>', gap: gapOf(o, L)};
+}
+function render(){
+  document.getElementById('opts').innerHTML = OPTS.map(o => {
+    const a = bar(o, 390), b = bar(o, 360);
+    const g = a.gap === null ? 'Chữ nằm ngoài viên' : `Khoảng hở: <b>${a.gap.toFixed(1)}</b> ở 390 · <b>${b.gap.toFixed(1)}</b> ở 360`;
+    return `<section class="opt" style="margin-bottom:14px"><div class="ohead"><span class="oname">${o.name}</span><span class="chip ${o.chip[0]}">${o.chip[1]}</span><span class="ometa">${o.meta}</span></div>`+
+      `<div class="sizes"><span class="size">390</span><div class="fit">${a.html}</div><span class="size">360</span><div class="fit">${b.html}</div></div>`+
+      `<div class="pad">${g}</div></section>`;
+  }).join('');
+  fit();
+}
+function fit(){
+  document.querySelectorAll('.fit').forEach(f => {
+    const p = f.firstElementChild, W = +p.dataset.w, s = Math.min(1, f.clientWidth / W);
+    p.style.transform = `scale(${s})`; f.style.height = (86*s) + 'px';
+  });
+}
+document.getElementById('opts').addEventListener('click', e => { const it = e.target.closest('.item'); if (it){ selected = +it.dataset.i; render(); } });
+document.getElementById('opts').addEventListener('keydown', e => { const it = e.target.closest('.item'); if (it && (e.key==='Enter'||e.key===' ')){ e.preventDefault(); selected = +it.dataset.i; render(); } });
+addEventListener('resize', fit);
+render();
+(document.fonts ? document.fonts.ready : Promise.resolve()).then(render);
+</script>
