@@ -41,7 +41,6 @@ class OmniFilterPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final dark = Theme.of(context).brightness == Brightness.dark;
 
     // Viên đang chọn là khối MỰC chữ trắng, số đếm xám xanh #A9B6CA (8,5:1
     // trên mực — không còn màu quỹ đạo sáng, màu đó chỉ cho logo); các viên
@@ -65,12 +64,12 @@ class OmniFilterPill extends StatelessWidget {
       foreground = Colors.white;
       countColor = Colors.white.withValues(alpha: 0.75);
     } else if (selected) {
-      // Chip chọn (spec phong cách iOS §3.4): nền xanh nhạt, chữ xanh, viền
-      // xanh 1.5 — một màu nhấn duy nhất, không còn khối mực.
-      background = scheme.primary.withValues(alpha: dark ? .16 : .10);
-      foreground = scheme.primary;
-      countColor = scheme.primary;
-      border = Border.all(color: scheme.primary, width: 1.5);
+      // Chip chọn = "Viên mực đặc" (duyệt 26/11/2026, quy tắc màu: mực/trắng =
+      // đang chọn, cùng màu mục chọn ở thanh tab): sáng = nền mực navy chữ
+      // trắng; tối = nền trắng chữ đen. Không viền, không xanh.
+      background = scheme.onSurface;
+      foreground = scheme.surface;
+      countColor = scheme.surface.withValues(alpha: .72);
     } else if (outlined) {
       background = scheme.surface;
       foreground = scheme.onSurface;
@@ -332,13 +331,19 @@ class OmniCountBadge extends StatelessWidget {
 class OmniUnreadDot extends StatelessWidget {
   const OmniUnreadDot({
     super.key,
-    this.size = 8,
+    this.size = 10,
     this.excludeSemantics = false,
+    this.ring = true,
   });
 
   final double size;
   final bool excludeSemantics;
 
+  /// Viền 2 màu nền để chấm tách khỏi icon nó đè lên (tab, ô ứng dụng).
+  final bool ring;
+
+  /// Chấm ĐỎ "cần chú ý" (duyệt 26/11/2026): mọi huy hiệu — tab, ô ứng dụng,
+  /// chưa đọc — là một chấm, không ghi số, không còn vàng.
   @override
   Widget build(BuildContext context) {
     final dot = Container(
@@ -346,9 +351,14 @@ class OmniUnreadDot extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: OmniColors.sun,
+        color: OmniColors.attentionOf(context),
         shape: BoxShape.circle,
-        border: Border.all(color: OmniColors.ink, width: 1),
+        border: ring
+            ? Border.all(
+                color: Theme.of(context).scaffoldBackgroundColor,
+                width: 2,
+              )
+            : null,
       ),
     );
 

@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:omni_app/core/error/app_exception.dart';
+import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/auth/application/password_strength.dart';
 import 'package:omni_app/modules/auth/application/login_controller.dart';
 import 'package:omni_app/modules/auth/data/auth_onboarding_api.dart';
 import 'package:omni_app/modules/auth/presentation/register_page.dart';
+import 'package:omni_app/modules/auth/presentation/widgets/auth_widgets.dart';
 import 'package:omni_app/security/session/session_controller.dart';
 
 class _FakeApi implements AuthOnboardingApi {
@@ -167,14 +169,37 @@ void main() {
     );
   });
 
-  testWidgets('Google lên đầu, trên ô họ tên', (tester) async {
-    await open(tester);
+  testWidgets(
+    'ô gộp theo nhóm BẠN · CÔNG TY · BẢO MẬT; Google dưới nút chính',
+    (tester) async {
+      await open(tester);
 
-    expect(
-      tester.getTopLeft(find.byKey(const ValueKey('google-sign-in'))).dy,
-      lessThan(tester.getTopLeft(find.byType(TextField).first).dy),
-    );
-  });
+      expect(find.text('BẠN'), findsOneWidget);
+      expect(find.text('CÔNG TY'), findsOneWidget);
+      expect(find.text('BẢO MẬT'), findsOneWidget);
+      expect(find.byType(AuthFieldGroup), findsNWidgets(3));
+      // Họ tên + email chung một nhóm.
+      expect(
+        find.descendant(
+          of: find.byType(AuthFieldGroup).first,
+          matching: find.byType(TextField),
+        ),
+        findsNWidgets(2),
+      );
+      expect(
+        tester.getTopLeft(find.byKey(const ValueKey('google-sign-in'))).dy,
+        greaterThan(
+          tester
+              .getBottomLeft(find.byKey(const ValueKey('register-submit')))
+              .dy,
+        ),
+      );
+      // Quỹ đạo nhỏ trang trí góc trên phải, không chặn chạm.
+      final orbit = tester.getCenter(find.byType(OmniOrbit));
+      expect(orbit.dx, greaterThan(390 / 2));
+      expect(orbit.dy, lessThan(120));
+    },
+  );
 
   testWidgets('điền đủ gọi API đúng tham số rồi đăng nhập', (tester) async {
     await open(tester);
@@ -219,15 +244,31 @@ void main() {
     expect(find.text('Không thể tạo workspace.'), findsOneWidget);
   });
 
-  testWidgets('thanh độ mạnh đổi nhãn theo mật khẩu', (tester) async {
+  testWidgets('thanh độ mạnh: số vạch sáng theo mật khẩu, nhãn đọc màn hình', (
+    tester,
+  ) async {
     await open(tester);
+    Color? bar(int i) =>
+        ((tester
+                    .widget<AnimatedContainer>(
+                      find.byKey(ValueKey('strength-bar-$i')),
+                    )
+                    .decoration
+                as BoxDecoration?)
+            ?.color);
+
     await tester.enterText(find.byType(TextField).at(3), 'abcdefgh');
-    await tester.pump();
-    expect(find.text('Yếu'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.bySemanticsLabel('Độ mạnh mật khẩu: Yếu'), findsOneWidget);
+    final weak = bar(0);
+    expect(bar(1), isNot(weak));
 
     await tester.enterText(find.byType(TextField).at(3), 'Abcdef1!');
-    await tester.pump();
-    expect(find.text('Mạnh'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.bySemanticsLabel('Độ mạnh mật khẩu: Mạnh'), findsOneWidget);
+    // Bốn vạch cùng một màu (xanh lá), khác màu của mức Yếu.
+    expect(bar(3), bar(0));
+    expect(bar(0), isNot(weak));
   });
 
   test('điểm mật khẩu: 8 ký tự, hoa+thường, số, ký tự đặc biệt', () {

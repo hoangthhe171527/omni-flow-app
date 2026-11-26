@@ -245,22 +245,11 @@ class _NavBadge extends StatelessWidget {
   final NavBadgeTone tone;
   final NavBadgeDisplay display;
 
+  /// Mọi huy hiệu trên thanh tab là CHẤM ĐỎ, không ghi số (duyệt 26/11/2026).
+  /// Số vẫn có trong nhãn trình đọc màn hình của mục.
   @override
-  Widget build(BuildContext context) {
-    final ring = Theme.of(context).colorScheme.surface;
-
-    if (display == NavBadgeDisplay.dot) {
-      return const OmniUnreadDot(excludeSemantics: true);
-    }
-
-    return switch (tone) {
-      NavBadgeTone.unread => OmniCountBadge.unread(
-        count: count,
-        ringColor: ring,
-      ),
-      NavBadgeTone.alert => OmniCountBadge.alert(count: count, ringColor: ring),
-    };
-  }
+  Widget build(BuildContext context) =>
+      const OmniUnreadDot(excludeSemantics: true);
 }
 
 class _ShellNavigationRail extends ConsumerWidget {
@@ -530,9 +519,8 @@ class _ShellNavItem extends ConsumerWidget {
                 softWrap: false,
                 overflow: TextOverflow.visible,
                 textScaler: TextScaler.noScaling,
-                style: OmniType.micro.copyWith(
+                style: OmniType.tabLabel.copyWith(
                   color: labelColor,
-                  fontSize: 11,
                   fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
                   height: 1.2,
                 ),

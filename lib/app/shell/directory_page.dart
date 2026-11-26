@@ -637,18 +637,7 @@ class _FeatureTile extends ConsumerWidget {
                         Positioned(
                           top: 0,
                           right: 0,
-                          child: tile.badgeDisplay == NavBadgeDisplay.dot
-                              ? const OmniUnreadDot(excludeSemantics: true)
-                              : switch (tile.badgeTone) {
-                                  NavBadgeTone.unread => OmniCountBadge.unread(
-                                    count: count,
-                                    ringColor: scheme.surface,
-                                  ),
-                                  NavBadgeTone.alert => OmniCountBadge.alert(
-                                    count: count,
-                                    ringColor: scheme.surface,
-                                  ),
-                                },
+                          child: const OmniUnreadDot(excludeSemantics: true),
                         ),
                     ],
                   ),

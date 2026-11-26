@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../platform/omni_performance.dart';
 import '../tokens/omni_colors.dart';
+import 'omni_top_bar.dart' show OmniSearchRecede;
 
 /// Lớp nổi của điều hướng: "kính phẳng" (bớt kính mờ, duyệt 26/11/2026 —
 /// `docs/superpowers/specs/phong-cach-ios/bot-kinh-mo.html`).
@@ -89,7 +90,7 @@ class OmniGlass extends StatelessWidget {
         // Token `glass` (gói Viomni, 26/11): nền .92 — đọc rõ chữ dưới nó,
         // nhoè nhẹ chỉ để mép nội dung cuộn qua không sắc.
         : dark
-        ? const Color(0xFF132033).withValues(alpha: 0.92)
+        ? const Color(0xFF1C1C1E).withValues(alpha: 0.92)
         : Colors.white.withValues(alpha: 0.92);
     final edge = solid
         ? scheme.outline
@@ -186,10 +187,12 @@ class OmniTopBarOverlap extends InheritedWidget {
   const OmniTopBarOverlap._({required this.inset, required super.child});
 
   /// Bọc thân màn; đọc chiều cao từ đệm trên mà Scaffold đã cộng thanh trên.
+  /// Bọc luôn [OmniSearchRecede]: mọi màn có thân chạy dưới thanh trên đều
+  /// lùi lại khi ô tìm đang mở (thanh tìm kiểu Biến hình, duyệt 26/11/2026).
   static Widget wrap({required Widget child}) => Builder(
     builder: (context) => OmniTopBarOverlap._(
       inset: MediaQuery.paddingOf(context).top,
-      child: child,
+      child: OmniSearchRecede(child: child),
     ),
   );
 

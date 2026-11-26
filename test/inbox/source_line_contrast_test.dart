@@ -41,9 +41,15 @@ void main() {
     ),
   );
 
-  testWidgets('ThreadIntro: dòng nguồn dùng textColorOf(tối)', (t) async {
+  // Duyệt 26/11/2026: nhãn kênh xám ở mọi chỗ — khối giới thiệu đầu hội
+  // thoại không tô màu kênh nữa, dùng chữ phụ của chế độ đang bật.
+  testWidgets('ThreadIntro: dòng nguồn xám (chữ phụ), không màu kênh', (
+    t,
+  ) async {
+    final muted = OmniTheme.dark(
+      TargetPlatform.android,
+    ).colorScheme.onSurfaceVariant;
     for (final channel in Channel.values) {
-      final meta = channel.meta;
       await t.pumpWidget(
         host(
           ThreadIntro(
@@ -59,11 +65,7 @@ void main() {
       );
       await t.pumpAndSettle();
       final text = t.widget<Text>(find.text(channel.sourceKind).first);
-      expect(
-        text.style?.color,
-        meta.textColorOf(Brightness.dark),
-        reason: '$channel',
-      );
+      expect(text.style?.color, muted, reason: '$channel');
     }
   });
 

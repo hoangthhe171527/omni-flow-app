@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,11 +15,15 @@ import '../auth_module.dart';
 import '../data/auth_onboarding_api.dart';
 import 'widgets/auth_widgets.dart';
 
-/// Màn quên mật khẩu (artifact "Màn xác thực" duyệt 26/11), hai bước:
-/// 1. một ô email (điền sẵn email vừa gõ ở màn đăng nhập, bàn phím bật sẵn) +
-///    "Gửi liên kết đặt lại";
-/// 2. "Kiểm tra email": một nút chính "Mở ứng dụng email" ở đáy; gửi lại (đếm
-///    ngược m:ss) và đổi email là nút chữ.
+/// Màn quên mật khẩu — hướng "Quỹ đạo" (duyệt 26/11/2026). Giữa màn là ô
+/// vuông xanh có phong bì, sóng tròn lan ra như đang phát tín hiệu, một chấm
+/// sáng chạy vòng. Hai bước:
+/// 1. "Quên mật khẩu?": một ô email (điền sẵn email vừa gõ ở màn đăng nhập,
+///    bàn phím bật sẵn) + "Gửi liên kết";
+/// 2. gửi xong: ô chuyển xanh lá, phong bì bay đi, dấu ✓ bật vào; "Đã gửi
+///    liên kết", thẻ 3 bước (bước 1 chạm để mở ứng dụng email), nút "Gửi lại
+///    sau N giây" đếm ngược 30 giây rồi bật lại; "Dùng email khác" là nút chữ.
+/// Chân màn: "Nhớ ra rồi? Đăng nhập".
 ///
 /// API trả 204 dù email có tồn tại hay không, nên màn này luôn báo trạng thái
 /// đã gửi như nhau để không lộ địa chỉ nào có tài khoản.
@@ -158,12 +163,17 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage>
   Widget build(BuildContext context) {
     return AuthScaffold(
       top: 4,
-      footer: _sent ? _sentActions() : null,
+      footer: AuthSwitchLink(
+        prompt: 'Nhớ ra rồi?',
+        action: 'Đăng nhập',
+        onTap: _back,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           AuthSubBar(onBack: _back),
-          const SizedBox(height: 4),
+          _MailHero(sent: _sent),
+          const SizedBox(height: 8),
           AnimatedSwitcher(
             duration: OmniMotion.of(context).base,
             child: _sent ? _sentBody() : _form(),
@@ -180,36 +190,42 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage>
         key: const ValueKey('forgot-form'),
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Semantics(
-            header: true,
-            child: Text('Quên mật khẩu', style: authTitleStyle(context)),
+          const AuthHeroTitle(
+            title: 'Quên mật khẩu?',
+            subtitle: 'Nhập email, Viomni gửi liên kết đặt lại.',
+            center: true,
           ),
-          const SizedBox(height: 18),
-          AuthField(
-            controller: _email,
-            label: 'Email',
-            hint: 'ten@congty.vn',
-            shake: _shake,
-            autofocus: true,
-            serverError: _fieldError,
-            keyboardType: TextInputType.emailAddress,
-            textInputAction: TextInputAction.done,
-            autofillHints: const [AutofillHints.email],
-            onSubmitted: (_) => _submit(),
-            validator: (value) {
-              final text = value?.trim() ?? '';
-              if (text.isEmpty) return 'Vui lòng nhập email';
-              if (!looksLikeEmail(text)) return 'Email chưa hợp lệ';
-              return null;
-            },
+          const SizedBox(height: 24),
+          AuthFieldGroup(
+            fields: [
+              AuthGroupField(
+                controller: _email,
+                label: 'Email',
+                hint: 'Email làm việc',
+                icon: LucideIcons.mail,
+                shake: _shake,
+                autofocus: true,
+                serverError: _fieldError,
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.done,
+                autofillHints: const [AutofillHints.email],
+                onSubmitted: (_) => _submit(),
+                validator: (value) {
+                  final text = value?.trim() ?? '';
+                  if (text.isEmpty) return 'Vui lòng nhập email';
+                  if (!looksLikeEmail(text)) return 'Email chưa hợp lệ';
+                  return null;
+                },
+              ),
+            ],
           ),
           if (_error != null) ...[
             const SizedBox(height: 12),
             AuthErrorBox(message: _error!),
           ],
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           AuthPrimaryButton(
-            label: 'Gửi liên kết đặt lại',
+            label: 'Gửi liên kết',
             busy: _busy,
             onPressed: _busy ? null : _submit,
           ),
@@ -220,97 +236,39 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage>
 
   Widget _sentBody() {
     final scheme = Theme.of(context).colorScheme;
-    final meta = OmniType.body.copyWith(color: scheme.onSurfaceVariant);
     return Column(
       key: const ValueKey('forgot-sent'),
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        AuthHeroTitle(
+          title: 'Đã gửi liên kết',
+          subtitle: 'Kiểm tra hộp thư ',
+          emphasis: _sentTo,
+          center: true,
+        ),
+        const SizedBox(height: 24),
+        _StepsCard(onOpenMail: _openMail),
+        if (_error != null) ...[
+          const SizedBox(height: 12),
+          AuthErrorBox(message: _error!),
+        ],
         const SizedBox(height: 16),
-        Container(
-          width: 64,
-          height: 64,
-          decoration: BoxDecoration(
-            color: scheme.primaryContainer,
-            shape: BoxShape.circle,
-          ),
-          alignment: Alignment.center,
-          child: Icon(LucideIcons.mailCheck, size: 30, color: scheme.primary),
-        ),
-        const SizedBox(height: 20),
-        Semantics(
-          header: true,
-          child: Text('Kiểm tra email', style: authTitleStyle(context)),
-        ),
-        const SizedBox(height: 6),
-        Semantics(
-          liveRegion: true,
-          child: Text.rich(
-            TextSpan(
-              text: 'Liên kết đặt lại đã gửi tới\n',
-              children: [
-                TextSpan(
-                  text: _sentTo,
-                  style: TextStyle(
-                    color: scheme.onSurface,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-            style: meta,
+        // Đếm ngược chỉ dựng lại nút này, không dựng lại cả trang mỗi giây.
+        ValueListenableBuilder<int>(
+          valueListenable: _left,
+          builder: (context, left, _) => AuthPrimaryButton(
+            label: left > 0 ? 'Gửi lại sau $left giây' : 'Gửi lại',
+            busy: _busy,
+            onPressed: left <= 0 && !_busy ? () => _send(_sentTo) : null,
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          'Hết hạn sau 30 phút',
-          style: OmniType.bodySm.copyWith(color: scheme.onSurfaceVariant),
-        ),
-        if (_error != null) ...[
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: AuthErrorBox(message: _error!),
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _sentActions() {
-    final scheme = Theme.of(context).colorScheme;
-    final textStyle = OmniType.input.copyWith(fontWeight: FontWeight.w600);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        AuthPrimaryButton(label: 'Mở ứng dụng email', onPressed: _openMail),
-        const SizedBox(height: 8),
-        ValueListenableBuilder<int>(
-          valueListenable: _left,
-          builder: (context, left, _) => TextButton(
-            onPressed: left <= 0 && !_busy ? () => _send(_sentTo) : null,
-            style: TextButton.styleFrom(
-              minimumSize: const Size.fromHeight(44),
-              foregroundColor: scheme.primary,
-              disabledForegroundColor: scheme.onSurfaceVariant,
-              textStyle: textStyle.copyWith(fontFeatures: OmniType.tabular),
-            ),
-            child: _busy
-                ? const SizedBox.square(
-                    dimension: 20,
-                    child: CircularProgressIndicator.adaptive(strokeWidth: 2),
-                  )
-                : Text(
-                    left > 0 ? 'Gửi lại sau ${_clock(left)}' : 'Gửi lại email',
-                  ),
-          ),
-        ),
         TextButton(
           onPressed: _busy ? null : _changeEmail,
           style: TextButton.styleFrom(
             minimumSize: const Size.fromHeight(44),
             foregroundColor: scheme.primary,
-            textStyle: textStyle,
+            textStyle: OmniType.body.copyWith(fontWeight: FontWeight.w600),
           ),
           child: const Text('Dùng email khác'),
         ),
@@ -319,6 +277,290 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage>
   }
 }
 
-/// 42 → "0:42", 75 → "1:15".
-String _clock(int seconds) =>
-    '${seconds ~/ 60}:${(seconds % 60).toString().padLeft(2, '0')}';
+/// Thẻ 3 bước làm tiếp sau khi gửi. Bước 1 chạm được: mở ứng dụng email.
+class _StepsCard extends StatelessWidget {
+  const _StepsCard({required this.onOpenMail});
+
+  final VoidCallback onOpenMail;
+
+  static const _steps = [
+    'Mở email từ Viomni',
+    'Bấm "Đặt lại mật khẩu"',
+    'Đăng nhập bằng mật khẩu mới',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    Widget row(int i) => Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+      child: Row(
+        children: [
+          Container(
+            width: 24,
+            height: 24,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerHighest,
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              '${i + 1}',
+              style: OmniType.micro.copyWith(
+                fontWeight: FontWeight.w700,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              _steps[i],
+              style: OmniType.body.copyWith(color: scheme.onSurface),
+            ),
+          ),
+          if (i == 0)
+            Icon(
+              LucideIcons.arrowUpRight,
+              size: OmniIconSize.sm,
+              color: scheme.primary,
+            ),
+        ],
+      ),
+    );
+
+    return Material(
+      color: scheme.surface,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(OmniRadius.xl),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Semantics(
+              button: true,
+              child: InkWell(
+                key: const ValueKey('forgot-open-mail'),
+                onTap: onOpenMail,
+                child: row(0),
+              ),
+            ),
+            row(1),
+            row(2),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Phong bì đặc Phosphor Fill (U+E218, font đã khai trong pubspec).
+const _envelopeFill = IconData(0xe218, fontFamily: 'PhosphorFill');
+
+/// Ô vuông bo 30 cỡ 104 dải xanh có phong bì; ba sóng tròn lan ra (2,8 giây,
+/// lệch 0,93 giây) và một chấm sáng chạy vòng (6 giây). [sent]: ô chuyển dải
+/// xanh lá, phong bì bay đi, dấu ✓ bật vào. Giảm chuyển động: không sóng,
+/// chấm đứng yên, đổi trạng thái tức thì.
+class _MailHero extends StatefulWidget {
+  const _MailHero({required this.sent});
+
+  final bool sent;
+
+  static const double height = 180;
+
+  @override
+  State<_MailHero> createState() => _MailHeroState();
+}
+
+class _MailHeroState extends State<_MailHero>
+    with SingleTickerProviderStateMixin {
+  /// 42 giây = 15 nhịp sóng × 7 vòng chấm: hết vòng không bị giật.
+  late final AnimationController _loop = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 42),
+  );
+
+  static const _blue = [
+    Color(0xFF4C8DFF),
+    Color(0xFF1D4FD1),
+    Color(0xFF13388F),
+  ];
+  static const _green = [
+    Color(0xFF4BE07A),
+    Color(0xFF1FA84A),
+    Color(0xFF127A34),
+  ];
+
+  /// Nảy khi đổi trạng thái — `cubic-bezier(.2,.9,.3,1.3)`.
+  static const Curve _pop = Cubic(0.2, 0.9, 0.3, 1.3);
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (OmniMotion.enabled(context)) {
+      if (!_loop.isAnimating) _loop.repeat();
+    } else {
+      _loop.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _loop.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final moving = OmniMotion.enabled(context);
+    final sent = widget.sent;
+    final duration = moving ? const Duration(milliseconds: 500) : Duration.zero;
+    final tones = sent ? _green : _blue;
+    final glow = sent ? const Color(0xFF1FA84A) : const Color(0xFF1D4FD1);
+
+    return ExcludeSemantics(
+      child: SizedBox(
+        height: _MailHero.height,
+        child: Stack(
+          alignment: Alignment.center,
+          clipBehavior: Clip.none,
+          children: [
+            Positioned.fill(
+              child: RepaintBoundary(
+                child: CustomPaint(
+                  painter: _HeroPainter(
+                    loop: _loop,
+                    moving: moving,
+                    wave: sent
+                        ? const Color(0xFF30D158).withValues(alpha: 0.55)
+                        : OmniColors.darkPrimary.withValues(alpha: 0.5),
+                  ),
+                ),
+              ),
+            ),
+            AnimatedScale(
+              scale: sent ? 1.06 : 1,
+              duration: duration,
+              curve: _pop,
+              child: AnimatedContainer(
+                duration: duration,
+                width: 104,
+                height: 104,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(30),
+                  gradient: LinearGradient(
+                    // Dải 160° của bản duyệt.
+                    begin: const Alignment(-0.34, -0.94),
+                    end: const Alignment(0.34, 0.94),
+                    colors: tones,
+                    stops: const [0, 0.6, 1],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: glow.withValues(alpha: 0.5),
+                      blurRadius: 50,
+                      offset: const Offset(0, 18),
+                    ),
+                  ],
+                ),
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween<double>(end: sent ? 1 : 0),
+                  duration: duration,
+                  curve: _pop,
+                  builder: (_, v, _) => Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Opacity(
+                        opacity: (1 - v).clamp(0.0, 1.0),
+                        child: Transform.translate(
+                          offset: Offset(40 * v, -40 * v),
+                          child: Transform.rotate(
+                            angle: 20 * math.pi / 180 * v,
+                            child: Transform.scale(
+                              scale: 1 - 0.6 * v,
+                              child: const Icon(
+                                _envelopeFill,
+                                size: 48,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Opacity(
+                        opacity: v.clamp(0.0, 1.0),
+                        child: Transform.rotate(
+                          angle: -30 * math.pi / 180 * (1 - v),
+                          child: Transform.scale(
+                            scale: 0.3 + 0.7 * v,
+                            child: const Icon(
+                              LucideIcons.check,
+                              size: 52,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Sóng tròn lan ra + chấm sáng chạy vòng quanh ô phong bì.
+class _HeroPainter extends CustomPainter {
+  _HeroPainter({required this.loop, required this.moving, required this.wave})
+    : super(repaint: loop);
+
+  final Animation<double> loop;
+  final bool moving;
+  final Color wave;
+
+  static const Curve _spread = Cubic(0.2, 0.6, 0.3, 1);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = size.center(Offset.zero);
+    final t = loop.value * 42;
+
+    if (moving) {
+      for (var k = 0; k < 3; k++) {
+        final phase = ((t - 0.93 * k) / 2.8) % 1;
+        final e = _spread.transform(phase);
+        canvas.drawCircle(
+          c,
+          60 * (0.8 + 1.6 * e),
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.5
+            ..color = wave.withValues(alpha: wave.a * 0.9 * (1 - e)),
+        );
+      }
+    }
+
+    // Chấm sáng trên vòng bán kính 92, bắt đầu ở đỉnh, 6 giây một vòng.
+    final angle = -math.pi / 2 + (moving ? t / 6 * 2 * math.pi : 0);
+    final dot = c + Offset(math.cos(angle), math.sin(angle)) * 92;
+    canvas.drawCircle(
+      dot,
+      7,
+      Paint()
+        ..color = OmniColors.darkPrimary.withValues(alpha: 0.8)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
+    );
+    canvas.drawCircle(dot, 4, Paint()..color = const Color(0xFFBFE6FF));
+  }
+
+  @override
+  bool shouldRepaint(_HeroPainter old) =>
+      old.loop != loop || old.moving != moving || old.wave != wave;
+}

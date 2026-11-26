@@ -452,11 +452,11 @@ class _UnitSheetState extends ConsumerState<UnitSheet> {
             OmniGroupRow(
               key: const ValueKey('inv-unit-condition'),
               title: 'Tình trạng',
-              trailing: Text(
-                UnitCondition.labelOf(u.condition),
-                style: invMuted(
-                  context,
-                ).copyWith(color: InvUi.conditionColor(context, u.condition)),
+              // Tình trạng là nhãn có nền, không chữ màu đứng một mình (duyệt
+              // 26/11/2026, rà soát mục 10).
+              trailing: OmniStatusLabel(
+                label: UnitCondition.labelOf(u.condition),
+                tone: InvUi.conditionTone(u.condition),
               ),
               chevron: perms.write,
               onTap: perms.write && !_busy ? _editCondition : null,

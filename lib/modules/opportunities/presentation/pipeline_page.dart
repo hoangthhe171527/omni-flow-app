@@ -35,13 +35,16 @@ class _PipelinePageState extends State<PipelinePage> {
           onOpenFilters: _openFilters,
         ),
       ),
-      body: Builder(
-        builder: (context) => Padding(
-          padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top),
-          child: MediaQuery.removePadding(
-            context: context,
-            removeTop: true,
-            child: const OpportunitiesSegment(),
+      // Chạm ô tìm: thân màn lùi ra sau (kiểu "Biến hình", duyệt 26/11/2026).
+      body: OmniSearchRecede(
+        child: Builder(
+          builder: (context) => Padding(
+            padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top),
+            child: MediaQuery.removePadding(
+              context: context,
+              removeTop: true,
+              child: const OpportunitiesSegment(),
+            ),
           ),
         ),
       ),

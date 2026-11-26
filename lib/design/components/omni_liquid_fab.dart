@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons_500.dart';
+import '../tokens/tokens.dart';
 
 /// Nút + tròn nổi ở góc dưới phải, phía trên thanh tab.
 ///
@@ -78,7 +79,7 @@ class _OmniLiquidFabState extends State<OmniLiquidFab>
         DecoratedBox(
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: solid ? scheme.surface : scheme.primary,
+            color: solid ? scheme.surface : OmniColors.primaryFillOf(context),
           ),
         ),
         if (solid)
@@ -99,7 +100,7 @@ class _OmniLiquidFabState extends State<OmniLiquidFab>
             child: Icon(
               widget.icon,
               size: 24,
-              color: solid ? scheme.primary : scheme.onPrimary,
+              color: solid ? scheme.primary : Colors.white,
             ),
           ),
         ),

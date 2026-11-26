@@ -11,10 +11,11 @@ import '../../../security/session/session_controller.dart';
 import '../application/login_controller.dart';
 import 'widgets/auth_widgets.dart';
 
-/// Màn chọn công ty (artifact "Màn xác thực" duyệt 26/11): đã đăng nhập nên
-/// KHÔNG còn logo — tiêu đề lớn "Chọn công ty", viên email tài khoản đang
-/// dùng, danh sách công ty (ô viết tắt mỗi công ty một tông, dòng cao 72) và
-/// "Đăng xuất" là nút chữ đỏ ở đáy, không tranh việc chính.
+/// Màn chọn công ty — cùng da hướng "Quỹ đạo" (duyệt 26/11/2026): nền đen, đã
+/// đăng nhập nên KHÔNG còn logo — tiêu đề lớn 32/800 căn trái "Chọn công ty",
+/// viên email tài khoản đang dùng, danh sách công ty trong thẻ bo 16 (ô viết
+/// tắt mỗi công ty một tông, dòng cao 72) và "Đăng xuất" là nút chữ đỏ ở đáy,
+/// không tranh việc chính.
 class WorkspacePage extends ConsumerStatefulWidget {
   const WorkspacePage({super.key});
 
@@ -63,7 +64,7 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -92,7 +93,7 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
                           'bạn.',
                     ),
                     data: (list) => ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 22, 16, 16),
+                      padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
                       children: [
                         OmniGroupSection(
                           title: 'Công ty · ${list.length}',
@@ -154,7 +155,7 @@ class _AccountChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: scheme.surface,
         borderRadius: OmniRadius.pillAll,
-        border: Border.all(color: scheme.outlineVariant),
+        border: Border.all(color: scheme.outlineVariant, width: 0.5),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

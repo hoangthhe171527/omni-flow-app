@@ -16,9 +16,10 @@ import '../../../tasks/tasks.dart';
 import '../../customers_module.dart';
 import '../../domain/customer.dart';
 
-/// Dòng khách gọn (`Customers.dc.html` `.row`): chấm nhãn ở mép trái, avatar
-/// tròn 36, tên một dòng, "nguồn · lần liên hệ gần nhất". Chạm dòng mở hàng
-/// thao tác nhanh ngay bên dưới; không có tiền ở bất kỳ đâu trên dòng.
+/// Dòng khách gọn (`Customers.dc.html` `.row`): avatar tròn 36, tên một dòng,
+/// dưới là nhãn kênh xám + lần liên hệ gần nhất (duyệt 26/11/2026, rà soát mục
+/// 8: một kiểu nhãn xám cho mọi kênh, bỏ chấm nhãn xám đầu dòng). Chạm dòng mở
+/// hàng thao tác nhanh ngay bên dưới; không có tiền ở bất kỳ đâu trên dòng.
 class CustomerRow extends ConsumerWidget {
   const CustomerRow({
     super.key,
@@ -38,8 +39,6 @@ class CustomerRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    final brightness = Theme.of(context).brightness;
-    final tag = customer.tags.isEmpty ? null : customer.tags.first;
     final inactive = customer.status == CustomerStatus.inactive;
     final last = Formatters.relative(customer.lastInteractionAt);
     final canCreateTask = ref.watch(accessProvider).can(TaskPermissions.write);
@@ -89,28 +88,21 @@ class CustomerRow extends ConsumerWidget {
                                   ),
                             ),
                             const SizedBox(height: 2),
-                            Text.rich(
-                              TextSpan(
-                                children: [
-                                  TextSpan(
-                                    text: customer.source.sourceKind,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      color: customer.source.meta.textColorOf(
-                                        brightness,
-                                      ),
+                            Row(
+                              children: [
+                                _ChannelTag(label: customer.source.sourceKind),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    last.isEmpty ? '—' : last,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: OmniType.micro.copyWith(
+                                      color: scheme.onSurfaceVariant,
                                     ),
                                   ),
-                                  TextSpan(
-                                    text: ' · ${last.isEmpty ? '—' : last}',
-                                  ),
-                                ],
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: OmniType.micro.copyWith(
-                                color: scheme.onSurfaceVariant,
-                              ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -118,26 +110,6 @@ class CustomerRow extends ConsumerWidget {
                     ],
                   ),
                 ),
-                if (tag != null)
-                  Positioned(
-                    left: 6,
-                    top: 0,
-                    bottom: 0,
-                    child: Center(
-                      child: Semantics(
-                        label: 'Nhãn: $tag',
-                        container: true,
-                        child: Container(
-                          width: 7,
-                          height: 7,
-                          decoration: BoxDecoration(
-                            color: OmniLabelColors.of(tag),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
               ],
             ),
           ),
@@ -149,6 +121,37 @@ class CustomerRow extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Nhãn kênh xám (duyệt 26/11/2026): nền `surfaceContainerHighest`, chữ
+/// `onSurfaceVariant` w600, bo 5 — cùng kiểu với dòng Hộp thư, không màu theo
+/// kênh.
+class _ChannelTag extends StatelessWidget {
+  const _ChannelTag({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(5),
+      ),
+      child: Text(
+        label,
+        maxLines: 1,
+        // 12 là sàn cỡ chữ của app (OmniType.micro) — bản duyệt ghi 11.
+        style: OmniType.micro.copyWith(
+          fontWeight: FontWeight.w600,
+          color: scheme.onSurfaceVariant,
+          height: 1.3,
+        ),
       ),
     );
   }

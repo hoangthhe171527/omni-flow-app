@@ -218,6 +218,19 @@ void main() {
       expect(find.text('Bàn làm việc'), findsOneWidget);
       expect(find.text('Kho'), findsOneWidget);
       expect(find.text('Công ty Sao Mai'), findsOneWidget);
+      // Hướng "Quỹ đạo" (duyệt 26/11/2026): ô chữ viết tắt cạnh tên công ty,
+      // ô tìm ghim ở đáy tầm ngón cái, quỹ đạo mờ không logo ở góc trên phải.
+      expect(find.text('SM'), findsOneWidget);
+      expect(
+        tester.getRect(find.byKey(const ValueKey('apps-search'))).bottom,
+        greaterThan(844 * 0.85),
+      );
+      expect(find.byType(OmniOrbit), findsOneWidget);
+      expect(find.byType(OmniBrandMark), findsNothing);
+      // Ô ứng dụng 58 nằm gọn trong bề ngang 390.
+      final tile = tester.getRect(find.byKey(const ValueKey('app-tile-stock')));
+      expect(tile.right, lessThanOrEqualTo(390));
+      expect(tester.takeException(), isNull);
 
       await tester.tap(find.byKey(const ValueKey('app-tile-stock')));
       await settle(tester);

@@ -986,11 +986,14 @@ class StockUnitRow extends StatelessWidget {
                             ),
                           ],
                         ),
+                        // Giữ cho khách / bán lẻ: thông tin, không phải
+                        // hành động → chữ mực đậm, không xanh (duyệt
+                        // 26/11/2026, rà soát mục 10).
                         if (hold != null)
                           Text(
                             hold,
                             style: OmniType.caption.copyWith(
-                              color: scheme.primary,
+                              color: scheme.onSurface,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -1055,34 +1058,17 @@ class _SearchBottom extends StatelessWidget implements PreferredSizeWidget {
   @override
   Size get preferredSize => const Size.fromHeight(44);
 
-  /// Ô tìm nền xám có nút lọc xanh bên trong (spec phong cách iOS §3.3).
+  /// Ô tìm nền xám có nút lọc bên trong: xám khi chưa lọc, viên mực/trắng có
+  /// số khi đang lọc (duyệt 26/11/2026, rà soát mục 6).
   @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return OmniSearchBottom(
-      fieldKey: const ValueKey('inv-search'),
-      hint: hint,
-      onChanged: onChanged,
-      trailing: IconButton(
-        key: const ValueKey('inv-filter'),
-        tooltip: activeFilters > 0 ? 'Lọc · đang bật $activeFilters' : 'Lọc',
-        padding: EdgeInsets.zero,
-        constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-        onPressed: onFilter,
-        icon: Badge(
-          isLabelVisible: activeFilters > 0,
-          label: Text('$activeFilters'),
-          backgroundColor: scheme.primary,
-          textColor: scheme.onPrimary,
-          child: Icon(
-            LucideIcons.slidersHorizontal,
-            size: OmniIconSize.md,
-            color: scheme.primary,
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => OmniSearchBottom(
+    fieldKey: const ValueKey('inv-search'),
+    hint: hint,
+    onChanged: onChanged,
+    filterKey: const ValueKey('inv-filter'),
+    onFilter: onFilter,
+    activeFilters: activeFilters,
+  );
 }
 
 class _GroupTrailing extends StatelessWidget {

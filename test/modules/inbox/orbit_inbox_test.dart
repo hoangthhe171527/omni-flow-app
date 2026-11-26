@@ -9,8 +9,9 @@ import 'package:omni_app/modules/inbox/domain/conversation.dart';
 import 'package:omni_app/modules/inbox/presentation/widgets/conversation_row.dart';
 import 'package:omni_app/modules/inbox/presentation/widgets/message_composer.dart';
 
-/// Quy ước Orbit của hộp thư: chấm chưa đọc vàng, chấm khẩn đỏ, chấm
-/// quá hạn trả lời hổ phách; hàng trả lời nhanh chèn câu vào ô nhập.
+/// Quy ước hộp thư (duyệt 26/11/2026): chưa đọc = một chấm đỏ đầu dòng; khẩn
+/// và quá hạn trả lời không còn chấm giữa câu mà giờ đổi sang đỏ "cần chú
+/// ý"; mẫu trả lời chèn câu vào ô nhập.
 void main() {
   setUpAll(() => initializeDateFormatting('vi_VN'));
 
@@ -34,21 +35,28 @@ void main() {
     urgent: urgent,
   );
 
-  Color? dotColor(WidgetTester tester) {
-    final dots = tester
-        .widgetList<Container>(
-          find.descendant(
-            of: find.byType(Tooltip),
-            matching: find.byType(Container),
-          ),
-        )
-        .map((c) => c.decoration)
-        .whereType<BoxDecoration>()
-        .where((d) => d.shape == BoxShape.circle && d.border == null);
-    return dots.isEmpty ? null : dots.first.color;
-  }
+  /// Chấm tròn nằm trong Tooltip (kiểu cũ: chấm khẩn/quá hạn giữa câu).
+  int tooltipDots(WidgetTester tester) => tester
+      .widgetList<Container>(
+        find.descendant(
+          of: find.byType(Tooltip),
+          matching: find.byType(Container),
+        ),
+      )
+      .map((c) => c.decoration)
+      .whereType<BoxDecoration>()
+      .where((d) => d.shape == BoxShape.circle)
+      .length;
 
-  testWidgets('chưa đọc: chỉ hiện chấm vàng, không hiện số', (tester) async {
+  /// Màu chữ giờ ở góc phải dòng (nằm trong Tooltip khi cần chú ý).
+  Color? stampColor(WidgetTester tester) => tester
+      .widget<Text>(
+        find.descendant(of: find.byType(Tooltip), matching: find.byType(Text)),
+      )
+      .style
+      ?.color;
+
+  testWidgets('chưa đọc: chỉ hiện chấm đỏ, không hiện số', (tester) async {
     await tester.pumpWidget(
       host(
         ConversationRow(conversation: conversation(unread: 3), onTap: () {}),
@@ -61,7 +69,7 @@ void main() {
     expect(find.text('3'), findsNothing);
   });
 
-  testWidgets('khẩn: chấm đỏ', (tester) async {
+  testWidgets('khẩn: giờ đỏ, không chấm giữa câu', (tester) async {
     await tester.pumpWidget(
       host(
         ConversationRow(
@@ -72,10 +80,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(dotColor(tester), OmniColors.destructive);
+    expect(tooltipDots(tester), 0);
+    expect(stampColor(tester), OmniColors.attentionDot);
   });
 
-  testWidgets('quá hạn trả lời: chấm hổ phách', (tester) async {
+  testWidgets('quá hạn trả lời: giờ đỏ, không chấm giữa câu', (tester) async {
     await tester.pumpWidget(
       host(
         ConversationRow(
@@ -89,7 +98,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(dotColor(tester), OmniColors.sla);
+    expect(tooltipDots(tester), 0);
+    expect(stampColor(tester), OmniColors.attentionDot);
   });
 
   testWidgets('mẫu trả lời: chọn là chèn vào ô, không gửi', (tester) async {

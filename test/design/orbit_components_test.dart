@@ -20,18 +20,15 @@ void main() {
           as BoxDecoration;
 
   group('viên lọc', () {
-    testWidgets('đang chọn: nền xanh nhạt, viền xanh (phong cách iOS §3.4)', (
+    testWidgets('đang chọn: viên mực đặc, không viền (quy tắc màu 26/11)', (
       tester,
     ) async {
       await tester.pumpWidget(
         host(OmniFilterPill(label: 'Tất cả', selected: true, onTap: () {})),
       );
       final scheme = OmniTheme.light(TargetPlatform.android).colorScheme;
-      expect(pillBox(tester).color, scheme.primary.withValues(alpha: .10));
-      expect(
-        pillBox(tester).border,
-        Border.all(color: scheme.primary, width: 1.5),
-      );
+      expect(pillBox(tester).color, scheme.onSurface);
+      expect(pillBox(tester).border, isNull);
     });
 
     testWidgets('chưa chọn: nền xám nhạt', (tester) async {

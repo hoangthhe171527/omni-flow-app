@@ -11,24 +11,23 @@ import '../../../../design/components/components.dart';
 import '../../../../design/platform/omni_motion_scope.dart';
 import '../../../../design/tokens/tokens.dart';
 
+export 'auth_field.dart';
+
 /// Lưu tạm email vừa đăng nhập để màn chọn tổ chức hiển thị ngay cả trước khi
 /// `/auth/context` tải xong hồ sơ người dùng.
 final authSignedInEmailProvider = StateProvider<String?>((ref) => null);
 
-/// Tiêu đề lớn của các màn xác thực: 28/800, chữ khít −0,02em (như tên màn gốc
-/// mỗi tab), giữ dòng cao 1.4 cho dấu tiếng Việt.
-TextStyle authTitleStyle(BuildContext context) => OmniType.largeTitle.copyWith(
-  fontSize: 28,
-  fontWeight: FontWeight.w800,
-  letterSpacing: -0.56,
-  color: Theme.of(context).colorScheme.onSurface,
-);
+/// Tiêu đề lớn của các màn xác thực (hướng "Quỹ đạo", duyệt 26/11/2026):
+/// 32/800, chữ khít −0,02em, căn trái.
+TextStyle authTitleStyle(BuildContext context) => OmniOrbitType.heroTitle
+    .copyWith(color: Theme.of(context).colorScheme.onSurface);
 
 /// Khung chuẩn của các màn xác thực: nền trơn của app, `SafeArea`, nội dung
 /// rộng tối đa 420 căn giữa, cuộn được khi bàn phím bật.
 ///
 /// [footer] được đẩy xuống đáy màn (vùng ngón cái) khi nội dung ngắn, và đi
-/// theo nội dung khi nội dung dài hơn màn.
+/// theo nội dung khi nội dung dài hơn màn. [backdrop] là lớp trang trí nằm
+/// sau nội dung, phủ cả màn (quỹ đạo nhỏ góc trên phải ở màn Đăng ký).
 class AuthScaffold extends StatelessWidget {
   const AuthScaffold({
     super.key,
@@ -36,10 +35,12 @@ class AuthScaffold extends StatelessWidget {
     this.footer,
     this.top = 8,
     this.scrollController,
+    this.backdrop,
   });
 
   final Widget child;
   final Widget? footer;
+  final Widget? backdrop;
 
   /// Khoảng trên cùng, dưới vùng an toàn.
   final double top;
@@ -51,42 +52,57 @@ class AuthScaffold extends StatelessWidget {
     // Đọc bàn phím TRƯỚC Scaffold: Scaffold gỡ viewInsets khỏi MediaQuery của
     // thân màn, bên trong không còn biết bàn phím đang bật.
     final keyboard = MediaQuery.viewInsetsOf(context).bottom > 0;
+    final decoration = backdrop;
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: _AuthKeyboard(
         open: keyboard,
-        child: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              // Lề 20, rộng hơn 420 + 40 thì căn giữa cột 420 (máy tính bảng).
-              final side = math.max(20.0, (constraints.maxWidth - 420) / 2);
-              return CustomScrollView(
-                controller: scrollController,
-                keyboardDismissBehavior:
-                    ScrollViewKeyboardDismissBehavior.onDrag,
-                slivers: [
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: Padding(
-                      padding: EdgeInsets.fromLTRB(side, top, side, 16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          child,
-                          if (footer != null) ...[
-                            const Spacer(),
-                            const SizedBox(height: OmniSpacing.xxl),
-                            footer!,
-                          ],
-                        ],
-                      ),
+        child: decoration == null
+            ? _body()
+            : Stack(
+                children: [
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: ExcludeSemantics(child: decoration),
                     ),
                   ),
+                  _body(),
                 ],
-              );
-            },
-          ),
-        ),
+              ),
+      ),
+    );
+  }
+
+  Widget _body() {
+    return SafeArea(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // Lề 20, rộng hơn 420 + 40 thì căn giữa cột 420 (máy tính bảng).
+          final side = math.max(20.0, (constraints.maxWidth - 420) / 2);
+          return CustomScrollView(
+            controller: scrollController,
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            slivers: [
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(side, top, side, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      child,
+                      if (footer != null) ...[
+                        const Spacer(),
+                        const SizedBox(height: 16),
+                        footer!,
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -140,274 +156,108 @@ class AuthSubBar extends StatelessWidget {
   }
 }
 
-/// Logo trần 56 (không ô nền — khung chỉ dành cho icon app) và tiêu đề lớn căn
-/// giữa. Logo là đích bay của màn mở app ([BrandAnchor]) và thu gọn khi bàn
-/// phím bật để ô nhập và nút chính lên vùng nhìn thấy.
-class AuthBrandHeader extends StatelessWidget {
-  const AuthBrandHeader({
-    super.key,
-    required this.title,
-    this.anchorBrand = false,
-  });
+/// Đầu màn đăng nhập (hướng "Quỹ đạo", duyệt 26/11/2026): quỹ đạo tỉ lệ .78
+/// có các hành tinh kênh chạy quanh chữ V. Logo giữa là đích bay của màn mở
+/// app ([BrandAnchor]) — vòng của màn mở app thu về đúng chỗ này. Thu gọn khi
+/// bàn phím bật để ô nhập và nút chính lên vùng nhìn thấy.
+class AuthOrbitHeader extends StatelessWidget {
+  const AuthOrbitHeader({super.key, this.anchorBrand = false});
 
-  final String title;
   final bool anchorBrand;
 
-  static const double logoSize = 56;
+  /// Tỉ lệ quỹ đạo so với màn mở app.
+  static const double scale = 0.78;
+
+  /// Chiều cao khối quỹ đạo.
+  static const double height = 180;
 
   @override
   Widget build(BuildContext context) {
     final keyboard = _AuthKeyboard.of(context);
-    const mark = OmniBrandMark(size: logoSize, framed: false);
-    final logo = anchorBrand ? const BrandAnchor(child: mark) : mark;
+    return AnimatedSize(
+      duration: OmniMotion.enabled(context) ? OmniDuration.base : Duration.zero,
+      curve: OmniCurves.standard,
+      alignment: Alignment.topCenter,
+      child: keyboard
+          ? const SizedBox(width: double.infinity)
+          : SizedBox(
+              height: height,
+              child: Center(
+                child: OmniOrbit(
+                  scale: scale,
+                  planets: true,
+                  anchorLogo: anchorBrand,
+                ),
+              ),
+            ),
+    );
+  }
+}
 
+/// Tiêu đề lớn 32/800 + dòng phụ 15 xám. [emphasis] nối vào cuối dòng phụ,
+/// chữ đậm màu chữ chính (vd email vừa gửi). [center] cho màn Quên mật khẩu.
+class AuthHeroTitle extends StatelessWidget {
+  const AuthHeroTitle({
+    super.key,
+    required this.title,
+    this.subtitle,
+    this.emphasis,
+    this.center = false,
+  });
+
+  final String title;
+  final String? subtitle;
+  final String? emphasis;
+  final bool center;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final align = center ? TextAlign.center : TextAlign.start;
+    final meta = OmniType.body.copyWith(color: scheme.onSurfaceVariant);
+    final sub = subtitle;
     return Column(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: center
+          ? CrossAxisAlignment.center
+          : CrossAxisAlignment.stretch,
       children: [
-        AnimatedSize(
-          duration: OmniMotion.enabled(context)
-              ? OmniDuration.base
-              : Duration.zero,
-          curve: OmniCurves.standard,
-          alignment: Alignment.topCenter,
-          child: keyboard
-              ? const SizedBox(width: double.infinity)
-              : Padding(
-                  padding: const EdgeInsets.only(top: 20, bottom: 16),
-                  child: Center(child: logo),
-                ),
-        ),
         Semantics(
           header: true,
-          child: Text(
-            title,
-            textAlign: TextAlign.center,
-            style: authTitleStyle(context),
-          ),
+          child: Text(title, textAlign: align, style: authTitleStyle(context)),
         ),
+        if (sub != null) ...[
+          const SizedBox(height: 8),
+          if (emphasis == null)
+            Text(sub, textAlign: align, style: meta)
+          else
+            Semantics(
+              liveRegion: true,
+              child: Text.rich(
+                TextSpan(
+                  text: sub,
+                  children: [
+                    TextSpan(
+                      text: emphasis,
+                      style: TextStyle(
+                        color: scheme.onSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                textAlign: align,
+                style: meta,
+              ),
+            ),
+        ],
       ],
     );
   }
 }
 
-/// Ô nhập của màn xác thực: nhãn luôn hiện phía trên (kèm liên kết phụ bên
-/// phải nếu có, vd "Quên?"), ô cao 52 bo 10 nền thẻ, viền 3:1; đang gõ thì viền
-/// xanh, lỗi thì viền đỏ + chữ lỗi bên dưới. Rung 400ms khi báo lỗi.
-class AuthField extends StatefulWidget {
-  const AuthField({
-    super.key,
-    required this.controller,
-    required this.label,
-    required this.hint,
-    required this.shake,
-    required this.validator,
-    this.serverError,
-    this.obscure = false,
-    this.keyboardType,
-    this.textInputAction,
-    this.onSubmitted,
-    this.suffix,
-    this.autofillHints,
-    this.labelTrailing,
-    this.focusNode,
-    this.autofocus = false,
-  });
-
-  final TextEditingController controller;
-  final String label;
-  final String hint;
-  final Animation<double> shake;
-  final String? Function(String?) validator;
-  final String? serverError;
-  final bool obscure;
-  final TextInputType? keyboardType;
-  final TextInputAction? textInputAction;
-  final ValueChanged<String>? onSubmitted;
-  final Widget? suffix;
-  final Iterable<String>? autofillHints;
-
-  /// Liên kết nhỏ cùng hàng nhãn, canh phải (vd "Quên?").
-  final Widget? labelTrailing;
-
-  final FocusNode? focusNode;
-  final bool autofocus;
-
-  @override
-  State<AuthField> createState() => _AuthFieldState();
-}
-
-class _AuthFieldState extends State<AuthField> {
-  FocusNode? _ownFocus;
-  FocusNode get _focus => widget.focusNode ?? (_ownFocus ??= FocusNode());
-
-  @override
-  void initState() {
-    super.initState();
-    _focus.addListener(_onFocusChange);
-  }
-
-  @override
-  void didUpdateWidget(AuthField oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.focusNode != widget.focusNode) {
-      (oldWidget.focusNode ?? _ownFocus)?.removeListener(_onFocusChange);
-      _focus.addListener(_onFocusChange);
-    }
-  }
-
-  void _onFocusChange() {
-    if (mounted) setState(() {});
-  }
-
-  @override
-  void dispose() {
-    _focus.removeListener(_onFocusChange);
-    _ownFocus?.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return FormField<String>(
-      validator: (_) => widget.validator(widget.controller.text),
-      builder: (field) {
-        final error = field.errorText ?? widget.serverError;
-        final focused = _focus.hasFocus;
-        final dangerFg = OmniColors.dangerTextOf(context);
-        final edge = error != null
-            ? dangerFg
-            : focused
-            ? scheme.primary
-            : scheme.outline;
-
-        final box = DecoratedBox(
-          decoration: BoxDecoration(
-            color: scheme.surface,
-            borderRadius: OmniRadius.mdAll,
-            border: Border.all(color: edge),
-            // Viền dày 2 khi đang gõ / lỗi vẽ bằng bóng đặc 1px phía ngoài —
-            // không đổi kích thước ô, chữ không xê dịch.
-            boxShadow: error != null || focused
-                ? [BoxShadow(color: edge, spreadRadius: 1)]
-                : null,
-          ),
-          child: SizedBox(
-            height: 52,
-            child: Row(
-              children: [
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Semantics(
-                    label: widget.label,
-                    textField: true,
-                    child: TextField(
-                      autofillHints: widget.autofillHints,
-                      controller: widget.controller,
-                      focusNode: _focus,
-                      autofocus: widget.autofocus,
-                      obscureText: widget.obscure,
-                      keyboardType: widget.keyboardType,
-                      textInputAction: widget.textInputAction,
-                      autocorrect: false,
-                      enableSuggestions: !widget.obscure,
-                      onSubmitted: widget.onSubmitted,
-                      onChanged: (_) {
-                        if (field.hasError) field.reset();
-                      },
-                      style: OmniType.input.copyWith(
-                        fontSize: 17,
-                        color: scheme.onSurface,
-                      ),
-                      cursorColor: scheme.primary,
-                      decoration: InputDecoration(
-                        hintText: widget.hint,
-                        hintStyle: OmniType.input.copyWith(
-                          fontSize: 17,
-                          color: scheme.onSurfaceVariant,
-                        ),
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        errorBorder: InputBorder.none,
-                        focusedErrorBorder: InputBorder.none,
-                        filled: false,
-                        isCollapsed: true,
-                        // Theme chung có contentPadding riêng — ở đây lề đã
-                        // nằm ở hàng bọc ngoài (14), chữ không thụt thêm.
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                    ),
-                  ),
-                ),
-                if (widget.suffix != null)
-                  widget.suffix!
-                else
-                  const SizedBox(width: 14),
-              ],
-            ),
-          ),
-        );
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              height: 36,
-              child: Row(
-                children: [
-                  const SizedBox(width: 2),
-                  Expanded(
-                    child: ExcludeSemantics(
-                      child: Text(
-                        widget.label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: OmniType.bodySm.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: scheme.onSurface,
-                        ),
-                      ),
-                    ),
-                  ),
-                  ?widget.labelTrailing,
-                ],
-              ),
-            ),
-            AnimatedBuilder(
-              animation: widget.shake,
-              builder: (_, child) {
-                final t = widget.shake.value;
-                final dx = error == null
-                    ? 0.0
-                    : math.sin(t * math.pi * 6) * 6 * (1 - t);
-                return Transform.translate(offset: Offset(dx, 0), child: child);
-              },
-              child: box,
-            ),
-            if (error != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(2, 6, 2, 0),
-                child: Semantics(
-                  liveRegion: true,
-                  child: Text(
-                    error,
-                    style: OmniType.caption.copyWith(color: dangerFg),
-                  ),
-                ),
-              ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-/// Liên kết chữ nhỏ cùng hàng nhãn ô nhập ("Quên?"): chữ xanh 14/600, vùng chạm
-/// rộng tối thiểu 44.
+/// Liên kết chữ xanh 15/500 ("Quên mật khẩu?" căn phải dưới nhóm ô), vùng
+/// chạm tối thiểu 44 × 40.
 class AuthLabelLink extends StatelessWidget {
   const AuthLabelLink({
     super.key,
@@ -433,15 +283,15 @@ class AuthLabelLink extends StatelessWidget {
         onTap: onTap,
         borderRadius: OmniRadius.smAll,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minWidth: 44, minHeight: 36),
+          constraints: const BoxConstraints(minWidth: 44, minHeight: 40),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Center(
               widthFactor: 1,
               child: Text(
                 label,
-                style: OmniType.bodySm.copyWith(
-                  fontWeight: FontWeight.w600,
+                style: OmniType.body.copyWith(
+                  fontWeight: FontWeight.w500,
                   color: Theme.of(context).colorScheme.primary,
                 ),
               ),
@@ -486,18 +336,22 @@ class AuthDivider extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: OmniSpacing.lg),
+      padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
         children: [
-          Expanded(child: Divider(color: scheme.outlineVariant)),
+          Expanded(
+            child: Divider(thickness: 0.5, color: scheme.outlineVariant),
+          ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.md),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Text(
               'hoặc',
-              style: OmniType.bodySm.copyWith(color: scheme.onSurfaceVariant),
+              style: OmniType.caption.copyWith(color: scheme.onSurfaceVariant),
             ),
           ),
-          Expanded(child: Divider(color: scheme.outlineVariant)),
+          Expanded(
+            child: Divider(thickness: 0.5, color: scheme.outlineVariant),
+          ),
         ],
       ),
     );
@@ -674,8 +528,10 @@ class AuthErrorBox extends StatelessWidget {
   }
 }
 
-/// Nút chính của các màn xác thực: viên thuốc xanh đặc cao 52, chữ 17/700; hiện
-/// vòng quay thay chữ khi [busy] mà không đổi kích thước nút.
+/// Nút chính của các màn xác thực (hướng "Quỹ đạo", duyệt 26/11/2026): cao 54,
+/// tròn hẳn, nền [OmniColors.primaryFillOf] chữ trắng 17/600, một vệt sáng
+/// lướt qua chậm (mỗi 3,2 giây). Đang gửi ([busy]): nút co thành tròn 54 với
+/// vòng xoay. Giảm chuyển động: không vệt sáng, co ngay không chuyển.
 class AuthPrimaryButton extends StatelessWidget {
   const AuthPrimaryButton({
     super.key,
@@ -688,34 +544,134 @@ class AuthPrimaryButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final bool busy;
 
+  static const double height = 54;
+
+  /// Co lại: `cubic-bezier(.2,.9,.3,1)` trong 350ms.
+  static const Curve _shrink = Cubic(0.2, 0.9, 0.3, 1);
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return FilledButton(
-      onPressed: busy ? () {} : onPressed,
-      style: FilledButton.styleFrom(
-        minimumSize: const Size.fromHeight(52),
-        shape: const StadiumBorder(),
-        textStyle: OmniType.input.copyWith(
-          fontSize: 17,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-      child: busy
-          ? SizedBox.square(
-              dimension: 20,
-              child: CircularProgressIndicator.adaptive(
-                strokeWidth: 2.5,
-                valueColor: AlwaysStoppedAnimation<Color>(scheme.onPrimary),
+    final motion = OmniMotion.of(context);
+    final enabled = onPressed != null;
+    // Chiều cao cố định bọc ngoài: khung màn xác thực đo chiều cao nội tại
+    // (SliverFillRemaining), mà LayoutBuilder không trả lời được phép đo đó.
+    return SizedBox(
+      height: height,
+      child: LayoutBuilder(
+        builder: (context, box) {
+          final full = box.maxWidth.isFinite ? box.maxWidth : 320.0;
+          return Center(
+            child: AnimatedContainer(
+              duration: motion.enabled
+                  ? const Duration(milliseconds: 350)
+                  : Duration.zero,
+              curve: _shrink,
+              width: busy ? height : full,
+              height: height,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  FilledButton(
+                    onPressed: busy ? () {} : onPressed,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: OmniColors.primaryFillOf(context),
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: scheme.surfaceContainerHighest,
+                      disabledForegroundColor: scheme.onSurfaceVariant,
+                      minimumSize: const Size(height, height),
+                      padding: busy
+                          ? EdgeInsets.zero
+                          : const EdgeInsets.symmetric(horizontal: 16),
+                      shape: const StadiumBorder(),
+                      textStyle: OmniOrbitType.button,
+                    ),
+                    child: busy
+                        ? const SizedBox.square(
+                            dimension: 26,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: Colors.white,
+                              backgroundColor: Color(0x40FFFFFF),
+                            ),
+                          )
+                        : Text(label, maxLines: 1, softWrap: false),
+                  ),
+                  if (enabled && !busy && motion.enabled)
+                    const IgnorePointer(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.all(
+                          Radius.circular(height / 2),
+                        ),
+                        child: _ShineSweep(),
+                      ),
+                    ),
+                ],
               ),
-            )
-          : Text(label),
+            ),
+          );
+        },
+      ),
     );
   }
 }
 
-/// Nút "Tiếp tục với Google": viên thuốc cao 52 nền thẻ viền mảnh, biểu tượng
-/// 4 màu, chữ 17/600 — bậc phụ, nằm TRÊN ô nhập (người quay lại vào một chạm).
+/// Vệt sáng 60dp lướt chéo qua nút: lướt trong 35% đầu mỗi chu kỳ 3,2 giây,
+/// lần đầu chờ 1,2 giây (như `animation: shine 3.2s 1.2s infinite`).
+class _ShineSweep extends StatefulWidget {
+  const _ShineSweep();
+
+  @override
+  State<_ShineSweep> createState() => _ShineSweepState();
+}
+
+class _ShineSweepState extends State<_ShineSweep>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 3200),
+    // Bắt đầu ở 62,5%: còn 1,2 giây nữa mới tới lượt lướt đầu.
+    value: 0.625,
+  )..repeat();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      CustomPaint(painter: _ShinePainter(_c), size: Size.infinite);
+}
+
+class _ShinePainter extends CustomPainter {
+  _ShinePainter(this.phase) : super(repaint: phase);
+
+  final Animation<double> phase;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = phase.value;
+    if (p >= 0.35) return;
+    const band = 60.0;
+    final x = -80 + (size.width * 1.1 + 80) * (p / 0.35);
+    final rect = Rect.fromLTWH(x, 0, band, size.height);
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..shader = const LinearGradient(
+          colors: [Color(0x00FFFFFF), Color(0x59FFFFFF), Color(0x00FFFFFF)],
+        ).createShader(rect),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_ShinePainter old) => old.phase != phase;
+}
+
+/// Nút "Tiếp tục với Google": thứ yếu, cao 54 tròn hẳn, nền thẻ viền mảnh,
+/// biểu tượng 4 màu, chữ 16/600 — nằm dưới nút chính, sau "hoặc".
 class AuthGoogleButton extends StatelessWidget {
   const AuthGoogleButton({
     super.key,
@@ -735,15 +691,12 @@ class AuthGoogleButton extends StatelessWidget {
       key: const ValueKey('google-sign-in'),
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
-        minimumSize: const Size.fromHeight(52),
+        minimumSize: const Size.fromHeight(AuthPrimaryButton.height),
         shape: const StadiumBorder(),
         backgroundColor: scheme.surface,
         foregroundColor: scheme.onSurface,
-        side: BorderSide(color: scheme.outlineVariant),
-        textStyle: OmniType.input.copyWith(
-          fontSize: 17,
-          fontWeight: FontWeight.w600,
-        ),
+        side: BorderSide(color: scheme.outlineVariant, width: 0.5),
+        textStyle: OmniType.input.copyWith(fontWeight: FontWeight.w600),
       ),
       icon: busy
           ? const SizedBox.square(

@@ -147,18 +147,11 @@ class OmniEmptyState extends StatelessWidget {
               width: 64,
               height: 64,
               decoration: BoxDecoration(
-                color: accent
-                    ? scheme.primaryContainer
-                    : scheme.surfaceContainerHighest,
+                // Ô xám trung tính (rà soát 26/11 mục 15) — không ô xanh.
+                color: scheme.surfaceContainerHighest,
                 borderRadius: OmniRadius.xlAll,
               ),
-              child: Icon(
-                icon,
-                size: 28,
-                color: accent
-                    ? scheme.onPrimaryContainer
-                    : scheme.onSurfaceVariant,
-              ),
+              child: Icon(icon, size: 28, color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: OmniSpacing.lg),
             Semantics(

@@ -347,14 +347,12 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
         : const <String, String>{};
 
     return Scaffold(
-      // Bubbles can only read as raised against a tinted canvas. On white the
-      // incoming (white) bubbles vanished into the page and the thread looked
-      // like a flat document — the single biggest reason it did not feel like a
-      // chat app.
-      backgroundColor: OmniColors.chat(
+      // Kiểu iMessage (duyệt 26/11/2026): nền trang trắng (tối: đen), tin
+      // khách là bong bóng xám nên vẫn tách khỏi nền.
+      backgroundColor: OmniColors.byBrightness(
         context,
-        OmniColors.chatCanvas,
-        OmniColors.chatCanvasDark,
+        OmniColors.card,
+        OmniColors.darkBackground,
       ),
       appBar: ThreadHeader(
         conversation: conversation.valueOrNull,
@@ -938,6 +936,8 @@ class _MessageList extends StatelessWidget {
                 groupedWithPrevious: grouped,
                 isLastInGroup: isLastInGroup,
                 isLatestOutbound: identical(message, latestOutbound),
+                // 1-1 không có avatar nhỏ bên tin khách (duyệt 26/11/2026).
+                showAvatar: isGroup,
                 // Kênh không có đường gửi đi: gửi lại không bao giờ được.
                 onRetry:
                     message.status == DeliveryStatus.failed &&

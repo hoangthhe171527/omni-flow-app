@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../design/components/components.dart';
-import '../../../../design/tokens/tokens.dart';
 import '../../application/inbox_providers.dart';
 import '../../domain/inbox_filter.dart';
 import '../inbox_page.dart';
@@ -92,80 +90,23 @@ class _FilterButton extends StatelessWidget {
   final int count;
   final VoidCallback onTap;
 
+  // Nút lọc chung của ô tìm (rà soát 26/11 mục 6): xám khi chưa lọc; đang
+  // lọc thì thành viên mực/trắng kèm số — không còn icon xanh + huy hiệu đỏ.
   @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Semantics(
-      button: true,
-      label: 'Bộ lọc',
-      expanded: open,
-      excludeSemantics: true,
-      onTap: onTap,
-      // Hình 36, vùng chạm 44: lớp ngoài bắt chạm cả phần đệm.
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: SizedBox.square(
-          dimension: 44,
-          child: Material(
-            color: Colors.transparent,
-            child: InkResponse(
-              onTap: onTap,
-              radius: 22,
-              containedInkWell: true,
-              highlightShape: BoxShape.circle,
-              child: Stack(
-                alignment: Alignment.center,
-                clipBehavior: Clip.none,
-                children: [
-                  Icon(
-                    LucideIcons.slidersHorizontal,
-                    size: OmniIconSize.md,
-                    color: open ? scheme.primary : scheme.onSurface,
-                  ),
-                  if (count > 0)
-                    Positioned(
-                      right: 2,
-                      top: 2,
-                      child: IgnorePointer(
-                        child: Container(
-                          key: const Key('inbox-filter-count'),
-                          constraints: const BoxConstraints(minWidth: 16),
-                          height: 16,
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: OmniColors.destructive,
-                            borderRadius: BorderRadius.circular(999),
-                            // Vòng tách huy hiệu khỏi nút: cùng màu nền nút.
-                            border: Border.all(
-                              color: scheme.surface,
-                              width: 1.5,
-                            ),
-                          ),
-                          child: Text(
-                            '$count',
-                            style: OmniType.micro.copyWith(
-                              color: scheme.onError,
-                              height: 1,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => OmniSearchFilterButton(
+    onPressed: onTap,
+    activeFilters: count,
+    open: open,
+    semanticsLabel: 'Bộ lọc',
+    countKey: const Key('inbox-filter-count'),
+  );
 }
 
 /// Bộ lọc Hộp thư mở cạnh nút giống bộ lọc Khách: không đẩy danh sách xuống,
 /// không làm header đổi chiều cao và vẫn giữ toàn bộ tiêu chí tại chỗ.
+///
+/// Bảng lọc thống nhất (duyệt 26/11/2026): đầu "Lọc" + "Đặt lại", nhãn nhóm
+/// chữ HOA, lựa chọn là chip viên mực đặc. Đóng bằng chạm ra ngoài.
 Future<void> showInboxFilterMenu({
   required BuildContext context,
   required Rect anchor,
@@ -175,62 +116,25 @@ Future<void> showInboxFilterMenu({
   width: 344,
   menuKey: const Key('inbox-filter-menu'),
   semanticsLabel: 'Bộ lọc hộp thư',
-  builder: (menuContext) => Column(
+  builder: (_) => const Column(
     mainAxisSize: MainAxisSize.min,
     crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      _InboxFilterMenuHeader(onClose: () => Navigator.of(menuContext).pop()),
-      const _PanelBody(),
-    ],
+    children: [_InboxFilterMenuHeader(), _PanelBody()],
   ),
 );
 
 class _InboxFilterMenuHeader extends ConsumerWidget {
-  const _InboxFilterMenuHeader({required this.onClose});
-
-  final VoidCallback onClose;
+  const _InboxFilterMenuHeader();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = Theme.of(context).colorScheme;
     final count = ref.watch(inboxFilterProvider.select((f) => f.activeCount));
-    return Container(
-      constraints: const BoxConstraints(minHeight: 60),
-      padding: const EdgeInsets.only(left: 16, right: 8, top: 8, bottom: 4),
-      child: Row(
-        children: [
-          Icon(
-            LucideIcons.slidersHorizontal,
-            size: OmniIconSize.md,
-            color: scheme.onSurface,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Lọc hội thoại',
-              style: OmniType.bodyStrong.copyWith(color: scheme.onSurface),
-            ),
-          ),
-          if (count > 0)
-            TextButton(
-              key: const Key('inbox-filter-clear'),
-              onPressed: ref.read(inboxFilterProvider.notifier).clearFilters,
-              style: TextButton.styleFrom(
-                minimumSize: const Size(44, 44),
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-              ),
-              child: const Text('Đặt lại'),
-            ),
-          // Nút đóng là viên kính tròn.
-          OmniGlassCircle(
-            child: IconButton(
-              tooltip: 'Đóng bộ lọc',
-              onPressed: onClose,
-              icon: const Icon(LucideIcons.x),
-            ),
-          ),
-        ],
-      ),
+    // "Đặt lại" luôn ở chỗ cũ, mờ khi chưa bật bộ lọc nào.
+    return OmniFilterHeader(
+      resetKey: const Key('inbox-filter-clear'),
+      onReset: count > 0
+          ? ref.read(inboxFilterProvider.notifier).clearFilters
+          : null,
     );
   }
 }
@@ -286,7 +190,6 @@ class _PanelBody extends ConsumerWidget {
               label: 'Kênh',
               child: Wrap(
                 spacing: 8,
-                runSpacing: 4,
                 children: [
                   for (final channel in channels)
                     _ChoiceChip(
@@ -305,7 +208,6 @@ class _PanelBody extends ConsumerWidget {
             label: 'Tình trạng',
             child: Wrap(
               spacing: 8,
-              runSpacing: 4,
               children: [
                 _ChoiceChip(
                   label: 'Khẩn',
@@ -359,15 +261,8 @@ class _FilterSection extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Text(
-            label,
-            style: OmniType.overline.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ),
+        // Nhãn nhóm chữ HOA 12/700 xám (bảng lọc thống nhất).
+        OmniFilterGroupLabel(title: label),
         child,
       ],
     ),
@@ -389,7 +284,6 @@ class _QuickFilterGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Wrap(
     spacing: 8,
-    runSpacing: 4,
     children: [
       for (final (filter, label) in items)
         KeyedSubtree(
@@ -404,8 +298,9 @@ class _QuickFilterGrid extends StatelessWidget {
   );
 }
 
-/// Chip lựa chọn (`OmniChoicePill`, spec phong cách iOS §3.4: chọn = xanh
-/// nhạt). Hộp bọc cao 44 để đủ vùng chạm dù chip cao 36.
+/// Chip lựa chọn: viên mực đặc [OmniFilterPill] (duyệt 26/11/2026) — chọn =
+/// nền mực chữ trắng (tối: nền trắng chữ đen), chưa chọn = nền xám nhạt. Viên
+/// tự có vùng chạm 44.
 class _ChoiceChip extends StatelessWidget {
   const _ChoiceChip({
     required this.label,
@@ -418,11 +313,6 @@ class _ChoiceChip extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-    height: 44,
-    child: Center(
-      widthFactor: 1,
-      child: OmniChoicePill(label: label, selected: selected, onTap: onTap),
-    ),
-  );
+  Widget build(BuildContext context) =>
+      OmniFilterPill(label: label, selected: selected, onTap: onTap);
 }

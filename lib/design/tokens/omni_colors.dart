@@ -68,8 +68,8 @@ abstract final class OmniColors {
   /// đậm hơn icon để chữ 11 đạt 4.5:1 trên viên kính trắng.
   static const tabInactiveIcon = Color(0xFF8A94A6);
   static const tabInactiveLabel = Color(0xFF5F6B7E);
-  static const darkTabInactiveIcon = Color(0xFF7F8BA0);
-  static const darkTabInactiveLabel = Color(0xFF9AA8BD);
+  static const darkTabInactiveIcon = Color(0xFF8E8E93);
+  static const darkTabInactiveLabel = Color(0xFF98989F);
 
   // ---- Bề mặt -------------------------------------------------------------
   static const background = Color(0xFFF5F7FA);
@@ -205,23 +205,46 @@ abstract final class OmniColors {
 
   // ---- Chế độ tối ---------------------------------------------------------
   //
-  // Nền tối là mực ngả xanh đêm, cùng họ với [ink]: hai chế độ phải đọc ra là
-  // cùng một sản phẩm.
-  static const darkBackground = Color(0xFF0B1422);
-  static const darkCard = Color(0xFF121E30);
-  static const darkMuted = Color(0xFF1A2840);
-  static const darkBorder = Color(0xFF22324A);
+  // Nền ĐEN chuẩn iOS (duyệt 26/11/2026, rà soát đồng nhất mục 1): nền #000,
+  // thẻ #1C1C1E, lớp nổi #2C2C2E, đường kẻ #38383A — thay bộ navy ngả xanh
+  // (#0B1422/#121E30) bị chê "nền hơi xanh".
+  static const darkBackground = Color(0xFF000000);
+  static const darkCard = Color(0xFF1C1C1E);
+  static const darkMuted = Color(0xFF2C2C2E);
+  static const darkBorder = Color(0xFF38383A);
 
   /// Bản tối của [borderInteractive].
   ///
-  /// Phải đạt 3:1 trên CẢ HAI mặt nó có thể nằm lên: [darkCard] (3.73) và
-  /// [darkMuted] (3.29) — ô nhập ở chế độ tối tô nền bằng cái thứ hai.
-  static const darkBorderInteractive = Color(0xFF667894);
+  /// Phải đạt 3:1 trên CẢ HAI mặt nó có thể nằm lên: [darkCard] và
+  /// [darkMuted] — ô nhập ở chế độ tối tô nền bằng cái thứ hai.
+  static const darkBorderInteractive = Color(0xFF7C7C82);
 
   /// Bản tối của [accent] và [accentForeground]: nền nhấn phải TỐI đi cùng
   /// chiều với nền trang, chứ không giữ nguyên khối sáng.
-  static const darkAccent = Color(0xFF102A52);
+  static const darkAccent = Color(0xFF16294A);
   static const darkAccentForeground = Color(0xFFADCFFF);
+
+  /// NỀN nút chính / nút + / tin mình gửi ở chế độ tối: xanh đặc chữ trắng
+  /// (5.0:1) như iOS. [darkPrimary] (sáng hơn) chỉ dùng cho CHỮ và icon xanh
+  /// trên nền tối — trắng trên nó không đủ tương phản.
+  static const darkPrimaryFill = Color(0xFF2F6FE0);
+
+  /// Công tắc bật: xanh lá chuẩn iOS — ngoại lệ duy nhất của quy tắc màu.
+  static const switchOn = Color(0xFF34C759);
+  static const darkSwitchOn = Color(0xFF30D158);
+
+  /// Chấm đỏ "cần chú ý": mọi huy hiệu (tab, ô ứng dụng, chưa đọc) là chấm,
+  /// không ghi số (duyệt 26/11/2026).
+  static const attentionDot = Color(0xFFFF3B30);
+  static const darkAttentionDot = Color(0xFFFF453A);
+
+  /// Nền nút chính theo chế độ đang bật (sáng: [primary]; tối:
+  /// [darkPrimaryFill]). Chữ trên nó luôn trắng.
+  static Color primaryFillOf(BuildContext context) =>
+      _byBrightness(context, primary, darkPrimaryFill);
+
+  static Color attentionOf(BuildContext context) =>
+      _byBrightness(context, attentionDot, darkAttentionDot);
 
   /// Bản tối của các cặp nền nhạt / chữ đậm theo khu: ô icon trong "Tất cả",
   /// ô chữ viết tắt ở màn chọn không gian, nhãn trạng thái. Nền nhạt của chế
@@ -238,16 +261,16 @@ abstract final class OmniColors {
   static Color byBrightness(BuildContext context, Color light, Color dark) =>
       _byBrightness(context, light, dark);
 
-  static const darkForeground = Color(0xFFE8EEF6);
-  static const darkMutedForeground = Color(0xFF9AA8BD);
-  static const darkPrimary = Color(0xFF6EA2FF);
+  static const darkForeground = Color(0xFFFFFFFF);
+  static const darkMutedForeground = Color(0xFF98989F);
 
-  /// Chữ trên nút chính ở nền tối.
-  ///
-  /// Nền tối buộc [darkPrimary] phải sáng, nên chữ trên nút chính là chữ TỐI
-  /// (9.30:1) — đây là chỗ hai chế độ buộc phải khác nhau, không phải chỗ đảo
-  /// màu là xong.
-  static const darkPrimaryForeground = Color(0xFF051833);
+  /// Xanh cho CHỮ / icon trên nền đen (link, ‹, "Đọc hết"). Nút đặc dùng
+  /// [darkPrimaryFill].
+  static const darkPrimary = Color(0xFF5E9BFF);
+
+  /// Chữ trên khối [darkPrimary] nếu có widget nào tô nền bằng màu chữ đó
+  /// (dự phòng: nút chính đã dùng [darkPrimaryFill] + chữ trắng).
+  static const darkPrimaryForeground = Color(0xFF000000);
 
   // ---- Tương phản cao ------------------------------------------------------
   //

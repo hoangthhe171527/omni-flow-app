@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/customers/domain/customer.dart';
 import 'package:omni_app/modules/customers/presentation/widgets/customer_row.dart';
@@ -64,7 +63,9 @@ void main() {
     expect(find.textContaining('186'), findsNothing);
   });
 
-  testWidgets('chấm nhãn ở mép trái, có Semantics', (t) async {
+  // Duyệt 26/11/2026 (rà soát mục 8): bỏ chấm nhãn xám đầu dòng; kênh là
+  // một nhãn xám, không tô màu theo kênh.
+  testWidgets('không còn chấm nhãn đầu dòng', (t) async {
     await t.pumpWidget(
       host(
         CustomerRow(
@@ -74,17 +75,29 @@ void main() {
         ),
       ),
     );
-    expect(find.bySemanticsLabel('Nhãn: Báo giá'), findsOneWidget);
-    final dot = t.getRect(find.bySemanticsLabel('Nhãn: Báo giá'));
-    final avatar = t.getRect(find.byType(OmniAvatar));
-    expect(dot.right, lessThanOrEqualTo(avatar.left));
+    expect(find.bySemanticsLabel('Nhãn: Báo giá'), findsNothing);
   });
 
-  testWidgets('dòng phụ: loại nguồn · —  khi chưa liên hệ', (t) async {
+  testWidgets('dòng phụ: nhãn kênh xám + "—" khi chưa liên hệ', (t) async {
     await t.pumpWidget(
       host(CustomerRow(customer: c(), expanded: false, onTap: () {})),
     );
-    expect(find.textContaining('OA · —', findRichText: true), findsOneWidget);
+    expect(find.text('OA'), findsOneWidget);
+    expect(find.text('—'), findsOneWidget);
+    final scheme = _theme.colorScheme;
+    final tag = t.widget<Container>(
+      find
+          .ancestor(of: find.text('OA'), matching: find.byType(Container))
+          .first,
+    );
+    expect(
+      (tag.decoration! as BoxDecoration).color,
+      scheme.surfaceContainerHighest,
+    );
+    expect(
+      t.widget<Text>(find.text('OA')).style!.color,
+      scheme.onSurfaceVariant,
+    );
   });
 
   testWidgets('mở ra có Nhắn · Gọi · Tạo việc · Hồ sơ; không số → Gọi tắt', (

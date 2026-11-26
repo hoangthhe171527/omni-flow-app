@@ -489,15 +489,13 @@ void main() {
     );
   });
 
-  testWidgets('huy hiệu: tin chưa đọc là chấm, việc trễ vẫn là số đỏ', (
+  testWidgets('huy hiệu: mọi mục có việc là chấm đỏ, không ghi số (26/11)', (
     t,
   ) async {
     await pump(t);
-    final overdue = t.widget<OmniCountBadge>(find.byType(OmniCountBadge));
-
-    expect(find.byType(OmniUnreadDot), findsOneWidget);
-    expect(overdue.color, OmniColors.dangerSurface);
-    expect(overdue.count, 3);
+    expect(find.byType(OmniCountBadge), findsNothing);
+    expect(find.byType(OmniUnreadDot), findsNWidgets(2));
+    expect(find.text('3'), findsNothing);
   });
 
   testWidgets('không còn thẻ hồ sơ / không gian / đăng xuất / xoá tài khoản', (
@@ -524,6 +522,10 @@ void main() {
     final container = ProviderScope.containerOf(
       t.element(find.byType(DirectoryPage)),
     );
+    // Mặc định Tối (rà soát 26/11 mục 2).
+    expect(container.read(themeModeProvider), ThemeMode.dark);
+    await t.tap(find.text('Máy'));
+    await t.pumpAndSettle();
     expect(container.read(themeModeProvider), ThemeMode.system);
     await t.tap(find.text('Tối'));
     await t.pumpAndSettle();

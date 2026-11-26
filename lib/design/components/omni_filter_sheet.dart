@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../tokens/tokens.dart';
 import 'omni_group.dart';
 import 'omni_inputs.dart';
+import 'omni_pills.dart';
 
 /// Một lựa chọn trong [OmniFilterGroup].
 @immutable
@@ -39,9 +40,11 @@ int omniFilterCount(OmniFilterSelection selection) =>
 
 /// Sheet lọc DÙNG CHUNG cho mọi danh sách (Chuẩn Mobile UI — FilterSheet).
 ///
-/// Đầu: "Lọc" + "Xoá hết". Nhóm: tiêu đề HOA nhỏ + chip chọn ([OmniChoicePill]).
+/// Bảng lọc thống nhất (duyệt 26/11/2026, rà soát mục 7): đầu "Lọc" 17/700 +
+/// "Đặt lại" chữ màu chính ([OmniFilterHeader]); nhóm: nhãn chữ HOA 12/700 xám
+/// ([OmniFilterGroupLabel]) + chip viên mực đặc ([OmniFilterPill]); bảng bo 24.
 /// Đáy: nút chính "Xem N kết quả" — số cập nhật sống qua [countResults]; 0
-/// kết quả thì nút khoá. Áp khi bấm nút; kéo xuống / ✕ = huỷ (trả `null`).
+/// kết quả thì nút khoá. Áp khi bấm nút; kéo xuống = huỷ (trả `null`).
 ///
 /// Sắp xếp là một nhóm trong sheet này, không phải nút riêng. Tối đa ~4 nhóm.
 Future<OmniFilterSelection?> showOmniFilterSheet({
@@ -54,6 +57,7 @@ Future<OmniFilterSelection?> showOmniFilterSheet({
 }) {
   return showOmniSheet<OmniFilterSelection>(
     context: context,
+    radius: OmniFilterHeader.sheetRadius,
     builder: (_) => _OmniFilterSheet(
       groups: groups,
       initial: initial,
@@ -116,18 +120,16 @@ class _OmniFilterSheetState extends State<_OmniFilterSheet> {
         : 'Xem $count ${widget.resultNoun}';
 
     return OmniSheetBody(
-      header: OmniSheetHeader(
+      header: OmniFilterHeader(
         title: widget.title,
-        trailing: TextButton(
-          onPressed: any
-              ? () => setState(() {
-                  for (final s in _sel.values) {
-                    s.clear();
-                  }
-                })
-              : null,
-          child: const Text('Xoá hết'),
-        ),
+        padding: const EdgeInsets.fromLTRB(22, 4, 12, 4),
+        onReset: any
+            ? () => setState(() {
+                for (final s in _sel.values) {
+                  s.clear();
+                }
+              })
+            : null,
       ),
       footer: FilledButton(
         onPressed: count == 0 ? null : () => Navigator.of(context).pop(_result),
@@ -141,23 +143,128 @@ class _OmniFilterSheetState extends State<_OmniFilterSheet> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                OmniGroupHeader(title: g.title),
-                Wrap(
-                  spacing: OmniSpacing.sm,
-                  runSpacing: OmniSpacing.sm,
-                  children: [
-                    for (final o in g.options)
-                      OmniChoicePill(
-                        label: o.label,
-                        selected: _sel[g.id]!.contains(o.id),
-                        onTap: () => _toggle(g, o),
-                      ),
-                  ],
+                OmniFilterGroupLabel(
+                  title: g.title,
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Wrap(
+                    spacing: OmniSpacing.sm,
+                    children: [
+                      for (final o in g.options)
+                        OmniFilterPill(
+                          label: o.label,
+                          selected: _sel[g.id]!.contains(o.id),
+                          onTap: () => _toggle(g, o),
+                        ),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
       ],
+    );
+  }
+}
+
+/// Đầu bảng lọc DÙNG CHUNG (duyệt 26/11/2026): "Lọc" 17/700 bên trái, "Đặt
+/// lại" chữ màu chính bên phải — thay icon + nút ✕. [onReset] null = chưa có
+/// gì để đặt lại (nút mờ). Bảng lọc nổi (menu neo) đóng bằng chạm ra ngoài,
+/// sheet đóng bằng kéo xuống.
+class OmniFilterHeader extends StatelessWidget {
+  const OmniFilterHeader({
+    super.key,
+    this.title = 'Lọc',
+    required this.onReset,
+    this.resetKey,
+    this.padding = const EdgeInsets.fromLTRB(16, 4, 6, 0),
+  });
+
+  /// Bo góc của bảng lọc dạng sheet.
+  static const double sheetRadius = 24;
+
+  final String title;
+  final VoidCallback? onReset;
+
+  /// Khoá của nút "Đặt lại" (test tìm theo khoá).
+  final Key? resetKey;
+  final EdgeInsetsGeometry padding;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: padding,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 46),
+        child: Row(
+          children: [
+            Expanded(
+              child: Semantics(
+                header: true,
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: OmniType.navTitle.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: scheme.onSurface,
+                  ),
+                ),
+              ),
+            ),
+            TextButton(
+              key: resetKey,
+              onPressed: onReset,
+              style: TextButton.styleFrom(
+                foregroundColor: scheme.primary,
+                minimumSize: const Size(44, 44),
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                textStyle: OmniType.body.copyWith(fontWeight: FontWeight.w500),
+              ),
+              child: const Text('Đặt lại'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Nhãn nhóm của bảng lọc: chữ HOA 12/700 xám, giãn chữ .06em (duyệt
+/// 26/11/2026). Trình đọc màn hình đọc chữ thường.
+class OmniFilterGroupLabel extends StatelessWidget {
+  const OmniFilterGroupLabel({
+    super.key,
+    required this.title,
+    this.padding = const EdgeInsets.only(bottom: 4),
+  });
+
+  final String title;
+  final EdgeInsetsGeometry padding;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: padding,
+      child: Semantics(
+        header: true,
+        label: title,
+        excludeSemantics: true,
+        child: Text(
+          title.toUpperCase(),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: OmniType.micro.copyWith(
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.72,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
     );
   }
 }

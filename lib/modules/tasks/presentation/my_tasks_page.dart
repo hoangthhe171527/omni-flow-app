@@ -256,10 +256,11 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
     TaskBucket.all => 'Chưa có việc nào được giao',
   };
 
-  String _emptyMessage(TaskBucket bucket) => switch (bucket) {
+  // Chỉ một tiêu đề ngắn (rà soát 26/11 mục 15): không câu giải thích kiểu
+  // "Kéo xuống để làm mới" — người dùng iOS tự biết kéo làm mới.
+  String? _emptyMessage(TaskBucket bucket) => switch (bucket) {
     TaskBucket.overdue => 'Bạn đang theo kịp tiến độ.',
-    TaskBucket.all => 'Việc được giao cho bạn sẽ hiện ở đây.',
-    _ => 'Kéo xuống để làm mới.',
+    _ => null,
   };
 
   List<({String title, List<Task> tasks})> _groupByPlan(List<Task> items) {

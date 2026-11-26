@@ -11,6 +11,7 @@ import 'package:omni_app/modules/auth/application/login_controller.dart';
 import 'package:omni_app/modules/auth/auth_module.dart';
 import 'package:omni_app/modules/auth/presentation/login_page.dart';
 import 'package:omni_app/modules/auth/presentation/workspace_page.dart';
+import 'package:omni_app/modules/auth/presentation/widgets/auth_widgets.dart';
 import 'package:omni_app/security/session/auth_gateway.dart';
 
 class _FailedLogin extends LoginController {
@@ -57,6 +58,14 @@ class _SlowLogin extends LoginController {
 }
 
 void main() {
+  /// Màn đăng nhập có hiệu ứng lặp mãi (quỹ đạo, vệt sáng nút chính) nên
+  /// pumpAndSettle không bao giờ dừng — bơm một khoảng cố định thay vì settle.
+  Future<void> settle(WidgetTester tester) async {
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+  }
+
   Future<void> pump(WidgetTester tester, Widget page, List<Override> o) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
@@ -72,20 +81,36 @@ void main() {
   }
 
   group('đăng nhập', () {
-    testWidgets('logo trần neo cho màn mở app, tiêu đề, hai ô và nút', (
+    testWidgets('quỹ đạo có hành tinh, logo neo, tiêu đề, ô gộp và nút', (
       tester,
     ) async {
       await pump(tester, const LoginPage(), const []);
 
+      final orbit = tester.widget<OmniOrbit>(find.byType(OmniOrbit));
+      expect(orbit.planets, isTrue);
+      expect(orbit.scale, AuthOrbitHeader.scale);
       final mark = tester.widget<OmniBrandMark>(find.byType(OmniBrandMark));
-      expect(mark.size, 56);
+      // Logo cùng tỉ lệ với vòng: vòng màn mở app thu về khớp đúng chỗ này.
+      expect(mark.size, OmniOrbit.logoSize * AuthOrbitHeader.scale);
       // Logo trong app không đóng khung — khung chỉ dành cho icon app.
       expect(mark.framed, isFalse);
       final anchor = tester.widget<BrandAnchor>(find.byType(BrandAnchor));
       expect(anchor.withWordmark, isFalse);
-      expect(find.text('Đăng nhập Viomni'), findsOneWidget);
-      expect(find.text('Chào mừng trở lại'), findsNothing);
-      expect(find.text('Email'), findsOneWidget);
+      expect(find.text('Chào mừng\ntrở lại'), findsOneWidget);
+      expect(
+        find.text('Đăng nhập vào không gian làm việc của bạn'),
+        findsOneWidget,
+      );
+      expect(find.text('Đăng nhập Viomni'), findsNothing);
+      // Email + mật khẩu gộp trong MỘT nhóm, gợi ý là chữ trong ô.
+      expect(
+        find.descendant(
+          of: find.byType(AuthFieldGroup),
+          matching: find.byType(TextField),
+        ),
+        findsNWidgets(2),
+      );
+      expect(find.text('Email làm việc'), findsOneWidget);
       expect(find.text('Mật khẩu'), findsOneWidget);
       expect(find.widgetWithText(FilledButton, 'Đăng nhập'), findsOneWidget);
       expect(find.text('Tiếp tục với Google'), findsOneWidget);
@@ -99,7 +124,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('Google lên đầu, trên ô email và nút Đăng nhập', (
+    testWidgets('thứ tự: ô nhập, Quên mật khẩu, Đăng nhập, rồi Google', (
       tester,
     ) async {
       await pump(tester, const LoginPage(), const []);
@@ -107,17 +132,69 @@ void main() {
       final login = find.widgetWithText(FilledButton, 'Đăng nhập');
       final google = find.byKey(const ValueKey('google-sign-in'));
       final email = find.byType(TextField).first;
-      expect(
-        tester.getTopLeft(google).dy,
-        lessThan(tester.getTopLeft(email).dy),
-      );
+      final forgot = find.text('Quên mật khẩu?');
       expect(
         tester.getTopLeft(email).dy,
+        lessThan(tester.getTopLeft(forgot).dy),
+      );
+      expect(
+        tester.getTopLeft(forgot).dy,
         lessThan(tester.getTopLeft(login).dy),
       );
+      expect(
+        tester.getTopLeft(login).dy,
+        lessThan(tester.getTopLeft(google).dy),
+      );
+      // "Quên mật khẩu?" căn phải dưới nhóm ô.
+      expect(
+        tester.getTopRight(forgot).dx,
+        greaterThan(tester.getCenter(email).dx),
+      );
+      // Nút chính cao 54, vừa trong màn 390 × 844 cùng Google.
+      expect(tester.getSize(login).height, 54);
+      expect(tester.getBottomLeft(google).dy, lessThan(844));
     });
 
-    testWidgets('bàn phím bật thì thu logo, giữ tiêu đề', (tester) async {
+    testWidgets('đang gửi: nút co thành tròn 54 có vòng xoay', (tester) async {
+      final controller = _SlowLogin();
+      await pump(tester, const LoginPage(), [
+        loginControllerProvider.overrideWith(() => controller),
+      ]);
+      await tester.enterText(find.byType(TextField).first, 'a@b.vn');
+      await tester.enterText(find.byType(TextField).last, 'matkhau');
+      await tester.tap(find.widgetWithText(FilledButton, 'Đăng nhập'));
+      await settle(tester);
+
+      final button = tester.getSize(find.byType(FilledButton));
+      expect(button, const Size(54, 54));
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      controller.finish.complete();
+      await tester.pump();
+    });
+
+    testWidgets('giảm chuyển động: quỹ đạo và nút đứng yên', (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            theme: OmniTheme.light(),
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(disableAnimations: true),
+              child: child!,
+            ),
+            home: const LoginPage(),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(OmniOrbit), findsOneWidget);
+      expect(tester.hasRunningAnimations, isFalse);
+    });
+
+    testWidgets('bàn phím bật thì thu quỹ đạo, giữ tiêu đề', (tester) async {
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
@@ -135,16 +212,17 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle();
+      await settle(tester);
 
       expect(find.byType(OmniBrandMark), findsNothing);
-      expect(find.text('Đăng nhập Viomni'), findsOneWidget);
+      expect(find.byType(OmniOrbit), findsNothing);
+      expect(find.text('Chào mừng\ntrở lại'), findsOneWidget);
       expect(tester.takeException(), isNull);
 
       // Đang gõ email: nút Đăng nhập nằm trọn trên bàn phím.
       await tester.tap(find.byType(TextField).first);
       await tester.pump(const Duration(milliseconds: 400));
-      await tester.pumpAndSettle();
+      await settle(tester);
       final button = tester.getRect(
         find.widgetWithText(FilledButton, 'Đăng nhập'),
       );
@@ -176,7 +254,7 @@ void main() {
 
       expect(find.text('Vui lòng nhập email'), findsOneWidget);
       expect(find.text('Vui lòng nhập mật khẩu'), findsOneWidget);
-      await tester.pumpAndSettle();
+      await settle(tester);
       expect(tester.takeException(), isNull);
     });
 
@@ -201,7 +279,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 40));
       final after = tester.getTopLeft(find.byType(TextField).first).dx;
-      await tester.pumpAndSettle();
+      await settle(tester);
       return after - before;
     }
 
@@ -242,24 +320,24 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle();
+      await settle(tester);
 
       await tester.tap(find.text('Đăng ký'));
-      await tester.pumpAndSettle();
+      await settle(tester);
       expect(find.text('trang-dang-ky'), findsOneWidget);
 
       router.pop();
-      await tester.pumpAndSettle();
+      await settle(tester);
       await tester.tap(find.text('Quên mật khẩu?'));
-      await tester.pumpAndSettle();
+      await settle(tester);
       expect(find.text('trang-quen:null'), findsOneWidget);
 
       // Đã gõ email thì mang sang, khỏi gõ lại.
       router.pop();
-      await tester.pumpAndSettle();
+      await settle(tester);
       await tester.enterText(find.byType(TextField).first, ' lan@acme.vn ');
       await tester.tap(find.text('Quên mật khẩu?'));
-      await tester.pumpAndSettle();
+      await settle(tester);
       expect(find.text('trang-quen:lan@acme.vn'), findsOneWidget);
     });
 

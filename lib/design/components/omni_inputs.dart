@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -26,9 +27,15 @@ class OmniSearchField extends StatefulWidget {
     this.onSubmitted,
     this.value,
     this.onCover = false,
+    this.hints,
   });
 
   final ValueChanged<String> onChanged;
+
+  /// Gợi ý quay vòng trong ô như máy đánh số (kiểu "Biến hình", duyệt
+  /// 26/11/2026): mỗi ~2,2 s lăn lên gợi ý kế tiếp. `null` hoặc chỉ 1 mục =
+  /// gợi ý tĩnh [hint]. Dừng quay khi ô đang focus hoặc giảm chuyển động.
+  final List<String>? hints;
 
   /// Ô nằm trên ảnh bìa (đầu Bảng kế hoạch): viên kính trắng mờ, chữ và icon
   /// trắng. Tương phản cao thì viên đặc ([OmniCovers.glass]).
@@ -81,6 +88,14 @@ class _OmniSearchFieldState extends State<OmniSearchField> {
   );
   Timer? _timer;
 
+  /// Ô đang focus — chỉ dùng để dừng gợi ý quay.
+  bool _focused = false;
+
+  List<String>? get _rollingHints {
+    final h = widget.hints;
+    return h != null && h.length > 1 ? h : null;
+  }
+
   /// Chữ ô đã gửi lên gần nhất (chế độ có điều khiển). Gán trong [initState]
   /// — KHÔNG dùng `late` có biểu thức khởi tạo: lần đọc đầu tiên rơi vào
   /// [didUpdateWidget], lúc `widget` đã là widget MỚI, và giá trị mới bị coi
@@ -120,6 +135,12 @@ class _OmniSearchFieldState extends State<OmniSearchField> {
 
   void _onChanged(String value) {
     _timer?.cancel();
+    // Viền cầu vồng của khung ô tìm (nếu có) chạy trong lúc chờ gửi: tối
+    // thiểu ~650ms, hoặc hết thời gian debounce (duyệt 26/11/2026).
+    if (value.trim().isNotEmpty) {
+      final wait = widget.debounce > _busyMin ? widget.debounce : _busyMin;
+      OmniSearchFrame._pulse(context, wait);
+    }
     if (widget.debounce == Duration.zero) {
       _emit(value.trim());
       setState(() {});
@@ -144,102 +165,495 @@ class _OmniSearchFieldState extends State<OmniSearchField> {
       borderSide: BorderSide(color: Colors.white.withValues(alpha: .36)),
     );
 
+    final rolling = _rollingHints;
+    final hintStyle = OmniType.searchHint.copyWith(color: muted);
+
     // Center: nơi gọi hay ép ô cao đúng 44 (hàng `stretch`, viên kính). Bị ép
     // thì ô nhập dồn nội dung lên mép trên — với phông thật (dòng cao hơn
     // phông thử) kính lúp và chữ lệch lên ~3px trong viên kính. Center để ô
     // giữ chiều cao tự nhiên và nằm đúng giữa khung.
-    return Center(
-      child: TextField(
-        controller: _controller,
-        autofocus: widget.autofocus,
-        onChanged: _onChanged,
-        onSubmitted: widget.onSubmitted == null
+    final field = TextField(
+      controller: _controller,
+      autofocus: widget.autofocus,
+      onChanged: _onChanged,
+      onSubmitted: widget.onSubmitted == null
+          ? null
+          : (value) {
+              _timer?.cancel();
+              _sent = value.trim();
+              widget.onSubmitted!(value.trim());
+            },
+      textInputAction: TextInputAction.search,
+      cursorColor: onCover ? Colors.white : null,
+      style: OmniType.search.copyWith(color: ink, fontStyle: FontStyle.normal),
+      textAlignVertical: TextAlignVertical.center,
+      decoration: InputDecoration(
+        hintText: rolling == null ? widget.hint : null,
+        hint: rolling == null
             ? null
-            : (value) {
-                _timer?.cancel();
-                _sent = value.trim();
-                widget.onSubmitted!(value.trim());
-              },
-        textInputAction: TextInputAction.search,
-        cursorColor: onCover ? Colors.white : null,
-        style: OmniType.search.copyWith(
-          color: ink,
-          fontStyle: FontStyle.normal,
+            : _RollingHint(hints: rolling, style: hintStyle, paused: _focused),
+        hintStyle: hintStyle,
+        prefixIcon: Icon(
+          LucideIcons.search,
+          color: muted,
+          size: OmniIconSize.lg,
         ),
-        textAlignVertical: TextAlignVertical.center,
-        decoration: InputDecoration(
-          hintText: widget.hint,
-          hintStyle: OmniType.searchHint.copyWith(color: muted),
-          prefixIcon: Icon(
-            LucideIcons.search,
-            color: muted,
-            size: OmniIconSize.lg,
-          ),
-          prefixIconConstraints: widget.dense || onCover
-              ? const BoxConstraints(minWidth: 36, minHeight: 36)
-              : null,
-          suffixIconConstraints: widget.dense || onCover
-              ? const BoxConstraints(minWidth: 36, minHeight: 36)
-              : null,
-          suffixIcon: _controller.text.isEmpty
-              ? widget.trailing
-              : IconButton(
-                  padding: widget.dense || onCover ? EdgeInsets.zero : null,
-                  constraints: widget.dense || onCover
-                      ? const BoxConstraints(minWidth: 36, minHeight: 36)
-                      : null,
-                  tooltip: 'Xoá tìm kiếm',
-                  icon: Icon(
-                    LucideIcons.x,
-                    size: OmniIconSize.md,
-                    color: muted,
-                  ),
-                  onPressed: () {
-                    _timer?.cancel();
-                    _controller.clear();
-                    _emit('');
-                    setState(() {});
-                  },
+        prefixIconConstraints: widget.dense || onCover
+            ? const BoxConstraints(minWidth: 36, minHeight: 36)
+            : null,
+        suffixIconConstraints: widget.dense || onCover
+            ? const BoxConstraints(minWidth: 36, minHeight: 36)
+            : null,
+        suffixIcon: _controller.text.isEmpty
+            ? widget.trailing
+            : IconButton(
+                padding: widget.dense || onCover ? EdgeInsets.zero : null,
+                constraints: widget.dense || onCover
+                    ? const BoxConstraints(minWidth: 36, minHeight: 36)
+                    : null,
+                tooltip: 'Xoá tìm kiếm',
+                icon: Icon(LucideIcons.x, size: OmniIconSize.md, color: muted),
+                onPressed: () {
+                  _timer?.cancel();
+                  _controller.clear();
+                  _emit('');
+                  setState(() {});
+                },
+              ),
+        isDense: true,
+        // Đệm 12 cho cả bản dense: 12 + dòng 20 + 12 = đúng 44, khớp viên kính
+        // / hàng ép vào. Đệm 10 thì nội dung chỉ cao 40, nằm sát mép trên khung
+        // 44 → kính lúp và chữ lệch lên 2px (thấy rõ trên viên kính).
+        // Trên ảnh bìa: viên 38 (9 + 20 + 9) nằm giữa hàng nút 44.
+        contentPadding: EdgeInsets.symmetric(vertical: onCover ? 9 : 12),
+        filled: onCover || !widget.flat,
+        fillColor: onCover
+            ? (MediaQuery.highContrastOf(context)
+                  ? OmniCovers.glass
+                  : Colors.white.withValues(alpha: .20))
+            : widget.flat
+            ? Colors.transparent
+            : widget.outlined
+            ? scheme.surface
+            : scheme.surfaceContainerHighest,
+        border: onCover
+            ? coverBorder
+            : widget.flat
+            ? InputBorder.none
+            : _border(scheme),
+        enabledBorder: onCover
+            ? coverBorder
+            : widget.flat
+            ? InputBorder.none
+            : _border(scheme),
+        focusedBorder: onCover
+            ? coverBorder
+            : !widget.flat && widget.outlined
+            ? OutlineInputBorder(
+                borderRadius: OmniRadius.lgAll,
+                borderSide: BorderSide(
+                  color: scheme.primary.withValues(alpha: .55),
+                  width: 1.5,
                 ),
-          isDense: true,
-          // Đệm 12 cho cả bản dense: 12 + dòng 20 + 12 = đúng 44, khớp viên kính
-          // / hàng ép vào. Đệm 10 thì nội dung chỉ cao 40, nằm sát mép trên khung
-          // 44 → kính lúp và chữ lệch lên 2px (thấy rõ trên viên kính).
-          // Trên ảnh bìa: viên 38 (9 + 20 + 9) nằm giữa hàng nút 44.
-          contentPadding: EdgeInsets.symmetric(vertical: onCover ? 9 : 12),
-          filled: onCover || !widget.flat,
-          fillColor: onCover
-              ? (MediaQuery.highContrastOf(context)
-                    ? OmniCovers.glass
-                    : Colors.white.withValues(alpha: .20))
-              : widget.flat
-              ? Colors.transparent
-              : widget.outlined
-              ? scheme.surface
-              : scheme.surfaceContainerHighest,
-          border: onCover
-              ? coverBorder
-              : widget.flat
-              ? InputBorder.none
-              : _border(scheme),
-          enabledBorder: onCover
-              ? coverBorder
-              : widget.flat
-              ? InputBorder.none
-              : _border(scheme),
-          focusedBorder: onCover
-              ? coverBorder
-              : !widget.flat && widget.outlined
-              ? OutlineInputBorder(
-                  borderRadius: OmniRadius.lgAll,
-                  borderSide: BorderSide(
-                    color: scheme.primary.withValues(alpha: .55),
-                    width: 1.5,
+              )
+            : widget.flat
+            ? InputBorder.none
+            : _border(scheme),
+      ),
+    );
+
+    return Center(
+      child: rolling == null
+          ? field
+          // Chỉ nghe focus khi có gợi ý quay (để dừng quay lúc đang gõ).
+          : Focus(
+              canRequestFocus: false,
+              skipTraversal: true,
+              onFocusChange: (f) {
+                if (f != _focused && mounted) setState(() => _focused = f);
+              },
+              child: field,
+            ),
+    );
+  }
+}
+
+/// Thời gian tối thiểu viền cầu vồng chạy sau một phím gõ.
+const Duration _busyMin = Duration(milliseconds: 650);
+
+/// Gợi ý quay như máy đánh số: gợi ý cũ lăn lên, gợi ý mới lăn từ dưới lên,
+/// có nảy nhẹ (cubic-bezier(.2,.9,.3,1.25) của bản duyệt). Giảm chuyển động
+/// hoặc [paused]: đứng yên ở gợi ý đang hiện.
+class _RollingHint extends StatefulWidget {
+  const _RollingHint({
+    required this.hints,
+    required this.style,
+    required this.paused,
+  });
+
+  final List<String> hints;
+  final TextStyle style;
+  final bool paused;
+
+  @override
+  State<_RollingHint> createState() => _RollingHintState();
+}
+
+class _RollingHintState extends State<_RollingHint> {
+  static const _every = Duration(milliseconds: 2200);
+  static const _roll = Duration(milliseconds: 550);
+
+  Timer? _timer;
+  int _i = 0;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _schedule();
+  }
+
+  @override
+  void didUpdateWidget(_RollingHint old) {
+    super.didUpdateWidget(old);
+    if (old.paused != widget.paused ||
+        old.hints.length != widget.hints.length) {
+      _schedule();
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _schedule() {
+    _timer?.cancel();
+    _timer = null;
+    if (widget.paused ||
+        widget.hints.length < 2 ||
+        !OmniMotion.enabled(context)) {
+      return;
+    }
+    _timer = Timer.periodic(_every, (_) {
+      if (mounted) setState(() => _i = (_i + 1) % widget.hints.length);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final i = _i % widget.hints.length;
+    return ClipRect(
+      child: AnimatedSwitcher(
+        duration: OmniMotion.enabled(context) ? _roll : Duration.zero,
+        switchInCurve: const Cubic(0.2, 0.9, 0.3, 1.25),
+        switchOutCurve: Curves.easeIn,
+        layoutBuilder: (current, previous) => Stack(
+          alignment: Alignment.centerLeft,
+          children: [...previous, ?current],
+        ),
+        transitionBuilder: (child, animation) {
+          // Mục mới lăn từ dưới lên; mục cũ (chạy ngược 1→0) lăn lên trên.
+          final incoming = child.key == ValueKey<int>(i);
+          return SlideTransition(
+            position: Tween<Offset>(
+              begin: incoming ? const Offset(0, 1) : const Offset(0, -1),
+              end: Offset.zero,
+            ).animate(animation),
+            child: child,
+          );
+        },
+        child: Text(
+          widget.hints[i],
+          key: ValueKey<int>(i),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: widget.style,
+        ),
+      ),
+    );
+  }
+}
+
+/// Khung ô tìm kiểu "Biến hình" (duyệt 26/11/2026, rà soát mục 18): nền xám
+/// đặc bo [radius]; vầng sáng xanh mảnh khi ô bên trong có focus; viền chạy
+/// vòng cầu vồng (xanh → tím → đỏ → vàng → xanh lá) trong lúc ô
+/// [OmniSearchField] bên trong đang gõ / chờ gửi. Giảm chuyển động: vầng sáng
+/// và viền hiện/tắt thẳng, viền không xoay.
+class OmniSearchFrame extends StatefulWidget {
+  const OmniSearchFrame({
+    super.key,
+    required this.child,
+    this.radius = 10,
+    this.color,
+  });
+
+  final Widget child;
+  final double radius;
+
+  /// Nền ô; null = mực 12% (tối) / 6% (sáng).
+  final Color? color;
+
+  /// Đang nằm trong một khung ô tìm — ô con không vẽ khung lần hai.
+  static bool isInside(BuildContext context) =>
+      context.getInheritedWidgetOfExactType<_OmniSearchScope>() != null;
+
+  /// Báo khung gần nhất "đang tìm" trong [wait]. Không có khung thì thôi.
+  static void _pulse(BuildContext context, Duration wait) => context
+      .getInheritedWidgetOfExactType<_OmniSearchScope>()
+      ?.state
+      ._busyFor(wait);
+
+  @override
+  State<OmniSearchFrame> createState() => _OmniSearchFrameState();
+}
+
+class _OmniSearchFrameState extends State<OmniSearchFrame>
+    with SingleTickerProviderStateMixin {
+  bool _focused = false;
+  bool _busy = false;
+  Timer? _busyTimer;
+  AnimationController? _spin;
+
+  void _busyFor(Duration wait) {
+    if (!mounted) return;
+    _busyTimer?.cancel();
+    if (!_busy) setState(() => _busy = true);
+    _syncSpin();
+    _busyTimer = Timer(wait, () {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      _syncSpin();
+    });
+  }
+
+  void _syncSpin() {
+    if (_busy && OmniMotion.enabled(context)) {
+      final spin = _spin ??= AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 1100),
+      );
+      if (!spin.isAnimating) spin.repeat();
+    } else {
+      _spin?.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _busyTimer?.cancel();
+    _spin?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final dark = theme.brightness == Brightness.dark;
+    final motion = OmniMotion.enabled(context);
+    final radius = BorderRadius.circular(widget.radius);
+    final glow = OmniColors.primaryFillOf(context).withValues(alpha: .25);
+    final fade = motion ? const Duration(milliseconds: 300) : Duration.zero;
+
+    final box = AnimatedContainer(
+      duration: fade,
+      decoration: BoxDecoration(
+        color:
+            widget.color ??
+            scheme.onSurface.withValues(alpha: dark ? .12 : .06),
+        borderRadius: radius,
+        border: MediaQuery.highContrastOf(context)
+            ? Border.all(color: scheme.outline)
+            : null,
+        // Vầng sáng xanh mảnh 3dp khi focus (box-shadow 0 0 0 4px .25).
+        boxShadow: _focused
+            ? [BoxShadow(color: glow, spreadRadius: 3)]
+            : const <BoxShadow>[],
+      ),
+      child: widget.child,
+    );
+
+    return _OmniSearchScope(
+      state: this,
+      child: Focus(
+        canRequestFocus: false,
+        skipTraversal: true,
+        onFocusChange: (f) {
+          if (f != _focused && mounted) setState(() => _focused = f);
+        },
+        child: Stack(
+          children: [
+            box,
+            Positioned.fill(
+              child: IgnorePointer(
+                child: AnimatedOpacity(
+                  key: const Key('omni-search-busy-ring'),
+                  opacity: _busy ? 1 : 0,
+                  duration: fade,
+                  child: CustomPaint(
+                    painter: _RainbowRingPainter(
+                      radius: widget.radius,
+                      turns: _spin,
+                    ),
                   ),
-                )
-              : widget.flat
-              ? InputBorder.none
-              : _border(scheme),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OmniSearchScope extends InheritedWidget {
+  const _OmniSearchScope({required this.state, required super.child});
+
+  final _OmniSearchFrameState state;
+
+  @override
+  bool updateShouldNotify(_OmniSearchScope oldWidget) =>
+      state != oldWidget.state;
+}
+
+/// Viền 2dp tô SweepGradient cầu vồng, xoay theo [turns] (0..1 = một vòng).
+class _RainbowRingPainter extends CustomPainter {
+  _RainbowRingPainter({required this.radius, this.turns})
+    : super(repaint: turns);
+
+  final double radius;
+  final Animation<double>? turns;
+
+  static const _colors = [
+    Color(0xFF2F6FE0),
+    Color(0xFF8B5CF6),
+    Color(0xFFFF453A),
+    Color(0xFFFFD60A),
+    Color(0xFF30D158),
+    Color(0xFF2F6FE0),
+  ];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    final rect = Offset.zero & size;
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..shader = SweepGradient(
+        colors: _colors,
+        transform: GradientRotation((turns?.value ?? 0) * 2 * math.pi),
+      ).createShader(rect);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        rect.deflate(1),
+        Radius.circular(math.max(0, radius - 1)),
+      ),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_RainbowRingPainter old) =>
+      old.radius != radius || old.turns != turns;
+}
+
+/// Nút lọc trong ô tìm (duyệt 26/11/2026, rà soát mục 6): chưa lọc = icon
+/// sliders XÁM (`onSurfaceVariant`); đang lọc = viên đặc `onSurface` (mực ở
+/// chế độ sáng, trắng ở tối) chữ `surface` kèm số bộ lọc đang bật. Vùng chạm
+/// tối thiểu 44.
+class OmniSearchFilterButton extends StatelessWidget {
+  const OmniSearchFilterButton({
+    super.key,
+    required this.onPressed,
+    this.activeFilters,
+    this.semanticsLabel,
+    this.open,
+    this.countKey,
+  });
+
+  final VoidCallback? onPressed;
+
+  /// Số bộ lọc đang bật; null hoặc 0 = chưa lọc.
+  final int? activeFilters;
+
+  /// Nhãn trình đọc màn hình; null = "Lọc" / "Lọc · đang bật N".
+  final String? semanticsLabel;
+
+  /// Bảng lọc đang mở (trình đọc màn hình đọc "đã mở rộng"); null = không báo.
+  final bool? open;
+
+  /// Key cho viên đếm (bài kiểm tìm theo key).
+  final Key? countKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final n = activeFilters ?? 0;
+    final label = semanticsLabel ?? (n > 0 ? 'Lọc · đang bật $n' : 'Lọc');
+    final Widget face = n > 0
+        ? Container(
+            key: countKey,
+            height: 26,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            decoration: BoxDecoration(
+              color: scheme.onSurface,
+              borderRadius: BorderRadius.circular(13),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  LucideIcons.slidersHorizontal,
+                  size: 14,
+                  color: scheme.surface,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '$n',
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.2,
+                    fontWeight: FontWeight.w700,
+                    color: scheme.surface,
+                    fontFeatures: OmniType.tabular,
+                  ),
+                ),
+              ],
+            ),
+          )
+        : Icon(
+            LucideIcons.slidersHorizontal,
+            size: OmniIconSize.md,
+            color: open == true ? scheme.onSurface : scheme.onSurfaceVariant,
+          );
+
+    return Semantics(
+      button: true,
+      label: label,
+      expanded: open,
+      excludeSemantics: true,
+      onTap: onPressed,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onPressed,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minWidth: 44,
+            minHeight: 44,
+            maxHeight: 44,
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkResponse(
+              onTap: onPressed,
+              radius: 22,
+              containedInkWell: true,
+              highlightShape: BoxShape.circle,
+              child: Center(widthFactor: 1, child: face),
+            ),
+          ),
         ),
       ),
     );
@@ -260,12 +674,29 @@ class OmniSearchBottom extends StatelessWidget implements PreferredSizeWidget {
     this.autofocus = false,
     this.onSubmitted,
     this.trailing,
+    this.hints,
+    this.onFilter,
+    this.activeFilters,
+    this.filterKey,
   });
 
   final String hint;
   final ValueChanged<String> onChanged;
   final Key? fieldKey;
   final Widget? trailing;
+
+  /// Gợi ý quay vòng (xem [OmniSearchField.hints]); null = [hint] tĩnh.
+  final List<String>? hints;
+
+  /// Có thì trong ô có nút lọc [OmniSearchFilterButton] (khi không truyền
+  /// [trailing]).
+  final VoidCallback? onFilter;
+
+  /// Số bộ lọc đang bật — nút lọc thành viên đặc có số (rà soát mục 6).
+  final int? activeFilters;
+
+  /// Key của nút lọc.
+  final Key? filterKey;
   final String? initialValue;
   final Duration debounce;
   final bool autofocus;
@@ -276,41 +707,43 @@ class OmniSearchBottom extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: scheme.onSurface.withValues(alpha: dark ? .12 : .06),
-        borderRadius: BorderRadius.circular(10),
-        border: MediaQuery.highContrastOf(context)
-            ? Border.all(color: scheme.outline)
-            : null,
-      ),
-      child: SizedBox(
-        height: 44,
-        child: Padding(
-          padding: EdgeInsets.only(left: 6, right: trailing == null ? 6 : 0),
-          child: Row(
-            children: [
-              Expanded(
-                child: OmniSearchField(
-                  key: fieldKey,
-                  hint: hint,
-                  initialValue: initialValue,
-                  debounce: debounce,
-                  flat: true,
-                  dense: true,
-                  autofocus: autofocus,
-                  onChanged: onChanged,
-                  onSubmitted: onSubmitted,
-                ),
+    final end =
+        trailing ??
+        (onFilter == null
+            ? null
+            : OmniSearchFilterButton(
+                key: filterKey,
+                onPressed: onFilter,
+                activeFilters: activeFilters,
+              ));
+    final content = SizedBox(
+      height: 44,
+      child: Padding(
+        padding: EdgeInsets.only(left: 6, right: end == null ? 6 : 0),
+        child: Row(
+          children: [
+            Expanded(
+              child: OmniSearchField(
+                key: fieldKey,
+                hint: hint,
+                hints: hints,
+                initialValue: initialValue,
+                debounce: debounce,
+                flat: true,
+                dense: true,
+                autofocus: autofocus,
+                onChanged: onChanged,
+                onSubmitted: onSubmitted,
               ),
-              ?trailing,
-            ],
-          ),
+            ),
+            ?end,
+          ],
         ),
       ),
     );
+    // Đã nằm trong khung ô tìm của thanh trên: không vẽ nền lần hai.
+    if (OmniSearchFrame.isInside(context)) return content;
+    return OmniSearchFrame(child: content);
   }
 }
 

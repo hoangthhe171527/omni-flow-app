@@ -10,17 +10,19 @@ import '../../design/platform/omni_motion_scope.dart';
 /// chỉ sống chừng nào phiên còn đang khôi phục, mà khôi phục thường xong trong
 /// vài trăm ms — đặt hiệu ứng ở đó thì hoặc nó bị cắt ngang giữa chừng, hoặc
 /// phải bắt router CHỜ nó. Ở đây hai việc chạy song song: router khôi phục
-/// phiên và điều hướng ngay bên dưới, còn hiệu ứng dựng hình ~1 giây rồi bay.
+/// phiên và điều hướng ngay bên dưới, còn hiệu ứng dựng hình ~2 giây rồi bay.
 /// Không có lượt điều hướng nào bị làm chậm; thứ duy nhất người dùng "chờ" là
 /// chính hiệu ứng, và chỉ ở lần mở đầu tiên.
 ///
-/// Pha bay (960ms → hết): nếu màn đích có logo neo bằng [BrandAnchor] (màn đăng
-/// nhập, header có logo), logo bay tới đúng chỗ đó và nền splash tan thành
-/// trong suốt (hào quang đã tắt từ trước) — chữ "Viomni" bay theo nếu đích có
-/// chữ, không thì mờ và trượt lên. Không có neo thì cả lớp phủ mờ dần.
+/// Pha bay (2,1 giây → hết, hướng "Quỹ đạo" duyệt 26/11/2026): nếu màn đích
+/// có logo neo bằng [BrandAnchor] (logo giữa quỹ đạo màn đăng nhập, header có
+/// logo), logo bay tới đúng chỗ đó, hệ vòng bay theo và mờ đi (màn đăng nhập
+/// có sẵn vòng ở đúng chỗ — không có cú cắt), nền splash tan thành trong suốt
+/// — chữ "Viomni" bay theo nếu đích có chữ, không thì mờ và trượt lên. Không
+/// có neo thì cả lớp phủ mờ dần.
 ///
 /// Nếu khôi phục phiên lâu hơn hiệu ứng (mạng chậm), bên dưới là [SplashPage]:
-/// cùng logo ở cùng chỗ, hào quang tỏa theo nhịp.
+/// cùng quỹ đạo, cùng logo ở cùng chỗ, sao chổi chạy vòng.
 ///
 /// Bỏ qua hẳn khi máy bật "giảm chuyển động" — thiết kế ghi rõ "tắt hết".
 class LaunchSplash extends StatefulWidget {
@@ -28,11 +30,13 @@ class LaunchSplash extends StatefulWidget {
 
   final Widget child;
 
-  /// Tổng thời lượng lớp phủ: dựng hình 960 + bay 640 (artifact duyệt 26/11).
-  static const total = Duration(milliseconds: 960 + 640);
+  /// Tổng thời lượng lớp phủ: dựng hình 2100 + bay 600 (bản "Quỹ đạo" duyệt
+  /// 26/11/2026).
+  static const total = Duration(milliseconds: 2100 + 600);
 
-  /// Mốc bắt đầu bay — ngay sau phần dựng hình.
-  static const _flyStartMs = 960;
+  /// Mốc bắt đầu bay — ngay sau phần dựng hình ([OmniSplash.timeline]).
+  @visibleForTesting
+  static const flyStartMs = 2100;
 
   /// Đã chạy trong tiến trình này chưa. Tĩnh chứ không nằm trong State: cây
   /// widget có thể dựng lại (đổi theme, đổi tenant dựng lại router) mà hiệu
@@ -126,7 +130,7 @@ class _LaunchSplashState extends State<LaunchSplash>
 
     final totalMs = LaunchSplash.total.inMilliseconds;
     final splashMs = OmniSplash.timeline.inMilliseconds;
-    const flyStart = LaunchSplash._flyStartMs;
+    const flyStart = LaunchSplash.flyStartMs;
 
     return Stack(
       fit: StackFit.expand,

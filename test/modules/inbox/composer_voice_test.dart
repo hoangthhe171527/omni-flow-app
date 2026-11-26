@@ -134,12 +134,18 @@ void main() {
       expect(find.byTooltip('Ghi âm'), findsNothing);
     });
 
-    testWidgets('gõ chữ thì mic thu cùng cụm công cụ', (tester) async {
+    // Duyệt 26/11/2026: mic ở cuối hàng khi ô trống; có chữ thì chỗ đó là
+    // nút ↑ gửi.
+    testWidgets('gõ chữ thì mic đổi thành nút Gửi', (tester) async {
       await tester.pumpWidget(host());
       await tester.enterText(find.byType(TextField), 'chào');
       await tester.pumpAndSettle();
-      expect(find.byTooltip('Ghi âm').hitTestable(), findsNothing);
-      expect(find.byTooltip('Hiện công cụ'), findsOneWidget);
+      expect(find.byTooltip('Ghi âm'), findsNothing);
+      expect(find.byTooltip('Gửi'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), '');
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('Ghi âm'), findsOneWidget);
     });
   });
 
@@ -497,7 +503,8 @@ void main() {
     expect(tester.takeException(), isNull);
     final mic = tester.getRect(find.byTooltip('Ghi âm'));
     final input = tester.getRect(find.byType(TextField));
-    expect(mic.right, lessThanOrEqualTo(input.left));
+    expect(mic.left, greaterThanOrEqualTo(input.right));
+    expect(mic.right, lessThanOrEqualTo(360));
     expect(input.width, greaterThanOrEqualTo(100));
 
     await tapMic(tester);

@@ -12,8 +12,9 @@ import '../storage/storage_keys.dart';
 /// phone in dark mode got a white screen in an otherwise dark home screen, and
 /// the messaging screens they compare against Zalo were the worst of it.
 ///
-/// Defaults to [ThemeMode.system]: matching the phone is what every messaging
-/// app does, and it costs the user no decision.
+/// Mặc định [ThemeMode.dark] (duyệt 26/11/2026, rà soát đồng nhất mục 2): app
+/// thiết kế quanh nền đen. Người đã tự chọn Máy / Sáng / Tối thì giữ nguyên lựa
+/// chọn đã lưu.
 class ThemeModeController extends Notifier<ThemeMode> {
   @override
   ThemeMode build() {
@@ -40,8 +41,8 @@ class ThemeModeController extends Notifier<ThemeMode> {
 
   static ThemeMode _decode(String? value) => switch (value) {
     'light' => ThemeMode.light,
-    'dark' => ThemeMode.dark,
-    _ => ThemeMode.system,
+    'system' => ThemeMode.system,
+    _ => ThemeMode.dark,
   };
 
   static String _encode(ThemeMode mode) => switch (mode) {
@@ -59,10 +60,7 @@ final themeModeProvider = NotifierProvider<ThemeModeController, ThemeMode>(
 /// describe it differently.
 ({String label, IconData icon}) themeModeDisplay(ThemeMode mode) =>
     switch (mode) {
-      ThemeMode.system => (
-        label: 'Theo hệ thống',
-        icon: LucideIcons.sunMoon,
-      ),
+      ThemeMode.system => (label: 'Theo hệ thống', icon: LucideIcons.sunMoon),
       ThemeMode.light => (label: 'Sáng', icon: LucideIcons.sun),
       ThemeMode.dark => (label: 'Tối', icon: LucideIcons.moon),
     };
