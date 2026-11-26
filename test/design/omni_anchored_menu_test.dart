@@ -4,6 +4,50 @@ import 'package:omni_app/design/components/omni_anchored_menu.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 
 void main() {
+  // Bớt kính mờ 26/11/2026: menu nền đặc màu thẻ, màn sau chỉ tối đi — không
+  // còn lớp nhoè nào (menu trong suốt để lộ cột / bong bóng chat qua chữ).
+  testWidgets('menu nền đặc, không BackdropFilter ở thân lẫn lớp phủ', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: OmniTheme.light(),
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: TextButton(
+                onPressed: () => showOmniAnchoredMenu<void>(
+                  context: context,
+                  anchor: const Rect.fromLTWH(300, 40, 44, 44),
+                  menuKey: const Key('solid-menu'),
+                  builder: (_) => const SizedBox(
+                    height: 52,
+                    child: Center(child: Text('Mục')),
+                  ),
+                ),
+                child: const Text('Mở'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Mở'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BackdropFilter), findsNothing);
+    final material = tester.widget<Material>(
+      find
+          .descendant(
+            of: find.byKey(const Key('solid-menu')),
+            matching: find.byType(Material),
+          )
+          .first,
+    );
+    final ctx = tester.element(find.byKey(const Key('solid-menu')));
+    expect(material.color, Theme.of(ctx).colorScheme.surface);
+  });
+
   testWidgets('menu gần đáy mở lên trên và nằm trong safe viewport', (
     tester,
   ) async {

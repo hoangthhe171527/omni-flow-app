@@ -39,12 +39,15 @@ void main() {
 
   testWidgets('nút tròn 44 của thanh trên không làm mờ ở mọi bậc', (t) async {
     await t.pumpWidget(
-      host(OmniPerfTier.full, const OmniGlassCircle(child: Icon(LucideIcons.plus))),
+      host(
+        OmniPerfTier.full,
+        const OmniGlassCircle(child: Icon(LucideIcons.plus)),
+      ),
     );
     expect(blurs(t), 0);
   });
 
-  testWidgets('dải mờ mép: 1 lớp ở bậc đầy đủ (trước là 3), 0 ở bậc giảm', (
+  testWidgets('dải mờ mép: chỉ dải màu, không nhoè ở mọi bậc (26/11)', (
     t,
   ) async {
     Widget edge(OmniPerfTier tier) => host(
@@ -56,9 +59,53 @@ void main() {
       ),
     );
     await t.pumpWidget(edge(OmniPerfTier.full));
-    expect(blurs(t), 1);
+    expect(blurs(t), 0);
     await t.pumpWidget(edge(OmniPerfTier.reduced));
     expect(blurs(t), 0);
+  });
+
+  testWidgets('opaque (menu, popover, khay đáy): nền đặc, không nhoè', (
+    t,
+  ) async {
+    await t.pumpWidget(
+      host(
+        OmniPerfTier.full,
+        const OmniGlass(
+          opaque: true,
+          radius: 16,
+          child: SizedBox(width: 100, height: 44),
+        ),
+      ),
+    );
+    expect(blurs(t), 0);
+    final box = t.widget<DecoratedBox>(
+      find
+          .descendant(
+            of: find.byType(OmniGlass),
+            matching: find.byType(DecoratedBox),
+          )
+          .last,
+    );
+    final ctx = t.element(find.byType(OmniGlass));
+    expect(
+      (box.decoration as BoxDecoration).color,
+      Theme.of(ctx).colorScheme.surface,
+    );
+  });
+
+  testWidgets('kính phẳng: không vệt sáng (gradient), nền .92', (t) async {
+    await t.pumpWidget(host(OmniPerfTier.full, glass()));
+    final box = t.widget<DecoratedBox>(
+      find
+          .descendant(
+            of: find.byType(OmniGlass),
+            matching: find.byType(DecoratedBox),
+          )
+          .last,
+    );
+    final deco = box.decoration as BoxDecoration;
+    expect(deco.gradient, isNull);
+    expect(deco.color!.a, closeTo(.92, .005));
   });
 
   testWidgets('tương phản cao vẫn là nền đặc dù bậc đầy đủ', (t) async {

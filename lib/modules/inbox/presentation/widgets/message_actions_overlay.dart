@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 
@@ -124,14 +123,6 @@ class _MessageActionsOverlay extends StatelessWidget {
       type: MaterialType.transparency,
       child: Stack(
         children: [
-          // Không có con: không nuốt chạm, để rào chắn của route đóng hộp.
-          // Làm mờ toàn màn chỉ ở bậc hiệu năng đầy đủ (lớp đắt nhất).
-          if (OmniPerformance.scrimBlur(context))
-            Positioned.fill(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-              ),
-            ),
           Positioned.fill(
             // Bọc NGOÀI vùng cuộn: vùng cuộn phủ cả màn nên nuốt chạm trước cả
             // rào chắn của route; bấm vào khoảng trống phải tự đóng.
@@ -275,6 +266,7 @@ class _ReactionBarState extends State<_ReactionBar>
   Widget build(BuildContext context) {
     final selectedBg = OmniGlass.selectionOf(context);
     return OmniGlass(
+      opaque: true,
       radius: 999,
       padding: const EdgeInsets.all(4),
       child: Material(
@@ -355,8 +347,9 @@ class _GlassMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: _menuWidth,
-      // Menu đang mở: GIỮ kính (spec phong cách iOS §3.1), bo 16.
+      // Menu đang mở: nền đặc, bo 16 (bớt kính mờ 26/11/2026).
       child: OmniGlass(
+        opaque: true,
         radius: 16,
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Material(

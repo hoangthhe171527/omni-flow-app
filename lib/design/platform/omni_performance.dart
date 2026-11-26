@@ -54,21 +54,6 @@ abstract final class OmniPerformance {
       ? full
       : (full * .55).roundToDouble();
 
-  /// Tăng bão hoà màu sau kính (thêm một lượt lọc màu) — chỉ ở bậc đầy đủ.
-  static bool saturate(BuildContext context) =>
-      tierOf(context) == OmniPerfTier.full;
-
-  /// Lớp phủ toàn màn sau menu / xem trước được làm mờ — chỉ ở bậc đầy đủ.
-  /// Bậc khác: phủ màu, không mờ (toàn màn là lớp mờ đắt nhất).
-  static bool scrimBlur(BuildContext context) =>
-      tierOf(context) == OmniPerfTier.full &&
-      !MediaQuery.highContrastOf(context);
-
-  /// Dải mờ dần ở mép màn có làm mờ thật không (bậc khác: chỉ dải màu).
-  static bool edgeBlur(BuildContext context) =>
-      tierOf(context) == OmniPerfTier.full &&
-      !MediaQuery.highContrastOf(context);
-
   /// Hiệu ứng mục hiện dần khi cuộn vào (mỗi mục một lớp mờ dần).
   static bool riseOnScroll(BuildContext context) =>
       tierOf(context) == OmniPerfTier.full;

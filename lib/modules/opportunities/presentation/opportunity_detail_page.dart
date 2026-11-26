@@ -239,7 +239,7 @@ class OpportunityDetailPage extends ConsumerWidget {
     if (!canUpdate || (data?.isCancelled ?? false)) return null;
     final closed = data?.isClosed ?? false;
 
-    // Viên kính nổi, hai nút kính theo theme (không viền xanh).
+    // Khay nổi nền đặc (bớt kính mờ 26/11/2026).
     return Padding(
       padding: EdgeInsets.fromLTRB(
         12,
@@ -248,6 +248,7 @@ class OpportunityDetailPage extends ConsumerWidget {
         14 + MediaQuery.paddingOf(context).bottom,
       ),
       child: OmniGlass(
+        opaque: true,
         radius: 30,
         padding: const EdgeInsets.all(7),
         child: Row(
