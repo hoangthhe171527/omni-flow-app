@@ -7,8 +7,8 @@ import 'package:omni_app/security/permissions/access_policy.dart';
 
 /// Đợt 6 P1 (quyết định 2026-10-04 #3): Page/OA là kênh công ty, chỉ admin
 /// (người đọc kênh toàn tenant và có `channels.write`) kết nối qua OAuth. API
-/// trả 403 cho sale ở `oauth/redirect`; sheet không mời sale bấm vào đó nữa.
-/// Sale vẫn tự ghép nối Zalo cá nhân.
+/// trả 403 cho sale ở `oauth/redirect`; menu nối kênh không mời sale bấm vào
+/// đó nữa. Sale vẫn tự ghép nối Zalo cá nhân.
 void main() {
   Future<void> openSheet(WidgetTester tester, Set<String> permissions) async {
     await tester.pumpWidget(
@@ -17,8 +17,11 @@ void main() {
         home: Builder(
           builder: (context) => Scaffold(
             body: TextButton(
-              onPressed: () =>
-                  showConnectSheet(context, access: AccessPolicy(permissions)),
+              onPressed: () => showConnectMenu(
+                context,
+                anchor: const Rect.fromLTWH(300, 40, 44, 44),
+                access: AccessPolicy(permissions),
+              ),
               child: const Text('mở'),
             ),
           ),

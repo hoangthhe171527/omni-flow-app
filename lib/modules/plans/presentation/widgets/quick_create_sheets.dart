@@ -11,8 +11,31 @@ import '../../../team/application/team_providers.dart';
 import '../../application/plans_providers.dart';
 import '../../data/plan_cover_upload.dart';
 import '../../data/plans_api.dart';
-import '../create_plan_page.dart' show kDefaultSections, kGatedDefaultSections;
 import 'cover_picker.dart';
+
+/// Bốn nhóm việc điền sẵn cho một dự án mới.
+///
+/// Cố ý CHUNG, không theo ngành nào. App này dùng cho nhiều loại công việc —
+/// xưởng phục chế đàn chỉ là một khách hàng — nên thứ điền sẵn cho mọi tenant
+/// phải là thứ ai đọc cũng hiểu. Bộ trước đây là năm cột của xưởng piano
+/// ("Nhập xưởng → Đang phục chế → Chờ QC → …"), và mọi khách mới đều nhận
+/// đúng năm chữ đó.
+///
+/// Điền sẵn chứ không bắt buộc: sửa, xoá, thêm đều được ngay trên màn tạo.
+/// Khách có quy trình riêng khai một lần rồi nhân bản dự án hằng tháng
+/// (`POST /projects/{id}/copy`), nên không ai phải gõ lại mỗi tháng.
+const kDefaultSections = <String>['Cần làm', 'Đang làm', 'Chờ duyệt', 'Xong'];
+
+/// Nhóm việc nào đặt CỔNG: vào đây thì mọi việc con phải xong trước.
+///
+/// "Chờ duyệt" và "Xong" là hai chỗ một công việc được tuyên bố là làm xong —
+/// và tuyên bố đó sai khi việc con còn dở. Hai nhóm đầu không có cổng, vì
+/// chúng là nơi việc đang chạy.
+///
+/// Chỉ áp cho dự án tạo MỚI bằng bộ điền sẵn. Dự án đã có và nhóm việc
+/// người dùng tự thêm đều không có cổng — bật cổng cho dữ liệu cũ là chặn
+/// công việc đang chạy bằng một quy tắc nó chưa từng biết.
+const kGatedDefaultSections = <String>{'Chờ duyệt', 'Xong'};
 
 /// Kết quả một lượt tạo nhanh để màn Việc báo "Đã tạo": kế hoạch (mở bảng
 /// được) hoặc chỉ team (chọn "Để sau" ở bước kế hoạch đầu tiên).
