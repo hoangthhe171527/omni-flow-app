@@ -39,6 +39,15 @@ abstract final class OmniType {
     letterSpacing: -0.36,
   );
 
+  /// Lời chào màn Ứng dụng (`greeting` 26/600 của Chuẩn Mobile UI), căn giữa.
+  static const TextStyle greeting = TextStyle(
+    fontFamily: family,
+    fontSize: 26,
+    fontWeight: FontWeight.w600,
+    height: 1.4,
+    letterSpacing: -0.5,
+  );
+
   /// Tiêu đề thanh trên của màn ĐẨY VÀO (có nút quay lại): 17/24, SemiBold.
   static const TextStyle navTitle = TextStyle(
     fontFamily: family,
