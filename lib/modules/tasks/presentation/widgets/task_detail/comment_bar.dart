@@ -340,8 +340,8 @@ class _CommentBarState extends ConsumerState<CommentBar> {
         ? const <MapEntry<String, String>>[]
         : Mentions.suggest(candidates, _query!);
 
-    // Viên kính nổi (viomni-apple-uiux.html: "Ô bình luận là viên kính nổi"):
-    // cách mép 12, bo 27, viền sáng, bóng nhẹ. Nền .92, KHÔNG blur: một
+    // Khay nổi nền ĐẶC (bớt kính mờ 26/11/2026 — nền .92 cũ để lộ chữ cuộn
+    // bên dưới): cách mép 12, bo 27, viền mảnh, bóng nhẹ. KHÔNG blur: một
     // BackdropFilter cố định đáy dựng lại lớp mờ ở mỗi khung cuộn của cả màn
     // (rà soát Task 9).
     final dark = Theme.of(context).brightness == Brightness.dark;
@@ -350,12 +350,12 @@ class _CommentBarState extends ConsumerState<CommentBar> {
       padding: EdgeInsets.fromLTRB(12, 6, 12, bottom),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: scheme.surface.withValues(alpha: 0.92),
+          color: scheme.surface,
           borderRadius: BorderRadius.circular(27),
           border: Border.all(
             color: dark
                 ? scheme.outlineVariant.withValues(alpha: 0.45)
-                : scheme.surface.withValues(alpha: 0.85),
+                : OmniColors.ink.withValues(alpha: 0.06),
           ),
           boxShadow: [
             BoxShadow(
@@ -622,11 +622,7 @@ class _Preview extends StatelessWidget {
                   color: scheme.onSurface.withValues(alpha: 0.7),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
-                  LucideIcons.x,
-                  size: 14,
-                  color: scheme.surface,
-                ),
+                child: Icon(LucideIcons.x, size: 14, color: scheme.surface),
               ),
             ),
           ),
