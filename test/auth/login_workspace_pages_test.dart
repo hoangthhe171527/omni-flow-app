@@ -15,8 +15,15 @@ import 'package:omni_app/security/session/auth_gateway.dart';
 
 class _FailedLogin extends LoginController {
   @override
-  LoginState build() =>
-      const LoginState(error: 'Email hoặc mật khẩu không đúng.');
+  LoginState build() => const LoginState(
+    error: 'Email hoặc mật khẩu không đúng.',
+    wrongCredentials: true,
+  );
+}
+
+class _OfflineLogin extends LoginController {
+  @override
+  LoginState build() => const LoginState(error: 'Không có kết nối mạng.');
 }
 
 class _RecordingGoogleLogin extends LoginController {
@@ -65,23 +72,25 @@ void main() {
   }
 
   group('đăng nhập', () {
-    testWidgets('logo neo cho màn mở app, lời chào, hai ô và nút', (
+    testWidgets('logo trần neo cho màn mở app, tiêu đề, hai ô và nút', (
       tester,
     ) async {
       await pump(tester, const LoginPage(), const []);
 
       final mark = tester.widget<OmniBrandMark>(find.byType(OmniBrandMark));
-      expect(mark.size, 64);
-      expect(mark.onInk, isNull);
+      expect(mark.size, 56);
+      // Logo trong app không đóng khung — khung chỉ dành cho icon app.
+      expect(mark.framed, isFalse);
       final anchor = tester.widget<BrandAnchor>(find.byType(BrandAnchor));
       expect(anchor.withWordmark, isFalse);
-      expect(find.text('Chào mừng trở lại'), findsOneWidget);
-      expect(find.text('Email làm việc'), findsOneWidget);
+      expect(find.text('Đăng nhập Viomni'), findsOneWidget);
+      expect(find.text('Chào mừng trở lại'), findsNothing);
+      expect(find.text('Email'), findsOneWidget);
       expect(find.text('Mật khẩu'), findsOneWidget);
       expect(find.widgetWithText(FilledButton, 'Đăng nhập'), findsOneWidget);
       expect(find.text('Tiếp tục với Google'), findsOneWidget);
       expect(find.text('hoặc'), findsOneWidget);
-      expect(find.text('Quên mật khẩu?'), findsOneWidget);
+      expect(find.text('Quên?'), findsOneWidget);
       expect(find.text('Đăng ký'), findsOneWidget);
       expect(find.text('Chính sách bảo mật'), findsOneWidget);
       expect(find.text('Quyền riêng tư'), findsNothing);
@@ -90,15 +99,73 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('Google nằm dưới nút Đăng nhập', (tester) async {
+    testWidgets('Google lên đầu, trên ô email và nút Đăng nhập', (
+      tester,
+    ) async {
       await pump(tester, const LoginPage(), const []);
 
       final login = find.widgetWithText(FilledButton, 'Đăng nhập');
       final google = find.byKey(const ValueKey('google-sign-in'));
+      final email = find.byType(TextField).first;
       expect(
-        tester.getTopLeft(google).dy > tester.getTopLeft(login).dy,
-        isTrue,
+        tester.getTopLeft(google).dy,
+        lessThan(tester.getTopLeft(email).dy),
       );
+      expect(
+        tester.getTopLeft(email).dy,
+        lessThan(tester.getTopLeft(login).dy),
+      );
+    });
+
+    testWidgets('bàn phím bật thì thu logo, giữ tiêu đề', (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            theme: OmniTheme.light(),
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(viewInsets: const EdgeInsets.only(bottom: 336)),
+              child: child!,
+            ),
+            home: const LoginPage(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(OmniBrandMark), findsNothing);
+      expect(find.text('Đăng nhập Viomni'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      // Đang gõ email: nút Đăng nhập nằm trọn trên bàn phím.
+      await tester.tap(find.byType(TextField).first);
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+      final button = tester.getRect(
+        find.widgetWithText(FilledButton, 'Đăng nhập'),
+      );
+      expect(button.bottom, lessThanOrEqualTo(844 - 336));
+      expect(
+        tester.getRect(find.byType(TextField).first).top,
+        greaterThanOrEqualTo(0),
+      );
+    });
+
+    testWidgets('Đăng ký và Chính sách bảo mật nằm ở chân màn', (tester) async {
+      await pump(tester, const LoginPage(), const []);
+
+      final login = tester.getBottomLeft(
+        find.widgetWithText(FilledButton, 'Đăng nhập'),
+      );
+      final register = tester.getTopLeft(find.text('Đăng ký'));
+      // Chân màn: cách nút chính một khoảng, nằm ở phần tư dưới màn 844.
+      expect(register.dy - login.dy, greaterThan(40));
+      expect(register.dy, greaterThan(844 * 0.75));
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('để trống rồi bấm Đăng nhập hiện lỗi dưới ô', (tester) async {
@@ -129,11 +196,11 @@ void main() {
           ),
         ),
       );
-      final before = tester.getTopLeft(find.text('Email làm việc')).dx;
+      final before = tester.getTopLeft(find.byType(TextField).first).dx;
       await tester.tap(find.widgetWithText(FilledButton, 'Đăng nhập'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 40));
-      final after = tester.getTopLeft(find.text('Email làm việc')).dx;
+      final after = tester.getTopLeft(find.byType(TextField).first).dx;
       await tester.pumpAndSettle();
       return after - before;
     }
@@ -163,7 +230,7 @@ void main() {
           GoRoute(
             path: '/forgot-password',
             name: AuthModule.forgot,
-            builder: (_, _) => const Text('trang-quen'),
+            builder: (_, state) => Text('trang-quen:${state.extra}'),
           ),
         ],
       );
@@ -183,9 +250,17 @@ void main() {
 
       router.pop();
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Quên mật khẩu?'));
+      await tester.tap(find.text('Quên?'));
       await tester.pumpAndSettle();
-      expect(find.text('trang-quen'), findsOneWidget);
+      expect(find.text('trang-quen:null'), findsOneWidget);
+
+      // Đã gõ email thì mang sang, khỏi gõ lại.
+      router.pop();
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).first, ' lan@acme.vn ');
+      await tester.tap(find.text('Quên?'));
+      await tester.pumpAndSettle();
+      expect(find.text('trang-quen:lan@acme.vn'), findsOneWidget);
     });
 
     testWidgets('ô giữ tên truy cập được khi đã có chữ', (tester) async {
@@ -196,10 +271,10 @@ void main() {
       await tester.enterText(find.byType(TextField).last, 'matkhau');
       await tester.pump();
 
-      expect(find.bySemanticsLabel('Email làm việc'), findsWidgets);
+      expect(find.bySemanticsLabel('Email'), findsWidgets);
       expect(
         tester.getSemantics(find.byType(TextField).first).label,
-        contains('Email làm việc'),
+        contains('Email'),
       );
       expect(find.bySemanticsLabel('Mật khẩu'), findsWidgets);
       expect(
@@ -268,6 +343,18 @@ void main() {
             .first,
       );
       expect((box.decoration! as BoxDecoration).color, OmniColors.dangerSoft);
+      // Lỗi chỉ hiện một chỗ, kèm lối sửa.
+      expect(find.text('Email hoặc mật khẩu không đúng.'), findsOneWidget);
+      expect(find.text('Đặt lại mật khẩu'), findsOneWidget);
+    });
+
+    testWidgets('lỗi mạng không mời đặt lại mật khẩu', (tester) async {
+      await pump(tester, const LoginPage(), [
+        loginControllerProvider.overrideWith(_OfflineLogin.new),
+      ]);
+
+      expect(find.text('Không có kết nối mạng.'), findsOneWidget);
+      expect(find.text('Đặt lại mật khẩu'), findsNothing);
     });
 
     testWidgets('nút mắt nói cả trạng thái mật khẩu', (tester) async {
@@ -300,12 +387,14 @@ void main() {
       ]);
       await tester.pump();
 
-      expect(find.text('Chọn không gian làm việc'), findsOneWidget);
+      expect(find.text('Chọn công ty'), findsOneWidget);
       expect(find.text('XDH'), findsOneWidget);
       expect(find.text('24 nhân viên · Gói Pro'), findsOneWidget);
-      expect(find.text('SHO'), findsOneWidget);
-      expect(find.text('Đăng xuất'), findsOneWidget);
-      expect(find.byType(OmniBrandMark), findsOneWidget);
+      // Không có mã: hai chữ đầu của tên.
+      expect(find.text('SP'), findsOneWidget);
+      expect(find.widgetWithText(TextButton, 'Đăng xuất'), findsOneWidget);
+      // Đã đăng nhập: logo chỉ ở đăng nhập / mở app.
+      expect(find.byType(OmniBrandMark), findsNothing);
     });
   });
 }

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Biểu tượng màn khởi động Android 12+: khung 240dp, logo trần 96dp ở giữa
+     (lề 72dp) — cùng cỡ logo của màn mở app Flutter. -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/launch_logo"
+    android:inset="72dp" />

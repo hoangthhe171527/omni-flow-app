@@ -39,9 +39,9 @@ void main() {
     expect(find.text('màn đích'), findsOneWidget);
   });
 
-  testWidgets('hiệu ứng kết thúc trong khoảng 2,5 giây', (tester) async {
+  testWidgets('hiệu ứng kết thúc trong khoảng 1,65 giây', (tester) async {
     await tester.pumpWidget(host());
-    await tester.pump(const Duration(milliseconds: 2499));
+    await tester.pump(const Duration(milliseconds: 1649));
     await tester.pump(const Duration(milliseconds: 1));
 
     expect(find.byType(OmniSplash), findsNothing);
@@ -68,16 +68,55 @@ void main() {
     expect(find.text('màn đích'), findsOneWidget);
   });
 
-  testWidgets('màn chờ khôi phục phiên vẽ đúng khung hình cuối', (
+  testWidgets('màn chờ: logo trần, hào quang tỏa thay vòng quay, không chữ', (
     tester,
   ) async {
     await tester.pumpWidget(
       MaterialApp(theme: OmniTheme.light(), home: const SplashPage()),
     );
 
-    expect(find.text(OmniSplash.tagline), findsOneWidget);
     expect(find.bySemanticsLabel('Logo Viomni'), findsOneWidget);
-    expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    final mark = tester.widget<OmniBrandMark>(find.byType(OmniBrandMark));
+    expect(mark.framed, isFalse);
+    expect(mark.size, OmniSplash.logoSize);
+    expect(find.byType(LinearProgressIndicator), findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.text('V'), findsNothing);
+    // Nhịp tỏa đang chạy.
+    final first = tester.widget<OmniSplash>(find.byType(OmniSplash)).pulse;
+    await tester.pump(const Duration(milliseconds: 500));
+    final later = tester.widget<OmniSplash>(find.byType(OmniSplash)).pulse;
+    expect(first, isNotNull);
+    expect(later, isNot(first));
+  });
+
+  testWidgets('màn chờ: giảm chuyển động thì đứng yên', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: OmniTheme.light(),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(disableAnimations: true),
+          child: child!,
+        ),
+        home: const SplashPage(),
+      ),
+    );
+
+    expect(tester.widget<OmniSplash>(find.byType(OmniSplash)).pulse, isNull);
+    expect(tester.hasRunningAnimations, isFalse);
+  });
+
+  testWidgets('khung đầu trùng màn khởi động: logo trần 96 đúng giữa màn', (
+    tester,
+  ) async {
+    await tester.pumpWidget(host());
+
+    final logo = tester.getRect(find.byKey(const ValueKey('splash-logo')));
+    final screen = tester.getRect(find.byType(OmniSplash));
+    expect(logo.size, const Size(96, 96));
+    expect((logo.center - screen.center).distance, lessThan(0.5));
+    final mark = tester.widget<OmniBrandMark>(find.byType(OmniBrandMark));
+    expect(mark.framed, isFalse);
   });
 
   testWidgets('giảm chuyển động: không có lớp phủ', (tester) async {
@@ -108,7 +147,7 @@ void main() {
           ),
         ),
       );
-      await tester.pump(const Duration(milliseconds: 2440));
+      await tester.pump(const Duration(milliseconds: 1590));
       final logo = tester.getRect(find.byKey(const ValueKey('splash-logo')));
       final anchor = tester.getRect(find.byType(BrandAnchor));
       expect((logo.center - anchor.center).distance, lessThan(1.5));
@@ -123,7 +162,7 @@ void main() {
         child: MaterialApp(home: LaunchSplash(child: const Text('đích'))),
       ),
     );
-    await tester.pump(const Duration(milliseconds: 2600));
+    await tester.pump(const Duration(milliseconds: 1700));
     expect(find.byType(OmniSplash), findsNothing);
     expect(find.text('đích'), findsOneWidget);
   });
@@ -162,7 +201,7 @@ void main() {
         ),
       ),
     );
-    await tester.pump(const Duration(milliseconds: 2440));
+    await tester.pump(const Duration(milliseconds: 1590));
     final logo = tester.getRect(find.byKey(const ValueKey('splash-logo')));
     final anchor = tester.getRect(find.byKey(const ValueKey('visible')));
     expect((logo.center - anchor.center).distance, lessThan(1.5));
@@ -198,7 +237,7 @@ void main() {
         ),
       ),
     );
-    await tester.pump(const Duration(milliseconds: 2440));
+    await tester.pump(const Duration(milliseconds: 1590));
     final logo = tester.getRect(find.byKey(const ValueKey('splash-logo')));
     final target = tester.getRect(find.byKey(const ValueKey('header-logo')));
     expect((logo.center - target.center).distance, lessThan(1.5));
@@ -234,12 +273,12 @@ void main() {
     }
   }
 
-  testWidgets('neo dựng muộn (1900ms) vẫn được bay tới', (tester) async {
+  testWidgets('neo dựng muộn (1100ms) vẫn được bay tới', (tester) async {
     final where = ValueNotifier<Alignment?>(null);
     await tester.pumpWidget(movable(where));
-    await tester.pump(const Duration(milliseconds: 1900));
+    await tester.pump(const Duration(milliseconds: 1100));
     where.value = Alignment.topLeft;
-    await pumpTo(tester, 1900, 2440);
+    await pumpTo(tester, 1100, 1590);
     final logo = tester.getRect(find.byKey(const ValueKey('splash-logo')));
     final anchor = tester.getRect(find.byType(BrandAnchor));
     expect((logo.center - anchor.center).distance, lessThan(1.5));
@@ -248,9 +287,9 @@ void main() {
   testWidgets('neo dời chỗ giữa lúc bay: khung cuối ở chỗ mới', (tester) async {
     final where = ValueNotifier<Alignment?>(Alignment.topLeft);
     await tester.pumpWidget(movable(where));
-    await tester.pump(const Duration(milliseconds: 2000));
+    await tester.pump(const Duration(milliseconds: 1200));
     where.value = Alignment.bottomRight;
-    await pumpTo(tester, 2000, 2440);
+    await pumpTo(tester, 1200, 1590);
     final logo = tester.getRect(find.byKey(const ValueKey('splash-logo')));
     final anchor = tester.getRect(find.byType(BrandAnchor));
     expect((logo.center - anchor.center).distance, lessThan(1.5));
@@ -261,9 +300,9 @@ void main() {
   ) async {
     final where = ValueNotifier<Alignment?>(Alignment.topLeft);
     await tester.pumpWidget(movable(where));
-    await tester.pump(const Duration(milliseconds: 2000));
+    await tester.pump(const Duration(milliseconds: 1200));
     where.value = null;
-    await pumpTo(tester, 2000, 2200);
+    await pumpTo(tester, 1200, 1300);
     expect(
       find.ancestor(
         of: find.byType(OmniSplash),
@@ -296,7 +335,7 @@ void main() {
         ),
       ),
     );
-    await tester.pump(const Duration(milliseconds: 2440));
+    await tester.pump(const Duration(milliseconds: 1590));
     final v = tester.getRect(
       find.descendant(of: find.byType(OmniSplash), matching: find.text('V')),
     );

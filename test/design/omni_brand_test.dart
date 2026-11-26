@@ -73,6 +73,20 @@ void main() {
       await tester.pumpWidget(MaterialApp(home: OmniSplash(progress: p)));
       expect(tester.takeException(), isNull, reason: 'progress $p');
     }
+    // Màn chờ: khung tĩnh và mọi pha của nhịp tỏa, sáng lẫn tối.
+    for (final dark in [false, true]) {
+      for (final pulse in [null, 0.0, 0.1, 0.5, 0.99]) {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData(
+              brightness: dark ? Brightness.dark : Brightness.light,
+            ),
+            home: OmniSplash(pulse: pulse),
+          ),
+        );
+        expect(tester.takeException(), isNull, reason: 'pulse $pulse');
+      }
+    }
   });
 
   testWidgets('chữ Viomni: "omni" mang màu chính trên nền sáng', (

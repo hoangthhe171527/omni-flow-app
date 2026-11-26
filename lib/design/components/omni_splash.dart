@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -7,53 +6,64 @@ import 'package:flutter/rendering.dart';
 import '../tokens/tokens.dart';
 import 'omni_brand.dart';
 
-/// Màn mở app "quỹ đạo" (khung `Intro` của bản thiết kế): ô logo hiện ra khỏi
-/// lớp mờ, vòng tròn vẽ ra, đuôi bong bóng, hai nửa quỹ đạo, chấm vàng quay
-/// vào chỗ rồi bật sáng, chữ "Viomni" nổi lên từng ký tự, rồi câu khẩu hiệu.
+/// Màn mở app (artifact "Màn xác thực" duyệt 26/11): khung đầu TRÙNG màn khởi
+/// động của hệ điều hành — logo trần 96 đứng giữa màn, không ô nền — rồi hai
+/// vòng hào quang nở ra sau logo, một vòng sáng tỏa ra từ mép logo, chữ
+/// "Viomni" nổi lên bên dưới; hào quang tắt hẳn trước khi logo bay về chỗ.
 ///
-/// Nền theo theme: sáng là [OmniColors.background] với hai vòng sáng xanh nhạt,
-/// tối là nền mực.
+/// Hào quang chỉ tỏa ra NGOÀI logo: mọi lớp sáng bị mặt nạ chừa trống một vòng
+/// bán kính [_clearRadius] quanh tâm logo, không phủ lên logo.
 ///
-/// [progress] = null là khung hình CUỐI (tĩnh) — màn chờ khôi phục phiên dùng
-/// đúng khung này, để khi lớp hiệu ứng mờ đi thì bên dưới là cùng một hình và
-/// không có cú giật nào.
+/// [progress] = null là khung TĨNH của màn chờ khôi phục phiên: logo + hai vòng
+/// hào quang, không chữ; [pulse] (0..1, lặp) cho hai vòng sáng tỏa thay vòng
+/// quay.
 class OmniSplash extends StatelessWidget {
-  const OmniSplash({super.key, this.progress, this.footer, this.flight});
+  const OmniSplash({super.key, this.progress, this.pulse, this.flight});
 
   /// Thời điểm trên trục thời gian, tính theo đơn vị [timeline]: 0..1 là phần
-  /// dựng hình; lớn hơn 1 khi đang bay (quầng vàng vẫn tắt dần nốt).
+  /// dựng hình; lớn hơn 1 khi đang bay.
   final double? progress;
 
-  /// Thứ đặt ở đáy màn — màn chờ khôi phục phiên đặt một vạch tiến độ ở đây.
-  final Widget? footer;
+  /// Pha của nhịp tỏa ở màn chờ (0..1, lặp). Null = không tỏa.
+  final double? pulse;
 
   /// Pha bay logo về chỗ của nó trên màn đích (xem `LaunchSplash`).
   final SplashFlight? flight;
 
-  /// Phần dựng hình: chữ và khẩu hiệu xong ở 1750ms, giữ một nhịp rồi bay.
-  static const timeline = Duration(milliseconds: 1800);
+  /// Phần dựng hình: hào quang nở, vòng tỏa, chữ nổi; hết hào quang ở ~990ms.
+  static const timeline = Duration(milliseconds: 960);
 
-  /// `cubic-bezier(.65,0,.35,1)` — vào chậm, ra chậm: nét vẽ và pha bay.
-  static const Curve flightCurve = Cubic(0.65, 0, 0.35, 1);
+  /// `cubic-bezier(.32,.72,0,1)` — pha bay: rời chỗ nhanh, đáp êm.
+  static const Curve flightCurve = Cubic(0.32, 0.72, 0, 1);
 
-  static const _tileSize = 148.0;
+  /// Cạnh logo trần giữa màn — đúng cỡ logo trên màn khởi động hệ điều hành.
+  static const double logoSize = 96;
 
-  static const String tagline = 'Mọi khách hàng, một quỹ đạo';
-
-  /// Vòng sáng trên nền sáng — chỉ dùng ở đây nên không thành token.
+  /// Vòng hào quang trên nền sáng — chỉ dùng ở đây nên không thành token.
   static const _lightHaloOuter = Color(0xFFEBF3FF);
   static const _lightHaloInner = Color(0xFFDCEBFF);
 
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final ms = progress == null
-        ? double.infinity
-        : progress! * timeline.inMilliseconds;
-    final s = _SplashFrame.at(ms);
+    final s = progress == null
+        ? _SplashFrame.still
+        : _SplashFrame.at(progress! * timeline.inMilliseconds);
     final fly = flight?.t ?? 0;
+
+    final rings = <({double scale, double opacity})>[
+      if (s.ringOpacity > 0) (scale: s.ringScale, opacity: s.ringOpacity),
+      if (pulse != null) ...[_pulseRing(pulse!), _pulseRing(pulse! + 0.5)],
+    ];
+
+    Widget word = _LetterWordmark(letters: s.letters, dark: dark);
     // Bay mà đích không có chữ (màn đăng nhập): chữ mờ và trượt lên 24.
-    final wordLeaves = flight != null && flight!.wordTarget == null;
+    if (flight != null && flight!.wordTarget == null) {
+      word = Opacity(
+        opacity: 1 - fly,
+        child: Transform.translate(offset: Offset(0, -24 * fly), child: word),
+      );
+    }
 
     final background = dark ? OmniColors.ink : OmniColors.background;
 
@@ -63,83 +73,50 @@ class OmniSplash extends StatelessWidget {
       color: background.withValues(alpha: 1 - fly),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final w = constraints.maxWidth;
           final h = constraints.maxHeight;
-          // Hai quầng tròn đồng tâm, tâm lệch xuống dưới giữa màn 73dp — đúng
-          // vị trí trong khung 390×844 của thiết kế.
-          final haloCenter = Offset(w / 2, h / 2 + 73);
-
-          Widget word = _LetterWordmark(letters: s.letters, dark: dark);
-          if (wordLeaves) {
-            word = Opacity(
-              opacity: 1 - fly,
-              child: Transform.translate(
-                offset: Offset(0, -24 * fly),
-                child: word,
-              ),
-            );
-          }
-
           return Stack(
             clipBehavior: Clip.hardEdge,
             children: [
-              Opacity(
-                opacity: 1 - fly,
-                child: Stack(
-                  children: [
-                    _halo(
-                      haloCenter,
-                      315 * s.haloOuter,
-                      dark ? OmniColors.inkHaloOuter : _lightHaloOuter,
+              Positioned.fill(
+                child: Opacity(
+                  opacity: 1 - fly,
+                  child: CustomPaint(
+                    painter: _AuraPainter(
+                      haloOpacity: s.haloOpacity,
+                      haloScale: s.haloScale,
+                      rings: rings,
+                      dark: dark,
                     ),
-                    _halo(
-                      haloCenter,
-                      235 * s.haloInner,
-                      dark ? OmniColors.inkHaloInner : _lightHaloInner,
-                    ),
-                  ],
+                  ),
                 ),
               ),
+              // Logo đúng giữa màn như màn khởi động hệ điều hành.
               Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _FlyTo(
-                      target: flight?.logoTarget,
-                      t: fly,
-                      child: KeyedSubtree(
-                        key: const ValueKey('splash-logo'),
-                        child: _logo(s),
-                      ),
+                child: _FlyTo(
+                  target: flight?.logoTarget,
+                  t: fly,
+                  child: const KeyedSubtree(
+                    key: ValueKey('splash-logo'),
+                    child: OmniBrandMark(
+                      size: logoSize,
+                      framed: false,
+                      semanticLabel: 'Logo Viomni',
                     ),
-                    const SizedBox(height: 28),
-                    _FlyTo(target: flight?.wordTarget, t: fly, child: word),
-                    const SizedBox(height: OmniSpacing.sm),
-                    Opacity(
-                      opacity: 1 - fly,
-                      child: _Rise(
-                        value: s.tag,
-                        child: Text(
-                          tagline,
-                          style: OmniType.bodyStrong.copyWith(
-                            fontWeight: FontWeight.w400,
-                            color: dark
-                                ? OmniColors.inkMutedForeground
-                                : OmniColors.mutedForeground,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-              if (footer != null)
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 40,
-                  child: Center(child: footer),
+              Positioned(
+                left: 0,
+                right: 0,
+                top: h / 2 + logoSize / 2 + 18,
+                child: Center(
+                  child: _FlyTo(
+                    target: flight?.wordTarget,
+                    t: fly,
+                    child: word,
+                  ),
                 ),
+              ),
             ],
           );
         },
@@ -147,66 +124,106 @@ class OmniSplash extends StatelessWidget {
     );
   }
 
-  /// Ô logo 148 với quầng hào quang xanh V-Orbit phía sau; hiện ra khỏi lớp mờ.
-  Widget _logo(_SplashFrame s) {
-    final tile = SizedBox.square(
-      dimension: _tileSize,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          if (s.glowOpacity > 0)
-            Positioned(
-              left: -16,
-              top: -16,
-              width: _tileSize + 32,
-              height: _tileSize + 32,
-              child: Opacity(
-                opacity: s.glowOpacity,
-                child: Transform.scale(
-                  scale: s.glowScale,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          OmniColors.orbit.withValues(alpha: 0.55),
-                          OmniColors.primary.withValues(alpha: 0.18),
-                          Colors.transparent,
-                        ],
-                        stops: const [0.0, 0.58, 1.0],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          OmniBrandMark(
-            size: _tileSize,
-            frame: s.mark,
-            semanticLabel: 'Logo Viomni',
-          ),
-        ],
-      ),
+  /// Một vòng của nhịp tỏa màn chờ: hiện nhanh, nở 1 → 2,2 rồi tắt dần.
+  static ({double scale, double opacity}) _pulseRing(double phase) {
+    final p = phase % 1;
+    final eased = const Cubic(0.2, 0.6, 0.35, 1).transform(p);
+    final opacity = p < 0.18 ? p / 0.18 : 1 - (p - 0.18) / 0.82;
+    return (scale: 1 + 1.2 * eased, opacity: opacity.clamp(0.0, 1.0));
+  }
+}
+
+/// Bán kính vùng trống quanh tâm logo (logo trần 96 rộng ~84) và mép mờ của nó.
+const double _clearRadius = 60;
+const double _clearFade = 82;
+
+/// Hai vòng hào quang + các vòng tỏa, cắt bởi mặt nạ chừa trống quanh logo.
+class _AuraPainter extends CustomPainter {
+  _AuraPainter({
+    required this.haloOpacity,
+    required this.haloScale,
+    required this.rings,
+    required this.dark,
+  });
+
+  final double haloOpacity;
+  final double haloScale;
+  final List<({double scale, double opacity})> rings;
+  final bool dark;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (haloOpacity <= 0 && rings.isEmpty) return;
+    final c = size.center(Offset.zero);
+    final bounds = Offset.zero & size;
+    canvas.saveLayer(bounds, Paint());
+
+    if (haloOpacity > 0) {
+      final outer = dark ? OmniColors.inkHaloOuter : OmniSplash._lightHaloOuter;
+      final inner = dark ? OmniColors.inkHaloInner : OmniSplash._lightHaloInner;
+      canvas.drawCircle(
+        c,
+        170 * haloScale,
+        Paint()..color = outer.withValues(alpha: haloOpacity),
+      );
+      canvas.drawCircle(
+        c,
+        125 * haloScale,
+        Paint()..color = inner.withValues(alpha: haloOpacity),
+      );
+    }
+
+    final peak = OmniColors.orbit.withValues(alpha: dark ? 0.40 : 0.32);
+    final tail = OmniColors.primary.withValues(alpha: dark ? 0.16 : 0.10);
+    for (final ring in rings) {
+      if (ring.opacity <= 0) continue;
+      final r = 90 * ring.scale;
+      canvas.drawCircle(
+        c,
+        r,
+        Paint()
+          ..shader = RadialGradient(
+            colors: [
+              Colors.transparent,
+              peak.withValues(alpha: peak.a * ring.opacity),
+              tail.withValues(alpha: tail.a * ring.opacity),
+              Colors.transparent,
+            ],
+            stops: const [0.56, 0.67, 0.73, 0.80],
+          ).createShader(Rect.fromCircle(center: c, radius: r)),
+      );
+    }
+
+    // Mặt nạ: giữ phần ngoài, xoá phần trong vòng [_clearRadius] quanh logo.
+    const maskRadius = 240.0;
+    canvas.drawRect(
+      bounds,
+      Paint()
+        ..blendMode = BlendMode.dstIn
+        ..shader = const RadialGradient(
+          colors: [Colors.transparent, Colors.black, Colors.black],
+          stops: [_clearRadius / maskRadius, _clearFade / maskRadius, 1],
+        ).createShader(Rect.fromCircle(center: c, radius: maskRadius)),
     );
-    return Opacity(
-      opacity: s.tileOpacity,
-      child: _blur(
-        s.tileBlur,
-        Transform.scale(scale: s.tileScale, child: tile),
-      ),
-    );
+    canvas.restore();
   }
 
-  Widget _halo(Offset center, double radius, Color color) {
-    return Positioned(
-      left: center.dx - radius,
-      top: center.dy - radius,
-      width: radius * 2,
-      height: radius * 2,
-      child: DecoratedBox(
-        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-      ),
-    );
+  @override
+  bool shouldRepaint(_AuraPainter old) =>
+      old.haloOpacity != haloOpacity ||
+      old.haloScale != haloScale ||
+      old.dark != dark ||
+      old.rings.length != rings.length ||
+      !_sameRings(old.rings, rings);
+
+  static bool _sameRings(
+    List<({double scale, double opacity})> a,
+    List<({double scale, double opacity})> b,
+  ) {
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
   }
 }
 
@@ -221,48 +238,23 @@ class SplashFlight {
   final Rect? wordTarget;
 }
 
-Widget _blur(double sigma, Widget child) {
-  if (sigma <= 0.01) return child;
-  return ImageFiltered(
-    imageFilter: ui.ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
-    child: child,
-  );
-}
-
-/// Chữ trượt lên 14dp và hiện dần (`sp-rise`).
-class _Rise extends StatelessWidget {
-  const _Rise({required this.value, required this.child});
-
-  final double value;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Opacity(
-      opacity: value,
-      child: Transform.translate(
-        offset: Offset(0, 14 * (1 - value)),
-        child: child,
-      ),
-    );
-  }
-}
-
-/// "Viomni" cỡ 34, mỗi ký tự nổi lên riêng: trượt lên 14dp, hết mờ 6 → 0.
+/// "Viomni" cỡ 28/800, mỗi ký tự nổi lên riêng: trượt lên 10dp và hiện dần.
 /// Màu như [OmniWordmark]: "Vi" mực/trắng, "omni" màu chính/quỹ đạo sáng.
 class _LetterWordmark extends StatelessWidget {
   const _LetterWordmark({required this.letters, required this.dark});
 
   static const _text = 'Viomni';
-  static const _fontSize = 34.0;
+  static const _fontSize = 28.0;
 
   final List<double> letters;
   final bool dark;
 
   @override
   Widget build(BuildContext context) {
+    if (letters.every((v) => v <= 0)) return const SizedBox.shrink();
     final base = OmniType.wordmark.copyWith(
       fontSize: _fontSize,
+      fontWeight: FontWeight.w800,
       letterSpacing: -0.02 * _fontSize,
     );
     return Semantics(
@@ -275,16 +267,13 @@ class _LetterWordmark extends StatelessWidget {
             Opacity(
               opacity: letters[i],
               child: Transform.translate(
-                offset: Offset(0, 14 * (1 - letters[i])),
-                child: _blur(
-                  6 * (1 - letters[i]),
-                  Text(
-                    _text[i],
-                    style: base.copyWith(
-                      color: i < 2
-                          ? (dark ? Colors.white : OmniColors.ink)
-                          : (dark ? OmniColors.orbit : OmniColors.primary),
-                    ),
+                offset: Offset(0, 10 * (1 - letters[i])),
+                child: Text(
+                  _text[i],
+                  style: base.copyWith(
+                    color: i < 2
+                        ? (dark ? Colors.white : OmniColors.ink)
+                        : (dark ? OmniColors.orbit : OmniColors.primary),
                   ),
                 ),
               ),
@@ -378,22 +367,25 @@ class _RenderFlyTo extends RenderProxyBox {
   }
 }
 
-/// Mọi giá trị của một khung hình, tính từ mốc thời gian (ms).
-///
-/// Mốc, thời lượng và đường cong chép từ khung `Intro` của bản thiết kế.
+/// Mọi giá trị của một khung hình, tính từ mốc thời gian (ms). Mốc theo
+/// artifact duyệt (tổng 1,6 giây, bay từ 960ms).
 class _SplashFrame {
   const _SplashFrame({
-    required this.tileScale,
-    required this.tileOpacity,
-    required this.tileBlur,
-    required this.haloOuter,
-    required this.haloInner,
-    required this.mark,
-    required this.glowOpacity,
-    required this.glowScale,
+    required this.haloOpacity,
+    required this.haloScale,
+    required this.ringOpacity,
+    required this.ringScale,
     required this.letters,
-    required this.tag,
   });
+
+  /// Khung tĩnh của màn chờ: logo + hai vòng hào quang, không chữ.
+  static const still = _SplashFrame(
+    haloOpacity: 1,
+    haloScale: 1,
+    ringOpacity: 0,
+    ringScale: 1,
+    letters: [0, 0, 0, 0, 0, 0],
+  );
 
   factory _SplashFrame.at(double ms) {
     double seg(double start, double duration, Curve curve) {
@@ -401,69 +393,33 @@ class _SplashFrame {
       return curve.transform(t);
     }
 
-    // Ô logo: 0 → 550ms, .9 → 1, hiện dần, mờ 10 → 0.
-    final tile = seg(0, 550, _outExpo);
+    // Hào quang: nở 0 → 480ms (.7 → 1), giữ, tắt 800 → 990ms trước khi bay.
+    final haloIn = seg(0, 480, _outExpo);
+    final haloOut = seg(800, 190, Curves.easeInOut);
 
-    // Chấm bật: 1200 → 1620ms. 0%: 0, 60%: 1.35, 100%: 1 — đường cong nảy áp
-    // cho TỪNG đoạn giữa hai mốc, như CSS làm.
-    final popT = ((ms - 1200) / 420).clamp(0.0, 1.0);
-    double dotScale;
-    double dotOpacity;
-    if (popT <= 0.6) {
-      final u = OmniCurves.pop.transform(popT / 0.6);
-      dotScale = 1.35 * u;
-      dotOpacity = u.clamp(0.0, 1.0);
-    } else {
-      final u = OmniCurves.pop.transform((popT - 0.6) / 0.4);
-      dotScale = 1.35 - 0.35 * u;
-      dotOpacity = 1;
-    }
-
-    // Quầng vàng: 1240 → 2140ms, ease-out. Độ mờ 0 → .55 (giữa) → 0; cỡ .6 → 1.6.
-    final glowT = ((ms - 1240) / 900).clamp(0.0, 1.0);
-    final glowOpacity = glowT <= 0 || glowT >= 1
+    // Vòng tỏa một lần: 320 → 930ms, hiện nhanh rồi nở 1 → 2,2 và tắt dần.
+    final ringT = ((ms - 320) / 610).clamp(0.0, 1.0);
+    final ringOpacity = ringT <= 0 || ringT >= 1
         ? 0.0
-        : glowT <= 0.5
-        ? 0.55 * Curves.easeOut.transform(glowT / 0.5)
-        : 0.55 * (1 - Curves.easeOut.transform((glowT - 0.5) / 0.5));
+        : ringT < 0.13
+        ? ringT / 0.13
+        : 1 - (ringT - 0.13) / 0.87;
 
     return _SplashFrame(
-      tileScale: 0.9 + 0.1 * tile,
-      tileOpacity: tile.clamp(0.0, 1.0),
-      tileBlur: 10 * (1 - tile).clamp(0.0, 1.0),
-      haloOuter: 0.7 + 0.3 * seg(0, 1000, _outExpo),
-      haloInner: 0.7 + 0.3 * seg(80, 1000, _outExpo),
-      mark: OmniBrandFrame(
-        ring: seg(120, 620, OmniSplash.flightCurve),
-        tail: seg(380, 500, OmniSplash.flightCurve),
-        backArc: seg(520, 600, OmniSplash.flightCurve),
-        frontArc: seg(620, 600, OmniSplash.flightCurve),
-        // Chấm vàng: 620 → 1420ms, quay từ −220° về chỗ nghỉ.
-        dotTurn: -220 * (1 - seg(620, 800, _outExpo)),
-        dotScale: math.max(0, dotScale),
-        dotOpacity: dotOpacity,
-      ),
-      glowOpacity: glowOpacity,
-      glowScale: 0.6 + glowT,
-      letters: [
-        for (var i = 0; i < 6; i++)
-          seg(950 + 45.0 * i, 500, _outExpo).clamp(0.0, 1.0),
-      ],
-      tag: seg(1250, 500, _outExpo).clamp(0.0, 1.0),
+      haloOpacity: haloIn * (1 - haloOut),
+      haloScale: 0.7 + 0.3 * haloIn + 0.04 * haloOut,
+      ringOpacity: ringOpacity,
+      ringScale: 1 + 1.2 * Curves.easeOut.transform(ringT),
+      letters: [for (var i = 0; i < 6; i++) seg(190 + 45.0 * i, 400, _outExpo)],
     );
   }
 
   /// `cubic-bezier(.16,1,.3,1)` — ra nhanh, đáp êm.
   static const _outExpo = Cubic(0.16, 1, 0.3, 1);
 
-  final double tileScale;
-  final double tileOpacity;
-  final double tileBlur;
-  final double haloOuter;
-  final double haloInner;
-  final OmniBrandFrame mark;
-  final double glowOpacity;
-  final double glowScale;
+  final double haloOpacity;
+  final double haloScale;
+  final double ringOpacity;
+  final double ringScale;
   final List<double> letters;
-  final double tag;
 }

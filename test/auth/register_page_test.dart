@@ -88,22 +88,12 @@ void main() {
     await tester.pump();
   }
 
-  Future<void> tick(WidgetTester tester) async {
-    await tester.ensureVisible(find.byKey(const ValueKey('terms-checkbox')));
-    await tester.tap(find.byKey(const ValueKey('terms-checkbox')));
-    await tester.pump();
-  }
-
   Future<void> submit(WidgetTester tester) async {
     await tester.ensureVisible(find.byKey(const ValueKey('register-submit')));
     await tester.tap(find.byKey(const ValueKey('register-submit')));
     await tester.pump();
     await tester.pump();
   }
-
-  double submitOpacity(WidgetTester tester) => tester
-      .widget<AnimatedOpacity>(find.byKey(const ValueKey('register-opacity')))
-      .opacity;
 
   testWidgets('lỗi Google còn sót từ màn đăng nhập không hiện ở màn đăng ký', (
     tester,
@@ -141,23 +131,54 @@ void main() {
     expect(find.text('Chính sách bảo mật'), findsOneWidget);
   });
 
-  testWidgets('nút mờ .45 khi thiếu; đủ + tích thì rõ', (tester) async {
-    await open(tester);
-    expect(submitOpacity(tester), 0.45);
-
-    await fill(tester);
-    expect(submitOpacity(tester), 0.45, reason: 'chưa tích điều khoản');
-
-    await tick(tester);
-    expect(submitOpacity(tester), 1);
-  });
-
-  testWidgets('điền đủ + tích gọi API đúng tham số rồi đăng nhập', (
+  testWidgets('nút luôn bấm được; thiếu gì báo ngay dưới ô đó, không gọi API', (
     tester,
   ) async {
     await open(tester);
+    final button = tester.widget<FilledButton>(
+      find.descendant(
+        of: find.byKey(const ValueKey('register-submit')),
+        matching: find.byType(FilledButton),
+      ),
+    );
+    expect(button.onPressed, isNotNull);
+
+    await submit(tester);
+
+    expect(find.text('Vui lòng nhập họ tên'), findsOneWidget);
+    expect(find.text('Vui lòng nhập email'), findsOneWidget);
+    expect(find.text('Vui lòng nhập tên công ty'), findsOneWidget);
+    expect(find.text('Mật khẩu cần ít nhất 8 ký tự'), findsOneWidget);
+    expect(api.registered, isNull);
+  });
+
+  testWidgets('không còn ô tích; dòng pháp lý dưới nút', (tester) async {
+    await open(tester);
+
+    expect(find.byKey(const ValueKey('terms-checkbox')), findsNothing);
+    expect(find.text('Tạo tài khoản là đồng ý '), findsOneWidget);
+    expect(find.text('Chính sách bảo mật'), findsOneWidget);
+    final button = tester.getBottomLeft(
+      find.byKey(const ValueKey('register-submit')),
+    );
+    expect(
+      tester.getTopLeft(find.text('Chính sách bảo mật')).dy,
+      greaterThan(button.dy),
+    );
+  });
+
+  testWidgets('Google lên đầu, trên ô họ tên', (tester) async {
+    await open(tester);
+
+    expect(
+      tester.getTopLeft(find.byKey(const ValueKey('google-sign-in'))).dy,
+      lessThan(tester.getTopLeft(find.byType(TextField).first).dy),
+    );
+  });
+
+  testWidgets('điền đủ gọi API đúng tham số rồi đăng nhập', (tester) async {
+    await open(tester);
     await fill(tester);
-    await tick(tester);
     await submit(tester);
 
     expect(api.registered, {
@@ -174,7 +195,6 @@ void main() {
   ) async {
     await open(tester);
     await fill(tester);
-    await tick(tester);
     api.failWith = const ValidationException(
       'Dữ liệu chưa hợp lệ.',
       errors: {
@@ -193,7 +213,6 @@ void main() {
   testWidgets('422 chỉ có message hiện trong hộp lỗi', (tester) async {
     await open(tester);
     await fill(tester);
-    await tick(tester);
     api.failWith = const ValidationException('Không thể tạo workspace.');
     await submit(tester);
 

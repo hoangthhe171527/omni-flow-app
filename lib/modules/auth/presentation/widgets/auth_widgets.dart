@@ -8,68 +8,83 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/config/app_config.dart';
 import '../../../../design/components/components.dart';
+import '../../../../design/platform/omni_motion_scope.dart';
 import '../../../../design/tokens/tokens.dart';
 
 /// Lưu tạm email vừa đăng nhập để màn chọn tổ chức hiển thị ngay cả trước khi
 /// `/auth/context` tải xong hồ sơ người dùng.
 final authSignedInEmailProvider = StateProvider<String?>((ref) => null);
 
-/// Nền chung của phân hệ xác thực: màu nền hệ thống sạch kèm quầng sáng xanh
-/// V-Orbit rất dịu ở đỉnh màn hình. Đây là nền thương hiệu sau logo của luồng
-/// đăng nhập — ngoại lệ duy nhất được giữ chuyển màu (spec iOS Q4).
-class AuthBackdrop extends StatelessWidget {
-  const AuthBackdrop({super.key, required this.child});
+/// Tiêu đề lớn của các màn xác thực: 28/800, chữ khít −0,02em (như tên màn gốc
+/// mỗi tab), giữ dòng cao 1.4 cho dấu tiếng Việt.
+TextStyle authTitleStyle(BuildContext context) => OmniType.largeTitle.copyWith(
+  fontSize: 28,
+  fontWeight: FontWeight.w800,
+  letterSpacing: -0.56,
+  color: Theme.of(context).colorScheme.onSurface,
+);
 
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox.expand(
-      child: DecoratedBox(
-        key: const Key('auth-backdrop'),
-        decoration: BoxDecoration(
-          gradient: RadialGradient(
-            center: const Alignment(0, -0.85),
-            radius: 1.05,
-            colors: [
-              OmniColors.primary.withValues(alpha: 0.08),
-              OmniColors.primary.withValues(alpha: 0),
-            ],
-          ),
-        ),
-        child: child,
-      ),
-    );
-  }
-}
-
-/// Khung cuộn chuẩn của các màn xác thực: `SafeArea` + `ConstrainedBox(420)`
-/// căn giữa, tự đẩy mượt khi bàn phím bật lên.
+/// Khung chuẩn của các màn xác thực: nền trơn của app, `SafeArea`, nội dung
+/// rộng tối đa 420 căn giữa, cuộn được khi bàn phím bật.
+///
+/// [footer] được đẩy xuống đáy màn (vùng ngón cái) khi nội dung ngắn, và đi
+/// theo nội dung khi nội dung dài hơn màn.
 class AuthScaffold extends StatelessWidget {
   const AuthScaffold({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.fromLTRB(20, 24, 20, 24),
+    this.footer,
+    this.top = 8,
+    this.scrollController,
   });
 
   final Widget child;
-  final EdgeInsetsGeometry padding;
+  final Widget? footer;
+
+  /// Khoảng trên cùng, dưới vùng an toàn.
+  final double top;
+
+  final ScrollController? scrollController;
 
   @override
   Widget build(BuildContext context) {
+    // Đọc bàn phím TRƯỚC Scaffold: Scaffold gỡ viewInsets khỏi MediaQuery của
+    // thân màn, bên trong không còn biết bàn phím đang bật.
+    final keyboard = MediaQuery.viewInsetsOf(context).bottom > 0;
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: AuthBackdrop(
+      body: _AuthKeyboard(
+        open: keyboard,
         child: SafeArea(
-          child: SingleChildScrollView(
-            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-            padding: padding,
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 420),
-                child: child,
-              ),
-            ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // Lề 20, rộng hơn 420 + 40 thì căn giữa cột 420 (máy tính bảng).
+              final side = math.max(20.0, (constraints.maxWidth - 420) / 2);
+              return CustomScrollView(
+                controller: scrollController,
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                slivers: [
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(side, top, side, 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          child,
+                          if (footer != null) ...[
+                            const Spacer(),
+                            const SizedBox(height: OmniSpacing.xxl),
+                            footer!,
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -77,198 +92,98 @@ class AuthScaffold extends StatelessWidget {
   }
 }
 
-/// Thanh đầu màn con (Đăng ký, Quên mật khẩu): `‹` xanh trơn, không vòng kính
-/// (spec iOS §3.3), đồng nhất với `OmniTopBar`.
+/// Bàn phím có đang bật không, đọc ở [AuthScaffold] (trên Scaffold).
+class _AuthKeyboard extends InheritedWidget {
+  const _AuthKeyboard({required this.open, required super.child});
+
+  final bool open;
+
+  /// Ngoài [AuthScaffold] thì đọc thẳng MediaQuery.
+  static bool of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<_AuthKeyboard>()?.open ??
+      MediaQuery.viewInsetsOf(context).bottom > 0;
+
+  @override
+  bool updateShouldNotify(_AuthKeyboard old) => old.open != open;
+}
+
+/// Thanh đầu màn con (Đăng ký, Quên mật khẩu): `‹` xanh trơn 44×44, không vòng
+/// kính, không tiêu đề (tiêu đề lớn nằm ngay dưới).
 class AuthSubBar extends StatelessWidget {
-  const AuthSubBar({
-    super.key,
-    required this.onBack,
-    this.title,
-    this.trailing,
-  });
+  const AuthSubBar({super.key, required this.onBack});
 
   final VoidCallback onBack;
-  final String? title;
-  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return SizedBox(
-      height: 48,
-      child: Row(
-        children: [
-          OmniGlassCircle(
-            child: IconButton(
-              tooltip: 'Quay lại',
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-              onPressed: () {
-                HapticFeedback.selectionClick();
-                onBack();
-              },
-              icon: Icon(
-                LucideIcons.chevronLeft,
-                size: OmniIconSize.md,
-                color: scheme.primary,
-              ),
-            ),
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Transform.translate(
+        // Đưa nét ‹ thẳng mép chữ tiêu đề bên dưới, vùng chạm vẫn đủ 44.
+        offset: const Offset(-12, 0),
+        child: IconButton(
+          tooltip: 'Quay lại',
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+          onPressed: () {
+            HapticFeedback.selectionClick();
+            onBack();
+          },
+          icon: Icon(
+            LucideIcons.chevronLeft,
+            size: 28,
+            color: Theme.of(context).colorScheme.primary,
           ),
-          Expanded(
-            child: title == null
-                ? const SizedBox.shrink()
-                : Text(
-                    title!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: OmniType.section.copyWith(color: scheme.onSurface),
-                  ),
-          ),
-          if (trailing != null)
-            trailing!
-          else if (title != null)
-            const SizedBox(width: 44),
-        ],
+        ),
       ),
     );
   }
 }
 
-/// Cụm nhận diện thương hiệu đầu màn xác thực: squircle V-Orbit 64×64 (tuỳ chọn
-/// neo `BrandAnchor` cho hiệu ứng bay từ Intro), `OmniWordmark`, tiêu đề và dòng
-/// phụ tinh gọn.
+/// Logo trần 56 (không ô nền — khung chỉ dành cho icon app) và tiêu đề lớn căn
+/// giữa. Logo là đích bay của màn mở app ([BrandAnchor]) và thu gọn khi bàn
+/// phím bật để ô nhập và nút chính lên vùng nhìn thấy.
 class AuthBrandHeader extends StatelessWidget {
   const AuthBrandHeader({
     super.key,
     required this.title,
-    this.subtitle,
     this.anchorBrand = false,
-    this.showWordmark = true,
-    this.brandSemanticLabel,
-    this.headerSemantics = false,
   });
 
   final String title;
-  final String? subtitle;
   final bool anchorBrand;
-  final bool showWordmark;
-  final String? brandSemanticLabel;
-  final bool headerSemantics;
+
+  static const double logoSize = 56;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final mark = OmniBrandMark(size: 64, semanticLabel: brandSemanticLabel);
-    final anchoredMark = anchorBrand ? BrandAnchor(child: mark) : mark;
-
-    final titleWidget = Text(
-      title,
-      textAlign: TextAlign.center,
-      style: OmniType.largeTitle.copyWith(
-        color: scheme.onSurface,
-        fontWeight: FontWeight.w600,
-      ),
-    );
+    final keyboard = _AuthKeyboard.of(context);
+    const mark = OmniBrandMark(size: logoSize, framed: false);
+    final logo = anchorBrand ? const BrandAnchor(child: mark) : mark;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
-      children: [
-        DecoratedBox(
-          decoration: const BoxDecoration(
-            borderRadius: BorderRadius.all(Radius.circular(16)),
-            boxShadow: OmniShadows.raised,
-          ),
-          child: anchoredMark,
-        ),
-        if (showWordmark) ...[const SizedBox(height: 10), const OmniWordmark()],
-        const SizedBox(height: 14),
-        if (headerSemantics)
-          Semantics(header: true, child: titleWidget)
-        else
-          titleWidget,
-        if (subtitle != null && subtitle!.isNotEmpty) ...[
-          const SizedBox(height: 4),
-          Text(
-            subtitle!,
-            textAlign: TextAlign.center,
-            style: OmniType.bodySm.copyWith(color: scheme.onSurfaceVariant),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-/// Thẻ nhóm ô nhập chuẩn iOS: bo 16, nền `card`, viền mảnh 1px
-/// và vạch ngăn mảnh thụt lề giữa các ô xếp chồng.
-class AuthFieldGroup extends StatelessWidget {
-  const AuthFieldGroup({
-    super.key,
-    required this.children,
-    this.title,
-    this.trailingTitle,
-    this.dividerIndent = 46,
-  });
-
-  final List<Widget> children;
-  final String? title;
-  final Widget? trailingTitle;
-  final double dividerIndent;
-
-  @override
-  Widget build(BuildContext context) {
-    if (children.isEmpty) return const SizedBox.shrink();
-    final scheme = Theme.of(context).colorScheme;
-
-    return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: MainAxisSize.min,
       children: [
-        if (title != null || trailingTitle != null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
-            child: Row(
-              children: [
-                if (title != null)
-                  Expanded(
-                    child: Text(
-                      title!,
-                      style: OmniType.caption.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                  )
-                else
-                  const Spacer(),
-                ?trailingTitle,
-              ],
-            ),
-          ),
-        Material(
-          color: scheme.surface,
-          shape: RoundedRectangleBorder(
-            // Nhóm bo 16 (thang 6/10/16/32).
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: scheme.outlineVariant),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              for (var i = 0; i < children.length; i++) ...[
-                if (i > 0)
-                  Divider(
-                    height: 1,
-                    thickness: 1,
-                    indent: dividerIndent,
-                    color: scheme.outlineVariant.withValues(alpha: 0.75),
-                  ),
-                children[i],
-              ],
-            ],
+        AnimatedSize(
+          duration: OmniMotion.enabled(context)
+              ? OmniDuration.base
+              : Duration.zero,
+          curve: OmniCurves.standard,
+          alignment: Alignment.topCenter,
+          child: keyboard
+              ? const SizedBox(width: double.infinity)
+              : Padding(
+                  padding: const EdgeInsets.only(top: 20, bottom: 16),
+                  child: Center(child: logo),
+                ),
+        ),
+        Semantics(
+          header: true,
+          child: Text(
+            title,
+            textAlign: TextAlign.center,
+            style: authTitleStyle(context),
           ),
         ),
       ],
@@ -276,15 +191,15 @@ class AuthFieldGroup extends StatelessWidget {
   }
 }
 
-/// Một dòng ô nhập bên trong [AuthFieldGroup]: icon 1 tông gọn gàng, nhãn phụ
-/// xếp chồng, rung báo lỗi 400ms và hiện lỗi từng trường bên dưới không vỡ khung.
-class AuthGroupField extends StatefulWidget {
-  const AuthGroupField({
+/// Ô nhập của màn xác thực: nhãn luôn hiện phía trên (kèm liên kết phụ bên
+/// phải nếu có, vd "Quên?"), ô cao 52 bo 10 nền thẻ, viền 3:1; đang gõ thì viền
+/// xanh, lỗi thì viền đỏ + chữ lỗi bên dưới. Rung 400ms khi báo lỗi.
+class AuthField extends StatefulWidget {
+  const AuthField({
     super.key,
     required this.controller,
     required this.label,
     required this.hint,
-    required this.icon,
     required this.shake,
     required this.validator,
     this.serverError,
@@ -294,12 +209,14 @@ class AuthGroupField extends StatefulWidget {
     this.onSubmitted,
     this.suffix,
     this.autofillHints,
+    this.labelTrailing,
+    this.focusNode,
+    this.autofocus = false,
   });
 
   final TextEditingController controller;
   final String label;
   final String hint;
-  final IconData icon;
   final Animation<double> shake;
   final String? Function(String?) validator;
   final String? serverError;
@@ -310,17 +227,33 @@ class AuthGroupField extends StatefulWidget {
   final Widget? suffix;
   final Iterable<String>? autofillHints;
 
+  /// Liên kết nhỏ cùng hàng nhãn, canh phải (vd "Quên?").
+  final Widget? labelTrailing;
+
+  final FocusNode? focusNode;
+  final bool autofocus;
+
   @override
-  State<AuthGroupField> createState() => _AuthGroupFieldState();
+  State<AuthField> createState() => _AuthFieldState();
 }
 
-class _AuthGroupFieldState extends State<AuthGroupField> {
-  final _focus = FocusNode();
+class _AuthFieldState extends State<AuthField> {
+  FocusNode? _ownFocus;
+  FocusNode get _focus => widget.focusNode ?? (_ownFocus ??= FocusNode());
 
   @override
   void initState() {
     super.initState();
     _focus.addListener(_onFocusChange);
+  }
+
+  @override
+  void didUpdateWidget(AuthField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.focusNode != widget.focusNode) {
+      (oldWidget.focusNode ?? _ownFocus)?.removeListener(_onFocusChange);
+      _focus.addListener(_onFocusChange);
+    }
   }
 
   void _onFocusChange() {
@@ -330,15 +263,13 @@ class _AuthGroupFieldState extends State<AuthGroupField> {
   @override
   void dispose() {
     _focus.removeListener(_onFocusChange);
-    _focus.dispose();
+    _ownFocus?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final dark = theme.brightness == Brightness.dark;
+    final scheme = Theme.of(context).colorScheme;
 
     return FormField<String>(
       validator: (_) => widget.validator(widget.controller.text),
@@ -346,150 +277,178 @@ class _AuthGroupFieldState extends State<AuthGroupField> {
         final error = field.errorText ?? widget.serverError;
         final focused = _focus.hasFocus;
         final dangerFg = OmniColors.dangerTextOf(context);
-
-        final rowFill = error != null
-            ? (dark
-                  ? OmniColors.dangerTextDark.withValues(alpha: 0.08)
-                  : OmniColors.dangerSoft.withValues(alpha: 0.55))
-            : focused
-            ? scheme.primaryContainer.withValues(alpha: dark ? 0.35 : 0.45)
-            : Colors.transparent;
-
-        final accentFg = error != null
+        final edge = error != null
             ? dangerFg
             : focused
             ? scheme.primary
-            : scheme.onSurfaceVariant;
+            : scheme.outline;
 
-        return AnimatedBuilder(
-          animation: widget.shake,
-          builder: (_, child) {
-            final t = widget.shake.value;
-            final dx = error == null
-                ? 0.0
-                : math.sin(t * math.pi * 6) * 6 * (1 - t);
-            return Transform.translate(offset: Offset(dx, 0), child: child);
-          },
-          child: ColoredBox(
-            color: rowFill,
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                14,
-                9,
-                widget.suffix != null ? 4 : 14,
-                9,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    children: [
-                      GestureDetector(
-                        excludeFromSemantics: true,
-                        behavior: HitTestBehavior.opaque,
-                        onTap: _focus.requestFocus,
-                        child: Padding(
-                          padding: const EdgeInsets.only(right: 12),
-                          child: Icon(
-                            widget.icon,
-                            size: OmniIconSize.lg,
-                            color: accentFg,
-                          ),
-                        ),
+        final box = DecoratedBox(
+          decoration: BoxDecoration(
+            color: scheme.surface,
+            borderRadius: OmniRadius.mdAll,
+            border: Border.all(color: edge),
+            // Viền dày 2 khi đang gõ / lỗi vẽ bằng bóng đặc 1px phía ngoài —
+            // không đổi kích thước ô, chữ không xê dịch.
+            boxShadow: error != null || focused
+                ? [BoxShadow(color: edge, spreadRadius: 1)]
+                : null,
+          ),
+          child: SizedBox(
+            height: 52,
+            child: Row(
+              children: [
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Semantics(
+                    label: widget.label,
+                    textField: true,
+                    child: TextField(
+                      autofillHints: widget.autofillHints,
+                      controller: widget.controller,
+                      focusNode: _focus,
+                      autofocus: widget.autofocus,
+                      obscureText: widget.obscure,
+                      keyboardType: widget.keyboardType,
+                      textInputAction: widget.textInputAction,
+                      autocorrect: false,
+                      enableSuggestions: !widget.obscure,
+                      onSubmitted: widget.onSubmitted,
+                      onChanged: (_) {
+                        if (field.hasError) field.reset();
+                      },
+                      style: OmniType.input.copyWith(
+                        fontSize: 17,
+                        color: scheme.onSurface,
                       ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            GestureDetector(
-                              excludeFromSemantics: true,
-                              behavior: HitTestBehavior.opaque,
-                              onTap: _focus.requestFocus,
-                              child: ExcludeSemantics(
-                                child: Text(
-                                  widget.label,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: OmniType.micro.copyWith(
-                                    color: accentFg,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Semantics(
-                              label: widget.label,
-                              textField: true,
-                              child: TextField(
-                                autofillHints: widget.autofillHints,
-                                controller: widget.controller,
-                                focusNode: _focus,
-                                obscureText: widget.obscure,
-                                keyboardType: widget.keyboardType,
-                                textInputAction: widget.textInputAction,
-                                autocorrect: false,
-                                enableSuggestions: !widget.obscure,
-                                onSubmitted: widget.onSubmitted,
-                                onChanged: (_) {
-                                  if (field.hasError) field.reset();
-                                },
-                                style: OmniType.input.copyWith(
-                                  fontWeight: FontWeight.w500,
-                                  color: scheme.onSurface,
-                                ),
-                                decoration: InputDecoration(
-                                  hintText: widget.hint,
-                                  hintStyle: OmniType.body.copyWith(
-                                    color: scheme.onSurfaceVariant.withValues(
-                                      alpha: 0.72,
-                                    ),
-                                  ),
-                                  border: InputBorder.none,
-                                  enabledBorder: InputBorder.none,
-                                  focusedBorder: InputBorder.none,
-                                  errorBorder: InputBorder.none,
-                                  focusedErrorBorder: InputBorder.none,
-                                  filled: false,
-                                  isDense: true,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    vertical: 2,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+                      cursorColor: scheme.primary,
+                      decoration: InputDecoration(
+                        hintText: widget.hint,
+                        hintStyle: OmniType.input.copyWith(
+                          fontSize: 17,
+                          color: scheme.onSurfaceVariant,
                         ),
-                      ),
-                      ?widget.suffix,
-                    ],
-                  ),
-                  if (error != null)
-                    Padding(
-                      padding: const EdgeInsets.only(
-                        top: 5,
-                        left: 32,
-                        right: 8,
-                      ),
-                      child: Semantics(
-                        liveRegion: true,
-                        child: Text(
-                          error,
-                          style: OmniType.micro.copyWith(
-                            color: dangerFg,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        errorBorder: InputBorder.none,
+                        focusedErrorBorder: InputBorder.none,
+                        filled: false,
+                        isCollapsed: true,
+                        // Theme chung có contentPadding riêng — ở đây lề đã
+                        // nằm ở hàng bọc ngoài (14), chữ không thụt thêm.
+                        contentPadding: EdgeInsets.zero,
                       ),
                     ),
-                ],
-              ),
+                  ),
+                ),
+                if (widget.suffix != null)
+                  widget.suffix!
+                else
+                  const SizedBox(width: 14),
+              ],
             ),
           ),
         );
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              height: 36,
+              child: Row(
+                children: [
+                  const SizedBox(width: 2),
+                  Expanded(
+                    child: ExcludeSemantics(
+                      child: Text(
+                        widget.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: OmniType.bodySm.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: scheme.onSurface,
+                        ),
+                      ),
+                    ),
+                  ),
+                  ?widget.labelTrailing,
+                ],
+              ),
+            ),
+            AnimatedBuilder(
+              animation: widget.shake,
+              builder: (_, child) {
+                final t = widget.shake.value;
+                final dx = error == null
+                    ? 0.0
+                    : math.sin(t * math.pi * 6) * 6 * (1 - t);
+                return Transform.translate(offset: Offset(dx, 0), child: child);
+              },
+              child: box,
+            ),
+            if (error != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(2, 6, 2, 0),
+                child: Semantics(
+                  liveRegion: true,
+                  child: Text(
+                    error,
+                    style: OmniType.caption.copyWith(color: dangerFg),
+                  ),
+                ),
+              ),
+          ],
+        );
       },
+    );
+  }
+}
+
+/// Liên kết chữ nhỏ cùng hàng nhãn ô nhập ("Quên?"): chữ xanh 14/600, vùng chạm
+/// rộng tối thiểu 44.
+class AuthLabelLink extends StatelessWidget {
+  const AuthLabelLink({
+    super.key,
+    required this.label,
+    required this.onTap,
+    this.semanticLabel,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+  final String? semanticLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    // Nút ngữ nghĩa riêng: không để trình đọc màn hình gộp "Quên mật khẩu"
+    // vào nhãn của ô mật khẩu ngay bên dưới.
+    return Semantics(
+      container: true,
+      button: true,
+      label: semanticLabel,
+      excludeSemantics: semanticLabel != null,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: OmniRadius.smAll,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 44, minHeight: 36),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Center(
+              widthFactor: 1,
+              child: Text(
+                label,
+                style: OmniType.bodySm.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -510,6 +469,7 @@ class AuthPasswordToggle extends StatelessWidget {
     return IconButton(
       tooltip: obscure ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
       onPressed: onToggle,
+      constraints: const BoxConstraints.tightFor(width: 48, height: 48),
       icon: Icon(
         obscure ? LucideIcons.eye : LucideIcons.eyeOff,
         size: OmniIconSize.lg,
@@ -524,28 +484,29 @@ class AuthDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = Theme.of(context).colorScheme.outlineVariant;
-    return Row(
-      children: [
-        Expanded(child: Divider(color: color)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.md),
-          child: Text(
-            'hoặc',
-            style: OmniType.caption.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: OmniSpacing.lg),
+      child: Row(
+        children: [
+          Expanded(child: Divider(color: scheme.outlineVariant)),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.md),
+            child: Text(
+              'hoặc',
+              style: OmniType.bodySm.copyWith(color: scheme.onSurfaceVariant),
             ),
           ),
-        ),
-        Expanded(child: Divider(color: color)),
-      ],
+          Expanded(child: Divider(color: scheme.outlineVariant)),
+        ],
+      ),
     );
   }
 }
 
 /// Biểu tượng Google Vector 4 màu chuẩn chính thức (viewBox 0 0 24 24).
 class AuthGoogleGlyph extends StatelessWidget {
-  const AuthGoogleGlyph({super.key, this.size = 19});
+  const AuthGoogleGlyph({super.key, this.size = 20});
 
   final double size;
 
@@ -639,12 +600,19 @@ class _GoogleMarkPainter extends CustomPainter {
   bool shouldRepaint(covariant _GoogleMarkPainter oldDelegate) => false;
 }
 
-/// Hộp báo lỗi: nền đỏ nhạt, chữ đỏ đậm, đọc được bởi trình đọc màn hình ngay
-/// khi hiện ra (`role="alert"` trong thiết kế).
+/// Hộp báo lỗi chung: nền đỏ nhạt, chữ đỏ đậm, đọc ngay bởi trình đọc màn
+/// hình. [actionLabel] là lối sửa đi kèm (vd "Đặt lại mật khẩu").
 class AuthErrorBox extends StatelessWidget {
-  const AuthErrorBox({super.key, required this.message});
+  const AuthErrorBox({
+    super.key,
+    required this.message,
+    this.actionLabel,
+    this.onAction,
+  });
 
   final String message;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -654,16 +622,13 @@ class AuthErrorBox extends StatelessWidget {
     return Semantics(
       liveRegion: true,
       child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: OmniSpacing.md,
-        ),
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
         decoration: BoxDecoration(
           color: dark
               ? OmniColors.dangerTextDark.withValues(alpha: 0.12)
               : OmniColors.dangerSoft,
           // Hộp báo nhỏ cỡ ô nhập → bo 10 (thang 6/10/16/32).
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: OmniRadius.mdAll,
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -672,13 +637,35 @@ class AuthErrorBox extends StatelessWidget {
               padding: const EdgeInsets.only(top: 1),
               child: Icon(
                 LucideIcons.circleAlert,
-                size: OmniIconSize.md,
+                size: OmniIconSize.lg,
                 color: fg,
               ),
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: Text(message, style: OmniType.bodySm.copyWith(color: fg)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(message, style: OmniType.body.copyWith(color: fg)),
+                  if (actionLabel != null && onAction != null)
+                    InkWell(
+                      onTap: onAction,
+                      borderRadius: OmniRadius.smAll,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Text(
+                          actionLabel!,
+                          style: OmniType.body.copyWith(
+                            color: fg,
+                            fontWeight: FontWeight.w600,
+                            decoration: TextDecoration.underline,
+                            decorationColor: fg,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ],
         ),
@@ -687,8 +674,8 @@ class AuthErrorBox extends StatelessWidget {
   }
 }
 
-/// Nút chính của các màn xác thực: viên thuốc xanh đặc cao 50; hiện vòng quay
-/// thay chữ khi [busy]. [onPressed] null thì nút bị khoá.
+/// Nút chính của các màn xác thực: viên thuốc xanh đặc cao 52, chữ 17/700; hiện
+/// vòng quay thay chữ khi [busy] mà không đổi kích thước nút.
 class AuthPrimaryButton extends StatelessWidget {
   const AuthPrimaryButton({
     super.key,
@@ -705,19 +692,21 @@ class AuthPrimaryButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return FilledButton(
-      onPressed: onPressed,
+      onPressed: busy ? () {} : onPressed,
       style: FilledButton.styleFrom(
-        minimumSize: const Size.fromHeight(50),
+        minimumSize: const Size.fromHeight(52),
         shape: const StadiumBorder(),
-        textStyle: OmniType.input.copyWith(fontWeight: FontWeight.w600),
+        textStyle: OmniType.input.copyWith(
+          fontSize: 17,
+          fontWeight: FontWeight.w700,
+        ),
       ),
       child: busy
-          ? SizedBox(
-              width: 20,
-              height: 20,
+          ? SizedBox.square(
+              dimension: 20,
               child: CircularProgressIndicator.adaptive(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(scheme.primary),
+                strokeWidth: 2.5,
+                valueColor: AlwaysStoppedAnimation<Color>(scheme.onPrimary),
               ),
             )
           : Text(label),
@@ -725,8 +714,8 @@ class AuthPrimaryButton extends StatelessWidget {
   }
 }
 
-/// Nút Google viền cao 50dp (bậc phụ, không tranh nút chính) kèm biểu tượng
-/// vector 4 màu chuẩn.
+/// Nút "Tiếp tục với Google": viên thuốc cao 52 nền thẻ viền mảnh, biểu tượng
+/// 4 màu, chữ 17/600 — bậc phụ, nằm TRÊN ô nhập (người quay lại vào một chạm).
 class AuthGoogleButton extends StatelessWidget {
   const AuthGoogleButton({
     super.key,
@@ -741,12 +730,20 @@ class AuthGoogleButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return OutlinedButton.icon(
       key: const ValueKey('google-sign-in'),
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
-        minimumSize: const Size.fromHeight(50),
+        minimumSize: const Size.fromHeight(52),
         shape: const StadiumBorder(),
+        backgroundColor: scheme.surface,
+        foregroundColor: scheme.onSurface,
+        side: BorderSide(color: scheme.outlineVariant),
+        textStyle: OmniType.input.copyWith(
+          fontSize: 17,
+          fontWeight: FontWeight.w600,
+        ),
       ),
       icon: busy
           ? const SizedBox.square(
@@ -759,10 +756,56 @@ class AuthGoogleButton extends StatelessWidget {
   }
 }
 
-/// Liên kết "Chính sách bảo mật" ở chân màn đăng nhập/đăng ký — cửa hàng ứng
-/// dụng đòi chính sách luôn mở được từ màn đầu tiên người dùng thấy.
+/// Dòng "Chưa có tài khoản? Đăng ký" ở chân màn: chữ phụ + liên kết xanh.
+class AuthSwitchLink extends StatelessWidget {
+  const AuthSwitchLink({
+    super.key,
+    required this.prompt,
+    required this.action,
+    required this.onTap,
+  });
+
+  final String prompt;
+  final String action;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Wrap(
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Text(
+          '$prompt ',
+          style: OmniType.body.copyWith(color: scheme.onSurfaceVariant),
+        ),
+        InkWell(
+          onTap: onTap,
+          borderRadius: OmniRadius.smAll,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+            child: Text(
+              action,
+              style: OmniType.body.copyWith(
+                fontWeight: FontWeight.w600,
+                color: scheme.primary,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Dòng pháp lý chữ nhỏ: [prefix] (nếu có) + liên kết "Chính sách bảo mật".
+/// Cửa hàng ứng dụng đòi chính sách luôn mở được từ màn đầu tiên người dùng
+/// thấy. Web chưa có trang Điều khoản nên chưa có liên kết đó.
 class AuthPrivacyLink extends StatelessWidget {
-  const AuthPrivacyLink({super.key});
+  const AuthPrivacyLink({super.key, this.prefix});
+
+  final String? prefix;
 
   Future<void> _open(BuildContext context) async {
     final opened = await launchUrl(
@@ -779,22 +822,33 @@ class AuthPrivacyLink extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: InkWell(
-        key: const ValueKey('privacy-link'),
-        onTap: () => _open(context),
-        borderRadius: BorderRadius.circular(6),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-          child: Text(
-            'Chính sách bảo mật',
-            style: OmniType.micro.copyWith(
-              fontWeight: FontWeight.w400,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+    final scheme = Theme.of(context).colorScheme;
+    final style = OmniType.micro.copyWith(
+      fontWeight: FontWeight.w400,
+      color: scheme.onSurfaceVariant,
+    );
+    return Wrap(
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        if (prefix != null) Text('$prefix ', style: style),
+        InkWell(
+          key: const ValueKey('privacy-link'),
+          onTap: () => _open(context),
+          borderRadius: OmniRadius.smAll,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 10),
+            child: Text(
+              'Chính sách bảo mật',
+              style: style.copyWith(
+                color: scheme.onSurface,
+                decoration: TextDecoration.underline,
+                decorationColor: scheme.onSurfaceVariant,
+              ),
             ),
           ),
         ),
-      ),
+      ],
     );
   }
 }

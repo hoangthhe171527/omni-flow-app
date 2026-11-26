@@ -11,10 +11,10 @@ import '../../../security/session/session_controller.dart';
 import '../application/login_controller.dart';
 import 'widgets/auth_widgets.dart';
 
-/// Màn chọn không gian làm việc (`#s-auth-workspace`): biểu tượng V-Orbit 64×64,
-/// viên thuốc hiển thị email tài khoản đang đăng nhập, danh sách tổ chức trong
-/// `OmniGroupSection` (bo 16) với ô chữ tắt 40×40 một tông thương hiệu và nút
-/// `Đăng xuất` ở vùng ngón cái dưới màn.
+/// Màn chọn công ty (artifact "Màn xác thực" duyệt 26/11): đã đăng nhập nên
+/// KHÔNG còn logo — tiêu đề lớn "Chọn công ty", viên email tài khoản đang
+/// dùng, danh sách công ty (ô viết tắt mỗi công ty một tông, dòng cao 72) và
+/// "Đăng xuất" là nút chữ đỏ ở đáy, không tranh việc chính.
 class WorkspacePage extends ConsumerStatefulWidget {
   const WorkspacePage({super.key});
 
@@ -55,75 +55,78 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: AuthBackdrop(
-        child: SafeArea(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-                    child: Column(
-                      children: [
-                        const AuthBrandHeader(
-                          title: 'Chọn không gian làm việc',
-                          showWordmark: false,
-                          brandSemanticLabel: 'Viomni',
-                          headerSemantics: true,
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Semantics(
+                        header: true,
+                        child: Text(
+                          'Chọn công ty',
+                          style: authTitleStyle(context),
                         ),
-                        const SizedBox(height: 10),
-                        _AccountIdentityPill(email: email),
+                      ),
+                      const SizedBox(height: 12),
+                      _AccountChip(email: email),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: OmniAsyncView(
+                    value: tenants,
+                    onRetry: () => ref.invalidate(tenantOptionsProvider),
+                    isEmpty: (list) => list.isEmpty,
+                    empty: const OmniEmptyState(
+                      icon: LucideIcons.boxes,
+                      title: 'Tài khoản chưa thuộc công ty nào',
+                      message:
+                          'Liên hệ quản trị viên để được thêm vào công ty của '
+                          'bạn.',
+                    ),
+                    data: (list) => ListView(
+                      padding: const EdgeInsets.fromLTRB(16, 22, 16, 16),
+                      children: [
+                        OmniGroupSection(
+                          title: 'Công ty · ${list.length}',
+                          dividerIndent: 72,
+                          children: [
+                            for (final tenant in list)
+                              _WorkspaceRow(
+                                tenant: tenant,
+                                busy: _entering == tenant.id,
+                                onTap: _entering == null
+                                    ? () => _enter(tenant)
+                                    : null,
+                              ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
-                  Expanded(
-                    child: OmniAsyncView(
-                      value: tenants,
-                      onRetry: () => ref.invalidate(tenantOptionsProvider),
-                      isEmpty: (list) => list.isEmpty,
-                      empty: const OmniEmptyState(
-                        icon: LucideIcons.boxes,
-                        title: 'Tài khoản chưa thuộc workspace nào',
-                        message:
-                            'Liên hệ quản trị viên để được thêm vào công ty của '
-                            'bạn.',
-                      ),
-                      data: (list) => ListView(
-                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-                        children: [
-                          OmniGroupSection(
-                            title: 'Công ty của bạn (${list.length})',
-                            dividerIndent: 68,
-                            children: [
-                              for (final tenant in list)
-                                _WorkspaceCard(
-                                  tenant: tenant,
-                                  busy: _entering == tenant.id,
-                                  onTap: _entering == null
-                                      ? () => _enter(tenant)
-                                      : null,
-                                ),
-                            ],
-                          ),
-                        ],
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                  child: TextButton(
+                    onPressed: _logout,
+                    style: TextButton.styleFrom(
+                      minimumSize: const Size.fromHeight(44),
+                      foregroundColor: OmniColors.dangerTextOf(context),
+                      textStyle: OmniType.input.copyWith(
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
+                    child: const Text('Đăng xuất'),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-                    child: OutlinedButton(
-                      onPressed: _logout,
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(50),
-                        shape: const StadiumBorder(),
-                      ),
-                      child: const Text('Đăng xuất'),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
@@ -132,43 +135,55 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
   }
 }
 
-class _AccountIdentityPill extends StatelessWidget {
-  const _AccountIdentityPill({required this.email});
+/// Viên tài khoản: ô chữ đầu tròn + email đang đăng nhập.
+class _AccountChip extends StatelessWidget {
+  const _AccountChip({required this.email});
 
   final String? email;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final hasEmail = email != null && email!.trim().isNotEmpty;
+    final text = email?.trim() ?? '';
+    final shown = text.isEmpty ? 'Phiên đăng nhập đã xác thực' : text;
+    final initial = text.isEmpty ? '?' : text.characters.first.toUpperCase();
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      constraints: const BoxConstraints(minHeight: 36),
+      padding: const EdgeInsets.fromLTRB(4, 4, 12, 4),
       decoration: BoxDecoration(
-        color: scheme.primaryContainer,
-        // Nhãn bo 6 (thang 6/10/16/32), không còn viên thuốc bo tròn.
-        borderRadius: BorderRadius.circular(6),
+        color: scheme.surface,
+        borderRadius: OmniRadius.pillAll,
+        border: Border.all(color: scheme.outlineVariant),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 7,
-            height: 7,
+            width: 28,
+            height: 28,
             decoration: BoxDecoration(
-              color: scheme.primary,
+              color: scheme.primaryContainer,
               shape: BoxShape.circle,
             ),
+            alignment: Alignment.center,
+            child: Text(
+              initial,
+              style: OmniType.micro.copyWith(
+                fontWeight: FontWeight.w700,
+                color: scheme.onPrimaryContainer,
+              ),
+            ),
           ),
-          const SizedBox(width: 7),
+          const SizedBox(width: 8),
           Flexible(
             child: Text(
-              hasEmail ? email!.trim() : 'Phiên đăng nhập đã xác thực',
+              shown,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: OmniType.micro.copyWith(
-                color: scheme.onPrimaryContainer,
-                fontWeight: FontWeight.w600,
+              style: OmniType.body.copyWith(
+                fontWeight: FontWeight.w500,
+                color: scheme.onSurface,
               ),
             ),
           ),
@@ -178,8 +193,8 @@ class _AccountIdentityPill extends StatelessWidget {
   }
 }
 
-class _WorkspaceCard extends StatelessWidget {
-  const _WorkspaceCard({
+class _WorkspaceRow extends StatelessWidget {
+  const _WorkspaceRow({
     required this.tenant,
     required this.busy,
     required this.onTap,
@@ -189,9 +204,37 @@ class _WorkspaceCard extends StatelessWidget {
   final bool busy;
   final VoidCallback? onTap;
 
+  /// Mỗi công ty một tông cố định (theo id) để nhận ra nhanh giữa nhiều công
+  /// ty — ngoại lệ màu như ô biểu tượng ứng dụng.
+  static const _hues = [
+    OmniHue.blue,
+    OmniHue.teal,
+    OmniHue.violet,
+    OmniHue.orange,
+  ];
+
+  static String _initials(TenantOption tenant) {
+    final code = tenant.code?.trim();
+    if (code != null && code.isNotEmpty) {
+      return code.characters.take(3).toString().toUpperCase();
+    }
+    final words = tenant.name.trim().split(RegExp(r'\s+'));
+    return words
+        .where((w) => w.isNotEmpty)
+        .take(2)
+        .map((w) => w.characters.first)
+        .join()
+        .toUpperCase();
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final tone = OmniFeatureTones.of(
+      context,
+      // Tổng mã ký tự: ổn định giữa các lần mở app (hashCode thì không chắc).
+      _hues[tenant.id.codeUnits.fold(0, (a, b) => a + b) % _hues.length],
+    );
     final meta = [
       if (tenant.memberCount != null) '${tenant.memberCount} nhân viên',
       if (tenant.planLabel != null) tenant.planLabel!,
@@ -203,76 +246,77 @@ class _WorkspaceCard extends StatelessWidget {
           : Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-          child: Row(
-            children: [
-              // Ô chữ tắt 40×40 bo 10 (ô icon, thang 6/10/16/32) một tông màu.
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: scheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  (tenant.code ?? tenant.name).characters
-                      .take(3)
-                      .toString()
-                      .toUpperCase(),
-                  style: OmniType.caption.copyWith(
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.28,
-                    color: scheme.primary,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 72),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: tone.background,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    _initials(tenant),
+                    style: OmniType.bodyStrong.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: tone.foreground,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      tenant.name,
-                      style: OmniType.listTitle.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: scheme.onSurface,
-                      ),
-                    ),
-                    if (meta.isNotEmpty) ...[
-                      const SizedBox(height: 2),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        meta,
-                        style: OmniType.caption.copyWith(
-                          fontWeight: FontWeight.w400,
-                          color: scheme.onSurfaceVariant,
-                          fontFeatures: OmniType.tabular,
+                        tenant.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: OmniType.input.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: scheme.onSurface,
                         ),
                       ),
+                      if (meta.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          meta,
+                          style: OmniType.bodySm.copyWith(
+                            color: scheme.onSurfaceVariant,
+                            fontFeatures: OmniType.tabular,
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
-                ),
-              ),
-              if (busy)
-                Semantics(
-                  label: 'Đang vào',
-                  child: SizedBox.square(
-                    dimension: 22,
-                    child: CircularProgressIndicator.adaptive(
-                      strokeWidth: 2.5,
-                      valueColor: AlwaysStoppedAnimation<Color>(scheme.primary),
-                      backgroundColor: scheme.primaryContainer,
-                    ),
                   ),
-                )
-              else
-                Icon(
-                  LucideIcons.chevronRight,
-                  color: scheme.onSurfaceVariant,
-                  size: OmniIconSize.lg,
                 ),
-            ],
+                const SizedBox(width: 8),
+                if (busy)
+                  Semantics(
+                    label: 'Đang vào',
+                    child: SizedBox.square(
+                      dimension: 20,
+                      child: CircularProgressIndicator.adaptive(
+                        strokeWidth: 2.5,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          scheme.primary,
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  Icon(
+                    LucideIcons.chevronRight,
+                    color: scheme.onSurfaceVariant,
+                    size: OmniIconSize.md,
+                  ),
+              ],
+            ),
           ),
         ),
       ),

@@ -1,0 +1,1247 @@
+<title>Màn xác thực</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap">
+<style>/* Bố cục: tiêu đề 1 câu → 2 điện thoại 390×844 cạnh nhau → luật kính → hệ thống (nút, bo góc, chữ, màu) → 3 điểm cần chốt.
+   Luật hình: nút = viên thuốc · nhóm/thẻ 16 · ô nhập 10 · nhãn 6 · sheet 32. Một màu nhấn: xanh Viomni. */
+:root{
+  --font:"Be Vietnam Pro",-apple-system,"SF Pro Text","Segoe UI",system-ui,sans-serif;
+  --bg:#EEF1F5; --surface:#FFFFFF; --fg:#0B1A33; --fg2:#3A4760; --muted:#56637A; --line:rgba(11,26,51,.09);
+  --accent:#0159DB; --accent-soft:rgba(1,89,219,.08); --ok:#008650; --bad:#C8322A;
+  --a-canvas:#F5F7FA; --a-card:#FFFFFF; --a-ink:#0B1A33; --a-ink2:#3A4760; --a-muted:#56637A;
+  --a-sep:rgba(11,26,51,.10); --a-fill:rgba(118,128,150,.14); --a-fill2:rgba(118,128,150,.26);
+  --a-blue:#0159DB; --a-on-blue:#FFFFFF; --a-blue-tint:#E6F0FF; --a-blue-ink:#0147B3;
+  --a-amber-tint:#FFF4D6; --a-amber-ink:#7A4F00; --a-red-tint:#FDECEA; --a-red-ink:#A32720; --a-dot:#E5484D;
+  --a-glass:rgba(255,255,255,.66); --a-glass-edge:rgba(255,255,255,.92); --a-sheet:#F2F4F7;
+  --a-scrim:rgba(11,26,51,.30); --a-thumb:#FFFFFF;
+  --o-sheet:#E8E9EC; --o-scrim:#707276; --o-cta:#E1EAF8; --o-glassbtn:rgba(255,255,255,.80);
+  --frame:#0B1A33; --island:#000;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#070D18; --surface:#0F1A2B; --fg:#E8EDF4; --fg2:#C9D3E0; --muted:#9AA8BD; --line:rgba(232,237,244,.09);
+  --accent:#5AAEFF; --accent-soft:rgba(90,174,255,.12); --ok:#41DA9D; --bad:#F0625A;
+  --a-canvas:#0B1422; --a-card:#132033; --a-ink:#E8EDF4; --a-ink2:#C9D3E0; --a-muted:#9AA8BD;
+  --a-sep:rgba(232,237,244,.10); --a-fill:rgba(154,168,189,.16); --a-fill2:rgba(154,168,189,.28);
+  --a-blue:#5AAEFF; --a-on-blue:#0A1931; --a-blue-tint:rgba(90,174,255,.16); --a-blue-ink:#74BDFF;
+  --a-amber-tint:rgba(255,196,61,.14); --a-amber-ink:#FFC43D; --a-red-tint:rgba(240,98,90,.16); --a-red-ink:#FF8A80; --a-dot:#FF6369;
+  --a-glass:rgba(24,36,56,.62); --a-glass-edge:rgba(255,255,255,.14); --a-sheet:#101B2C;
+  --a-scrim:rgba(0,0,0,.5); --a-thumb:#2E3F5C;
+  --o-sheet:#1C2738; --o-scrim:#05080F; --o-cta:rgba(90,174,255,.14); --o-glassbtn:rgba(255,255,255,.12);
+  --frame:#25324A; --island:#000; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#070D18; --surface:#0F1A2B; --fg:#E8EDF4; --fg2:#C9D3E0; --muted:#9AA8BD; --line:rgba(232,237,244,.09);
+  --accent:#5AAEFF; --accent-soft:rgba(90,174,255,.12); --ok:#41DA9D; --bad:#F0625A;
+  --a-canvas:#0B1422; --a-card:#132033; --a-ink:#E8EDF4; --a-ink2:#C9D3E0; --a-muted:#9AA8BD;
+  --a-sep:rgba(232,237,244,.10); --a-fill:rgba(154,168,189,.16); --a-fill2:rgba(154,168,189,.28);
+  --a-blue:#5AAEFF; --a-on-blue:#0A1931; --a-blue-tint:rgba(90,174,255,.16); --a-blue-ink:#74BDFF;
+  --a-amber-tint:rgba(255,196,61,.14); --a-amber-ink:#FFC43D; --a-red-tint:rgba(240,98,90,.16); --a-red-ink:#FF8A80; --a-dot:#FF6369;
+  --a-glass:rgba(24,36,56,.62); --a-glass-edge:rgba(255,255,255,.14); --a-sheet:#101B2C;
+  --a-scrim:rgba(0,0,0,.5); --a-thumb:#2E3F5C;
+  --o-sheet:#1C2738; --o-scrim:#05080F; --o-cta:rgba(90,174,255,.14); --o-glassbtn:rgba(255,255,255,.12);
+  --frame:#25324A; --island:#000; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:40px 72px}
+.wrap{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:48px}
+.wrap > section:first-of-type{margin-top:-24px}
+.tnum{font-variant-numeric:tabular-nums}
+h1,h2,h3{text-wrap:balance;margin:0;line-height:1.25}
+h1{font-size:clamp(26px,4.2vw,38px);font-weight:800;letter-spacing:-.02em}
+h2{font-size:20px;font-weight:700;letter-spacing:-.01em}
+h3{font-size:15px;font-weight:700}
+p{margin:0}
+svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+header.top{display:flex;flex-direction:column;gap:10px;max-width:720px}
+.lede{color:var(--fg2);font-size:16px;max-width:56ch}
+
+/* thanh điều khiển */
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;position:sticky;top:env(safe-area-inset-top,0px);z-index:5;padding-block:10px;background:var(--bg)}
+.seg{display:inline-flex;background:var(--a-fill);border-radius:10px;padding:2px;gap:2px;max-width:100%;overflow-x:auto;scrollbar-width:none}
+.seg::-webkit-scrollbar{display:none}
+.seg button{font:600 14px/1 var(--font);color:var(--fg);background:transparent;border:0;border-radius:8px;padding:0 16px;height:34px;cursor:pointer;white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.12),0 0 0 .5px rgba(0,0,0,.05)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* sân khấu */
+.stage{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(410px,100%),1fr));gap:40px 32px;justify-items:center;margin-top:8px}
+.col{display:flex;flex-direction:column;align-items:center;gap:16px;width:100%;min-width:0}
+.tag{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:700;height:30px;padding:0 12px;border-radius:999px;background:var(--surface);border:1px solid var(--line)}
+.tag i{width:8px;height:8px;border-radius:50%}
+.tag.old i{background:var(--muted)} .tag.new i{background:var(--accent)}
+.pts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;width:min(410px,100%)}
+.pts li{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--fg2)}
+.pts svg{width:18px;height:18px;stroke-width:2.4}
+.pts.bad svg{color:var(--bad)} .pts.good svg{color:var(--ok)}
+
+/* khung máy: thiết kế ở 390×844, co theo cột bằng JS */
+.ph-hold{width:min(410px,100%);position:relative}
+.phone{width:410px;height:864px;border:10px solid var(--frame);border-radius:58px;overflow:hidden;position:absolute;top:0;left:0;transform-origin:0 0;
+  background:var(--a-canvas);color:var(--a-ink);font-size:16px;line-height:1.4;box-shadow:0 24px 60px rgba(11,26,51,.20)}
+.scr{position:absolute;inset:0;display:flex;flex-direction:column}
+.island{position:absolute;top:11px;left:50%;width:124px;height:36px;margin-left:-62px;border-radius:20px;background:var(--island);z-index:20}
+.home{position:absolute;bottom:8px;left:50%;width:136px;height:5px;margin-left:-68px;border-radius:3px;background:var(--a-ink);z-index:20;opacity:.9}
+.sb{height:54px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:4px 30px 0 44px;font-weight:600;font-size:16px;position:relative;z-index:1}
+.sb svg{height:12px;width:auto}
+.scroll{flex:1;overflow-y:auto;padding:0 16px 132px;scrollbar-width:none}
+.scroll::-webkit-scrollbar{display:none}
+
+/* ===== HIỆN TẠI ===== */
+.o .hdr{display:flex;align-items:center;justify-content:space-between;padding:6px 0 8px}
+.o .brand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:22px;letter-spacing:-.01em}
+.o .brand b{color:var(--a-blue)}
+.o .gbtn{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--o-glassbtn);border:1px solid var(--a-glass-edge);
+  background-image:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,.08));box-shadow:0 6px 14px rgba(11,26,51,.16),0 9px 0 -2px rgba(11,26,51,.07)}
+.o .search{display:flex;align-items:center;gap:14px;padding:12px 8px;color:var(--a-muted);font-style:italic}
+.o .gseg{display:flex;padding:4px;border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,.4),rgba(118,128,150,.08));border:1px solid var(--a-glass-edge);
+  box-shadow:0 6px 0 -1px rgba(11,26,51,.06),0 4px 12px rgba(11,26,51,.08);margin:6px 0 12px}
+.o .gseg span{flex:1;text-align:center;padding:9px 4px;border-radius:999px;color:var(--a-muted);font-weight:600;white-space:nowrap}
+.o .gseg span.on{background:var(--o-glassbtn);color:var(--a-blue);box-shadow:0 4px 10px rgba(11,26,51,.14),0 3px 0 rgba(11,26,51,.05);border:1px solid var(--a-glass-edge)}
+.o .card{background:var(--a-card);border-radius:20px;overflow:hidden}
+.o .sum{display:flex;justify-content:space-between;align-items:center;padding:16px}
+.o .sum .v{color:var(--a-muted)}
+.o .sec{font-size:14px;font-weight:600;color:var(--a-muted);padding:14px 8px 8px;display:flex;justify-content:space-between}
+.o .row{display:flex;gap:10px;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--a-sep)}
+.o .row:first-child{border-top:0}
+.o .row .l{min-width:0}
+.o .row .n{font-size:16px;font-weight:500}
+.o .row .s{font-size:14px;color:var(--a-muted)}
+.o .row .r{text-align:right;flex:none}
+.o .st{font-size:14px}
+.o .st.blue{color:var(--a-blue)} .o .st.amb{color:var(--a-amber-ink)} .o .st.gray{color:var(--a-muted)}
+.o .fab{position:absolute;right:20px;bottom:104px;width:58px;height:58px;border-radius:50%;display:grid;place-items:center;color:var(--a-blue);
+  background:var(--o-glassbtn);border:1px solid var(--a-glass-edge);background-image:linear-gradient(180deg,rgba(255,255,255,.6),rgba(118,128,150,.12));
+  box-shadow:0 12px 0 -2px rgba(11,26,51,.12),0 8px 18px rgba(11,26,51,.18)}
+.o .fab::after{content:"";position:absolute;bottom:4px;width:22px;height:8px;border-radius:50%;background:var(--a-blue);opacity:.25;filter:blur(4px)}
+.o .fab svg{width:28px;height:28px;stroke-width:2.2}
+.o .tabs{position:absolute;left:14px;right:14px;bottom:24px;height:64px;border-radius:999px;display:flex;align-items:center;padding:6px;
+  background:var(--a-glass);border:1px solid var(--a-glass-edge);backdrop-filter:blur(18px) saturate(1.6);-webkit-backdrop-filter:blur(18px) saturate(1.6);box-shadow:0 8px 24px rgba(11,26,51,.12)}
+.o .tabs span{flex:1;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10px;color:var(--a-muted);border-radius:999px;white-space:nowrap}
+.o .tabs span.on{background:var(--o-glassbtn);color:var(--a-blue);box-shadow:0 3px 8px rgba(11,26,51,.12)}
+.o .stats{display:grid;grid-template-columns:1fr 1.5fr 1fr;padding:14px 10px 10px}
+.o .stats div{padding:0 8px;border-left:1px solid var(--a-sep);min-width:0} .o .stats div:first-child{border-left:0}
+.o .stats b{display:block;font-size:15px;white-space:nowrap} .o .stats span{font-size:13px;color:var(--a-muted)}
+.o .serial{text-decoration:underline dotted;text-underline-offset:3px}
+.o .link{color:var(--a-blue);font-weight:600;font-size:15px}
+.o .scrim{position:absolute;inset:0;background:var(--o-scrim)}
+.o .sheet{position:absolute;left:8px;right:8px;bottom:8px;border-radius:38px;background:var(--o-sheet);padding:10px 16px 18px;display:flex;flex-direction:column;gap:12px;
+  border:1px solid var(--a-glass-edge);box-shadow:0 10px 0 -2px rgba(0,0,0,.25)}
+.grab{width:36px;height:5px;border-radius:3px;background:var(--a-fill2);margin:0 auto;flex:none}
+.o .sheet .t{font-size:18px;font-weight:600;padding:4px 8px 0}
+.o .sheet .t small{display:block;font-size:14px;font-weight:400;color:var(--a-muted)}
+.o .big{text-align:center;font-size:34px;font-weight:700;letter-spacing:-.01em}
+.o .big small{display:block;font-size:14px;font-weight:400;color:var(--a-muted);letter-spacing:0}
+.o .chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.o .chips span{padding:8px 14px;border-radius:999px;background:var(--a-fill);color:var(--a-muted);font-weight:500}
+.o .chips span.on{background:var(--o-glassbtn);color:var(--a-ink);font-weight:600;border:1px solid var(--a-glass-edge);box-shadow:0 4px 0 -1px rgba(11,26,51,.1),0 4px 10px rgba(11,26,51,.12)}
+.o .cta{height:52px;border-radius:999px;display:grid;place-items:center;background:var(--o-cta);color:var(--a-blue);font-weight:600;font-size:16px}
+.o .kv{display:flex;justify-content:space-between;padding:14px 16px;border-top:1px solid var(--a-sep)} .o .kv:first-child{border-top:0}
+.o .kv span:last-child{color:var(--a-muted)}
+
+/* ===== ĐỀ XUẤT ===== */
+.p .hdr{display:flex;align-items:center;justify-content:space-between;height:52px;margin:2px 0 8px}
+.p .brand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:22px;letter-spacing:-.01em}
+.p .brand b{color:var(--a-blue)}
+.p .brand svg{width:30px;height:24px;color:var(--a-blue)}
+.p .ttl2{font-size:28px;font-weight:800;letter-spacing:-.02em;line-height:1.2;white-space:nowrap}
+/* màn Ứng dụng */
+.c-home{--c1:#38BDF8;--c2:#0159DB} .c-sales{--c1:#34D399;--c2:#059669} .c-stock{--c1:#FBBF24;--c2:#EA580C} .c-work{--c1:#818CF8;--c2:#4F46E5}
+.c-fin{--c1:#2DD4BF;--c2:#0D9488} .c-hr{--c1:#F472B6;--c2:#DB2777} .c-sys{--c1:#94A3B8;--c2:#475569}
+.cnt{position:absolute;top:-6px;right:-7px;min-width:21px;height:21px;padding:0 6px;border-radius:999px;background:#E5484D;color:#fff;font-size:12px;font-weight:700;display:grid;place-items:center;border:2px solid var(--a-card);font-variant-numeric:tabular-nums;line-height:1}
+.o .atop{display:flex;align-items:center;justify-content:space-between;height:56px;gap:10px}
+.o .comp{display:flex;align-items:center;gap:10px;min-width:0}
+.o .comp .bdg{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;background:var(--o-glassbtn);border:1px solid var(--a-sep);box-shadow:0 2px 8px rgba(11,26,51,.06)}
+.o .comp .bdg svg{width:22px;height:18px;color:var(--a-blue)}
+.o .comp small{display:block;font-size:12px;font-weight:600;color:var(--a-blue);line-height:1.15}
+.o .comp b{display:block;font-size:16px;font-weight:600;line-height:1.2;white-space:nowrap}
+.o .acts{display:flex;gap:8px}
+.o .av{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:var(--a-blue);background:var(--o-glassbtn);border:1px solid var(--a-glass-edge);box-shadow:0 6px 14px rgba(11,26,51,.16),0 9px 0 -2px rgba(11,26,51,.07)}
+.o .greet{padding:10px 2px 16px}
+.o .greet b{display:block;font-size:22px;font-weight:600}
+.o .greet span{font-size:14px;color:var(--a-muted)}
+.o .agrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.o .atile{background:var(--a-card);border:1px solid var(--a-sep);border-radius:22px;padding:16px;box-shadow:0 4px 14px rgba(11,26,51,.05);min-width:0;
+  background-image:linear-gradient(135deg,transparent 40%,color-mix(in srgb,var(--c2) 5%,transparent))}
+.o .aico{width:52px;height:52px;border-radius:15px;display:grid;place-items:center;color:#fff;position:relative;background:linear-gradient(135deg,var(--c1),var(--c2));
+  border:1px solid rgba(255,255,255,.35);box-shadow:0 4px 12px color-mix(in srgb,var(--c2) 30%,transparent)}
+.o .aico svg{width:26px;height:26px}
+.o .atile b{display:block;font-size:16px;font-weight:600;margin-top:14px}
+.o .atile .sub{display:block;font-size:12px;color:var(--a-muted);line-height:1.3;height:32px;overflow:hidden}
+.p .atop{display:flex;align-items:center;justify-content:space-between;height:48px;gap:8px;margin-right:-6px}
+.p .comp{display:flex;align-items:center;gap:4px;font-size:15px;font-weight:600;color:var(--a-ink2);white-space:nowrap;min-width:0;height:44px}
+.p .comp svg{width:15px;height:15px;color:var(--a-muted)}
+.p .acts{display:flex;align-items:center}
+.p .acts .ibtn{margin-right:0}
+.p .av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--a-blue-tint);color:var(--a-blue-ink);font-weight:700;font-size:14px;margin:0 5px}
+.p .hi{font-size:28px;font-weight:800;letter-spacing:-.02em;line-height:1.2;margin:2px 0 16px;white-space:nowrap}
+.sq{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;color:#fff;background:var(--c2);position:relative;flex:none}
+.sq svg{width:24px;height:24px;stroke-width:2}
+.p .desk{display:flex;align-items:center;gap:14px;padding:14px 12px 14px 16px}
+.p .desk .l{flex:1;min-width:0}
+.p .desk .l b{display:block;font-size:17px;font-weight:700}
+.p .desk .l span{font-size:14px;color:var(--a-muted)}
+.p .desk .chev{width:18px;height:18px;color:var(--a-muted);opacity:.6}
+.p .desk .cnt{position:static;border:0}
+.p .apgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));row-gap:22px;padding:20px 8px 18px}
+.p .ap{display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;transition:transform .12s cubic-bezier(.23,1,.32,1)}
+.p .ap:active{transform:scale(.95)}
+.p .ap .sq{width:62px;height:62px;border-radius:16px}
+.p .ap .sq svg{width:30px;height:30px;stroke-width:1.9}
+.p .ap > span:last-child{font-size:13px;font-weight:600;white-space:nowrap}
+.p .todo .r{grid-template-columns:auto minmax(0,1fr) auto;align-items:center;column-gap:12px}
+.p .todo .r::before{left:60px!important}
+.p .todo .sq{width:32px;height:32px;border-radius:9px}
+.p .todo .sq svg{width:18px;height:18px}
+.p .todo .t b{display:block;font-size:16px;font-weight:600;line-height:1.3}
+.p .todo .t span{font-size:13px;color:var(--a-muted)}
+.p .todo .cnt{position:static;border:0;height:24px;min-width:24px;font-size:13px}
+/* màn chi tiết (màn con) */
+.navd{display:grid;grid-template-columns:44px minmax(0,1fr) 44px;align-items:center;height:56px}
+.o .navd .t{text-align:center;font-size:18px;font-weight:600;white-space:nowrap}
+.o .navd .gbtn svg{width:22px;height:22px;stroke-width:2.2}
+.prog{display:flex;gap:3px;margin-top:12px}
+.prog span{flex:1;height:6px;border-radius:2px}
+.prog .g1{background:#56637A}.prog .g2{background:#12B886}.prog .g3{background:#A32720}.prog .g4{background:#0159DB}.prog .g5{background:var(--a-fill2)}
+.o .dsum{padding:16px}
+.o .dsum .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.o .dsum b{font-size:18px;font-weight:600}
+.o .dsum .c{color:var(--a-muted);white-space:nowrap}
+.o .dsum small{display:block;font-size:14px;color:var(--a-muted)}
+.o .drow{display:flex;align-items:center;gap:12px;padding:12px 16px}
+.o .drow .l{flex:1;min-width:0}
+.o .drow .n{font-size:16px;font-weight:500;white-space:nowrap}
+.o .drow .s{font-size:14px;color:var(--a-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.o .drow .sc{font-size:15px}
+.o .alert{color:var(--a-red-ink)}
+.p .navd{height:44px;margin:0 -10px 6px}
+.p .navd .back{width:44px;height:44px;display:grid;place-items:center;color:var(--a-blue)}
+.p .navd .back svg{width:26px;height:26px;stroke-width:2.4;transform:scaleX(-1)}
+.p .navd .t{text-align:center;font-size:17px;font-weight:700;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.p .navd .t small{display:block;font-size:12px;font-weight:500;color:var(--a-muted)}
+.p .dstat{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--a-sep)}
+.p .dstat b{display:block;font-size:15px;font-weight:700;white-space:nowrap}
+.p .dstat span{font-size:12px;color:var(--a-muted)}
+.p .r .lead{display:flex;align-items:center;gap:10px;min-width:0}
+.p .r .lead svg{width:20px;height:20px;color:var(--a-red-ink);flex:none}
+.p .ibtn{width:44px;height:44px;display:grid;place-items:center;color:var(--a-ink);position:relative;margin-right:-10px}
+.p .ibtn svg{width:23px;height:23px}
+.p .ibtn .dot{position:absolute;top:10px;right:10px;width:9px;height:9px;border-radius:50%;background:var(--a-dot);border:2px solid var(--a-canvas)}
+.p .lt{font-size:32px;font-weight:800;letter-spacing:-.025em;line-height:1.2;margin:0 0 10px}
+.p .sf{display:flex;align-items:center;gap:8px;height:38px;border-radius:10px;background:var(--a-fill);padding:0 10px;color:var(--a-muted);font-size:16px}
+.p .sf svg{width:18px;height:18px}
+.p .sf .sp{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.p .sf .flt{color:var(--a-blue);width:20px;height:20px}
+.p .seg2{display:flex;background:var(--a-fill);border-radius:10px;padding:2px;margin:14px 0 18px;height:34px;gap:2px}
+.p .seg2 span{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;gap:5px;font-size:14px;font-weight:500;color:var(--a-ink);border-radius:8px;white-space:nowrap}
+.p .seg2 span.on{background:var(--a-thumb);font-weight:700;box-shadow:0 3px 8px rgba(0,0,0,.12),0 0 0 .5px rgba(0,0,0,.04)}
+.p .seg2 em{font-style:normal;font-weight:600;font-size:12px;color:var(--a-muted);font-variant-numeric:tabular-nums}
+.p .seg2 span.on em{color:var(--a-blue)}
+.p .hero{background:var(--a-card);border-radius:16px;padding:14px 16px 16px;display:flex;flex-direction:column}
+.p .hero .lb{font-size:13px;color:var(--a-muted);font-weight:500;display:flex;justify-content:space-between;gap:12px;white-space:nowrap}
+.p .hero .v{font-size:30px;font-weight:800;letter-spacing:-.025em;line-height:1.25;white-space:nowrap}
+.p .hero .meta{font-size:13px;color:var(--a-muted);margin-top:2px}
+.p .hdr2{font-size:13px;font-weight:600;color:var(--a-muted);text-transform:uppercase;letter-spacing:.03em;padding:22px 16px 7px;display:flex;justify-content:space-between;align-items:baseline;gap:12px;white-space:nowrap}
+.p .hdr2 .act{color:var(--a-blue);text-transform:none;letter-spacing:0;font-size:15px;font-weight:600}
+.p .grp{background:var(--a-card);border-radius:16px;overflow:hidden}
+.p .r{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:12px;row-gap:3px;align-items:center;padding:12px 16px;position:relative}
+.p .r + .r::before{content:"";position:absolute;top:0;left:16px;right:0;height:1px;background:var(--a-sep)}
+.p .r .n{font-size:16px;font-weight:600;line-height:1.4;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;align-self:start}
+.p .r .amt{font-size:16px;font-weight:700;white-space:nowrap;text-align:right;line-height:1.4;align-self:start}
+.p .r .s{font-size:14px;color:var(--a-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.p .r .pill{justify-self:end}
+.pill{display:inline-flex;align-items:center;height:22px;font-size:12px;font-weight:600;padding:0 8px;border-radius:6px;white-space:nowrap}
+.pill.blue{background:var(--a-blue-tint);color:var(--a-blue-ink)}
+.pill.amb{background:var(--a-amber-tint);color:var(--a-amber-ink)}
+.pill.red{background:var(--a-red-tint);color:var(--a-red-ink)}
+.pill.gray{background:var(--a-fill);color:var(--a-ink2)}
+.warn{color:var(--a-amber-ink);font-weight:600}
+.p .fab{position:absolute;right:20px;bottom:104px;width:56px;height:56px;z-index:2;border-radius:50%;display:grid;place-items:center;background:var(--a-blue);color:var(--a-on-blue);
+  box-shadow:0 6px 16px rgba(1,89,219,.30),0 1px 3px rgba(11,26,51,.14)}
+.p .fab svg{width:26px;height:26px;stroke-width:2.4}
+.p .tabs{position:absolute;left:16px;right:16px;bottom:26px;height:66px;border-radius:999px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;z-index:1;
+  background:var(--a-glass);border:1px solid var(--a-glass-edge);backdrop-filter:blur(20px) saturate(1.8);-webkit-backdrop-filter:blur(20px) saturate(1.8);box-shadow:0 8px 24px rgba(11,26,51,.12)}
+.p .tabs span{flex:none;width:52px;height:46px;display:grid;place-items:center;color:var(--a-muted);border-radius:999px}
+.p .tabs span svg{width:26px;height:26px;stroke-width:1.8}
+.p .tabs span.on{color:var(--a-blue);background:var(--a-blue-tint)}
+.p .tabs span.on svg{stroke-width:2.2}
+/* mép cuộn kiểu iOS 26: nội dung mờ dần dưới thanh tab */
+.p .scr:not([data-s="thu"]):not([data-s="ct"]):not([data-s="apps"])::after,.p .under::after{content:"";position:absolute;left:0;right:0;bottom:0;height:118px;pointer-events:none;z-index:0;
+  background:linear-gradient(to bottom,color-mix(in srgb,var(--a-canvas) 0%,transparent),var(--a-canvas) 72%)}
+.p .seg2{margin:10px 0 12px}
+.p .hero{padding:12px 16px 14px}
+.p .hdr2{padding-top:16px}
+.p .hdr{height:48px;margin:0 0 6px}
+.p .r{padding-block:10px}
+.p .stat3{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--a-sep)}
+.p .stat3 div{min-width:0}
+.p .stat3 b{display:block;font-size:15px;font-weight:700;white-space:nowrap}
+.p .stat3 span{font-size:12px;color:var(--a-muted);white-space:nowrap}
+/* sheet mới */
+.p .under{position:absolute;inset:0;display:flex;flex-direction:column;pointer-events:none;z-index:0}
+.p .dim{position:absolute;inset:0;background:var(--a-scrim);z-index:3}
+.p .sheet{z-index:4}
+.p .sheet{position:absolute;left:0;right:0;bottom:0;border-radius:32px 32px 0 0;background:var(--a-sheet);padding:8px 16px 44px;display:flex;flex-direction:column;gap:16px;
+  box-shadow:0 -8px 30px rgba(0,0,0,.10)}
+.p .shd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:2px 0 0 4px}
+.p .shd .ttl{font-weight:700;font-size:20px;line-height:1.3;white-space:nowrap}
+.p .shd .ttl small{display:block;font-weight:500;font-size:14px;color:var(--a-muted)}
+.p .shd .close{all:unset;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--a-fill);color:var(--a-ink2);cursor:pointer;position:relative}
+.p .shd .close::after{content:"";position:absolute;inset:-6px}
+.p .shd .close svg{width:16px;height:16px;stroke-width:2.4}
+.p .pm{display:flex;gap:8px}
+.p .pm button{all:unset;box-sizing:border-box;flex:1 1 auto;height:44px;padding:0 10px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:var(--a-card);
+  font-size:14px;font-weight:600;color:var(--a-ink2);white-space:nowrap;cursor:pointer}
+.p .pm button[aria-pressed="true"]{background:var(--a-blue-tint);color:var(--a-blue-ink);box-shadow:inset 0 0 0 1.5px var(--a-blue)}
+.p .pm button:focus-visible,.p .shd .close:focus-visible{outline:2px solid var(--a-blue);outline-offset:2px}
+.p .amtbox{display:flex;flex-direction:column;align-items:center;gap:6px;padding:4px 0}
+.p .amtbox .v{font-size:40px;font-weight:800;letter-spacing:-.025em;line-height:1.2;white-space:nowrap}
+.p .amtbox small{font-size:13px;color:var(--a-muted)}
+.p .kv{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 14px 0 16px;height:52px;position:relative;font-size:16px;white-space:nowrap}
+.p .kv + .kv::before{content:"";position:absolute;top:0;left:16px;right:0;height:1px;background:var(--a-sep)}
+.p .kv .val{display:flex;align-items:center;gap:4px;color:var(--a-muted)}
+.p .kv .val svg{width:15px;height:15px;opacity:.6}
+.p .bigbtn{all:unset;box-sizing:border-box;height:52px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:var(--a-blue);color:var(--a-on-blue);font-weight:700;font-size:17px;cursor:pointer;
+  box-shadow:0 4px 12px rgba(1,89,219,.24);transition:transform .12s cubic-bezier(.23,1,.32,1)}
+.p .bigbtn:active{transform:scale(.97)}
+.p .menu{display:none;position:absolute;right:30px;width:220px;border-radius:16px;background:var(--a-glass);border:1px solid var(--a-glass-edge);z-index:4;
+  backdrop-filter:blur(24px) saturate(1.8);-webkit-backdrop-filter:blur(24px) saturate(1.8);box-shadow:0 14px 36px rgba(11,26,51,.24);overflow:hidden;font-size:16px;
+  transform-origin:top right;animation:pop .18s cubic-bezier(.23,1,.32,1)}
+@keyframes pop{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:none}}
+.p .menu button{all:unset;box-sizing:border-box;width:100%;display:flex;align-items:center;gap:8px;height:44px;padding:0 14px;position:relative;cursor:pointer;color:var(--a-ink)}
+.p .menu button + button::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;background:var(--a-sep)}
+.p .menu button:hover,.p .menu button:focus-visible{background:var(--a-fill)}
+.p .menu .ck{width:18px;height:18px;color:var(--a-blue);stroke-width:2.4}
+
+/* ===== phần dưới ===== */
+section{display:flex;flex-direction:column;gap:16px}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:16px}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.box h3{display:flex;gap:8px;align-items:center}
+.box h3 i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border-radius:999px;background:var(--a-fill);font-size:14px;font-weight:500;white-space:nowrap}
+.chip svg{width:17px;height:17px;color:var(--muted)}
+.kit{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr));gap:16px}
+.kit .box{background:var(--a-canvas);color:var(--a-ink)}
+.lbl{font-size:12px;color:var(--muted);font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.stack{display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+.b{font:600 15px/1 var(--font);border:0;border-radius:999px;padding:0 18px;height:44px;display:inline-flex;align-items:center;cursor:pointer;white-space:nowrap;transition:transform .12s cubic-bezier(.23,1,.32,1)}
+.b:active{transform:scale(.97)}
+.b.fill{background:var(--a-blue);color:var(--a-on-blue)}
+.b.tint{background:var(--a-blue-tint);color:var(--a-blue-ink)}
+.b.gray{background:var(--a-fill);color:var(--a-ink)}
+.b.plain{background:transparent;color:var(--a-blue);padding:0 4px}
+.b.danger{background:transparent;color:var(--a-red-ink);padding:0 4px}
+.brow{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%}
+.brow small{font-size:12px;color:var(--a-muted);white-space:nowrap}
+.shapes{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.shapes div{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11.5px;color:var(--a-muted);text-align:center;white-space:nowrap}
+.shapes span{display:block;width:100%;max-width:48px;height:34px;background:var(--a-card);border:1.5px solid var(--a-blue)}
+.types{display:flex;flex-direction:column;gap:8px}
+.types div{display:flex;justify-content:space-between;align-items:baseline;gap:10px;white-space:nowrap}
+.types code{font:500 12px/1 var(--font);color:var(--a-muted)}
+.swatch{display:flex;align-items:center;gap:10px;font-size:14px}
+.swatch i{width:28px;height:28px;border-radius:8px;flex:none}
+.decide{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr));gap:16px}
+.decide .box{gap:6px}
+.decide .num{width:26px;height:26px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-weight:700;font-size:13px;display:grid;place-items:center;margin-bottom:4px}
+.decide p{font-size:14px;color:var(--muted)}
+details{background:var(--surface);border:1px solid var(--line);border-radius:16px}
+summary{cursor:pointer;padding:16px 18px;font-weight:700;list-style-position:inside}
+.tbl{overflow-x:auto;padding:0 18px 12px}
+table{border-collapse:collapse;width:100%;min-width:520px;font-size:14px}
+th,td{text-align:left;padding:10px 12px 10px 0;border-top:1px solid var(--line);vertical-align:top}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-top:0}
+td code{font-size:12.5px;background:var(--accent-soft);padding:2px 6px;border-radius:5px;white-space:nowrap}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}</style>
+<style>
+/* ===== gói Viomni 26/11 + phần riêng màn xác thực ===== */
+:root{--vb:#1D5FD1;--vb-on:#FFFFFF;--vb-ink:#164CAB;--vb-tint:#E8EFFB;--edge:#868F9F;--edge2:rgba(11,26,51,.14);
+  --ap-bg:#000;--ap-fg:#fff;--kb:#D3D6DC;--key:#FFFFFF;--key2:#ABB1BA;--keyfg:#000;--accent:#1D5FD1;--accent-soft:rgba(29,95,209,.08)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--vb:#5AAEFF;--vb-on:#0A1931;--vb-ink:#74BDFF;--vb-tint:rgba(90,174,255,.16);--edge:#61708A;--edge2:rgba(232,237,244,.16);
+  --ap-bg:#fff;--ap-fg:#000;--kb:#2B2C30;--key:#6B6C70;--key2:#47484C;--keyfg:#fff;--accent:#5AAEFF}}
+:root[data-theme="dark"]{--vb:#5AAEFF;--vb-on:#0A1931;--vb-ink:#74BDFF;--vb-tint:rgba(90,174,255,.16);--edge:#61708A;--edge2:rgba(232,237,244,.16);
+  --ap-bg:#fff;--ap-fg:#000;--kb:#2B2C30;--key:#6B6C70;--key2:#47484C;--keyfg:#fff;--accent:#5AAEFF}
+:root[data-apple="0"] .apple{display:none!important}
+/* màn xác thực không có thanh tab → bỏ mép mờ đáy của kit */
+.phone.p .scr::after{display:none!important}
+
+/* ----- logo: màu nét theo giao diện (như OmniBrandMarkPainter sáng/tối) ----- */
+:root{--ring1:rgba(45,171,255,.32);--ring2:rgba(29,95,209,.10);--l1:#2DABFF;--l2:#0159DB;--l3:#002B80;--r3:#003594;--ap:#002B80;--s2:#0A6CFF;--s3:#0159DB;--tile:#FFFFFF;--tile-edge:#E3E8EF;
+  --halo1:#EBF3FF;--halo2:#DCEBFF}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ring1:rgba(90,174,255,.40);--ring2:rgba(29,95,209,.16);--l1:#5EC2FF;--l2:#1E7BFF;--l3:#0A47B8;--r3:#0159DB;--ap:#0A47B8;--s2:#2DABFF;--s3:#1E7BFF;--tile:#0B1A33;--tile-edge:transparent;
+  --halo1:#10284A;--halo2:#0E2240}}
+:root[data-theme="dark"]{--ring1:rgba(90,174,255,.40);--ring2:rgba(29,95,209,.16);--l1:#5EC2FF;--l2:#1E7BFF;--l3:#0A47B8;--r3:#0159DB;--ap:#0A47B8;--s2:#2DABFF;--s3:#1E7BFF;--tile:#0B1A33;--tile-edge:transparent;
+  --halo1:#10284A;--halo2:#0E2240}
+.lb{display:block;flex:none;overflow:visible}
+.p .lb56{width:56px;height:56px;margin:0 auto}
+
+/* ----- MỞ APP + CHỜ TẢI ----- */
+.ctr{position:absolute;left:0;right:0;display:flex;justify-content:center;pointer-events:none}
+/* Hiện tại: ô trắng 148, hai vòng sáng, chữ từng ký tự, khẩu hiệu, 2,45 giây rồi bay về ô 64 */
+.o .ospl{position:absolute;inset:0;border-radius:48px;z-index:6;background:var(--a-canvas);opacity:0;pointer-events:none}
+.o .halo{position:absolute;left:50%;border-radius:50%}
+.o .halo.h1{width:340px;height:340px;margin-left:-170px;top:210px;background:var(--halo1)}
+.o .halo.h2{width:250px;height:250px;margin-left:-125px;top:255px;background:var(--halo2)}
+.o .owm{top:470px;font-size:34px;font-weight:800;letter-spacing:-.01em;gap:0}
+.o .owm span{display:inline-block} .o .owm .bl{color:var(--vb)}
+.o .otag{top:520px;font-size:15px;color:var(--a-muted)}
+.o .obar{top:570px}
+.o .obar i{display:block;width:120px;height:3px;border-radius:3px;background:var(--a-fill2);overflow:hidden;position:relative}
+.o .obar i::after{content:"";position:absolute;inset:0 60% 0 0;border-radius:3px;background:var(--vb);animation:bar 1.4s ease-in-out infinite}
+@keyframes bar{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}
+.o .otile{position:absolute;left:50%;top:74px;width:64px;height:64px;margin-left:-32px;border-radius:24%;background:var(--tile);border:1px solid var(--tile-edge);z-index:7;
+  box-shadow:0 6px 18px rgba(11,26,51,.14);transform-origin:50% 50%}
+.o .otile svg{width:100%;height:100%;display:block}
+.o .otile.big{top:306px;width:148px;height:148px;margin-left:-74px}
+.o .hide{visibility:hidden}
+.run .ospl{animation:oSpl 2.45s linear both}
+.run .halo{animation:oHalo 2.45s cubic-bezier(.16,1,.3,1) both}
+.run .owm span{animation:oLet 2.45s cubic-bezier(.16,1,.3,1) both}
+.run .owm span:nth-child(2){animation-delay:45ms}.run .owm span:nth-child(3){animation-delay:90ms}.run .owm span:nth-child(4){animation-delay:135ms}.run .owm span:nth-child(5){animation-delay:180ms}.run .owm span:nth-child(6){animation-delay:225ms}
+.run .otag{animation:oTag 2.45s cubic-bezier(.16,1,.3,1) both}
+.run .otile{animation:oTile 2.45s both}
+.run .otile svg{animation:oDraw 2.45s cubic-bezier(.16,1,.3,1) both}
+@keyframes oSpl{0%,75.5%{opacity:1}100%{opacity:0}}
+@keyframes oHalo{0%{transform:scale(.7)}41%,100%{transform:none}}
+@keyframes oLet{0%,38.8%{opacity:0;transform:translateY(14px)}59%,100%{opacity:1;transform:none}}
+@keyframes oTag{0%,51%{opacity:0;transform:translateY(14px)}71%,100%{opacity:1;transform:none}}
+@keyframes oTile{0%{opacity:0;filter:blur(10px);transform:translateY(274px) scale(2.08)}
+  22.4%{opacity:1;filter:none;transform:translateY(274px) scale(2.3125);animation-timing-function:linear}
+  75.5%{opacity:1;transform:translateY(274px) scale(2.3125);animation-timing-function:cubic-bezier(.2,.8,.2,1)}
+  100%{opacity:1;transform:none}}
+@keyframes oDraw{0%,4.9%{clip-path:inset(0 0 100% 0)}50%,100%{clip-path:inset(0)}}
+
+/* Đề xuất: khung đầu = màn hệ thống (logo trần 96 giữa màn), chữ Viomni nổi lên, logo bay về chỗ đăng nhập; 1,15 giây */
+.p .fly{position:absolute;left:50%;top:82px;width:56px;height:56px;margin-left:-28px;z-index:7;transform-origin:50% 50%}
+.p .fly.mid{top:374px;width:96px;height:96px;margin-left:-48px}
+.p .pwm{top:488px;font-size:28px;font-weight:800;letter-spacing:-.02em;opacity:0}
+.p .pwm b{color:var(--vb);font-weight:800}
+.p .ghost{visibility:hidden}
+.run .fly{animation:pFly 1.6s both}
+.run .pwm{animation:pWm 1.6s cubic-bezier(.16,1,.3,1) both}
+.run .lgc{animation:pIn 1.6s cubic-bezier(.16,1,.3,1) both}
+/* hào quang: chỉ tỏa ra NGOÀI logo — mặt nạ tròn chừa trống bán kính 60 quanh tâm logo */
+.p .aura{position:absolute;left:50%;top:202px;width:440px;height:440px;margin-left:-220px;z-index:5;pointer-events:none;
+  -webkit-mask:radial-gradient(circle at 50% 50%,transparent 60px,#000 82px);mask:radial-gradient(circle at 50% 50%,transparent 60px,#000 82px)}
+.p .phalo{position:absolute;border-radius:50%;opacity:0}
+.p .phalo.h1{width:340px;height:340px;left:50px;top:50px;background:var(--halo1)}
+.p .phalo.h2{width:250px;height:250px;left:95px;top:95px;background:var(--halo2)}
+.p .phalo.on{opacity:1}
+.p .ring{position:absolute;left:130px;top:130px;width:180px;height:180px;border-radius:50%;opacity:0;
+  background:radial-gradient(circle,transparent 56%,var(--ring1) 67%,var(--ring2) 73%,transparent 80%)}
+.run .phalo{animation:pHalo 1.6s cubic-bezier(.16,1,.3,1) both}
+.run .ring{animation:pRing 1.6s ease-out both}
+.p .ring.loop{animation:pLoop 2s cubic-bezier(.2,.6,.35,1) infinite}
+.p .ring.loop.d2{animation-delay:1s}
+@keyframes pHalo{0%{opacity:0;transform:scale(.7)}30%,50%{opacity:1;transform:none}62%,100%{opacity:0;transform:scale(1.04)}}
+@keyframes pRing{0%,20%{opacity:0;transform:scale(1)}28%{opacity:1}58%,100%{opacity:0;transform:scale(2.2)}}
+@keyframes pLoop{0%{opacity:0;transform:scale(1)}18%{opacity:1}100%{opacity:0;transform:scale(2.2)}}
+.scr[data-s="intro"] .sb,.scr[data-s="tai"] .sb{z-index:8}
+@keyframes pFly{0%,60%{transform:translateY(312px) scale(1.7143);animation-timing-function:cubic-bezier(.32,.72,0,1)}92%,100%{transform:none}}
+@keyframes pWm{0%,12%{opacity:0;transform:translateY(10px)}36%,56%{opacity:1;transform:none}66%,100%{opacity:0;transform:translateY(-6px)}}
+@keyframes pIn{0%,74%{opacity:0;transform:translateY(8px)}100%{opacity:1;transform:none}}
+.p .spin22{width:22px;height:22px;border-radius:50%;border:2.5px solid var(--a-fill2);border-top-color:var(--a-muted);animation:sp .9s linear infinite}
+.p .ptai{top:510px;z-index:7}
+.p .pwm{z-index:7}
+
+.au{flex:1;display:flex;flex-direction:column;padding:0 20px 34px;position:relative;min-height:0}
+.au .grow{flex:1}
+.mk{display:block;border-radius:24%;flex:none}
+.gg{width:20px;height:20px;flex:none}
+.apl{width:19px;height:19px;flex:none;fill:currentColor}
+
+/* ----- HIỆN TẠI (dựng từ code main: auth_widgets.dart, *_page.dart) ----- */
+.o .scr.glow{background:radial-gradient(120% 60% at 50% 4%,color-mix(in srgb,var(--vb) 9%,transparent),transparent 62%)}
+.o .au{padding-top:20px}
+.o .mk64{width:64px;height:64px;margin:0 auto;box-shadow:0 6px 18px rgba(11,26,51,.14)}
+.o .wm{text-align:center;font-weight:800;font-size:21px;letter-spacing:-.01em;margin-top:10px}
+.o .wm b{color:var(--vb)}
+.o .h1o{font-size:28px;font-weight:600;line-height:1.2;letter-spacing:-.01em;text-align:center;margin-top:14px}
+.o .h1o.l{text-align:left;margin-top:10px}
+.o .subo{font-size:14px;color:var(--a-muted);text-align:center;margin-top:4px}
+.o .subo.l{text-align:left}
+.o .gt{display:flex;justify-content:space-between;font-size:13px;font-weight:600;color:var(--a-muted);padding:0 6px 6px}
+.o .grpo{background:var(--a-card);border:1px solid var(--a-sep);border-radius:16px;overflow:hidden}
+.o .fo{display:flex;align-items:center;gap:12px;padding:9px 6px 9px 14px;position:relative;min-height:58px}
+.o .fo + .fo::before{content:"";position:absolute;top:0;left:46px;right:0;height:1px;background:var(--a-sep)}
+.o .fo > svg{width:22px;height:22px;color:var(--a-muted)}
+.o .fo .c{flex:1;min-width:0}
+.o .fo small{display:block;font-size:11px;font-weight:500;color:var(--a-muted);line-height:1.3}
+.o .fo .in{font-size:16px;font-weight:500;line-height:1.35;white-space:nowrap;overflow:hidden}
+.o .fo .in.ph{color:color-mix(in srgb,var(--a-muted) 72%,transparent);font-weight:400}
+.o .fo .eye{width:40px;height:40px;display:grid;place-items:center;color:var(--a-muted)}
+.o .fo .eye svg{width:22px;height:22px}
+.o .fo.foc{background:color-mix(in srgb,var(--vb) 10%,transparent)} .o .fo.foc > svg,.o .fo.foc small{color:var(--vb)}
+.o .fo.bad{background:var(--a-red-tint)} .o .fo.bad > svg,.o .fo.bad small{color:var(--a-red-ink)}
+.o .fp{align-self:flex-end;font-size:13px;font-weight:600;color:var(--vb);padding:12px 8px}
+.o .b1{height:50px;border-radius:999px;background:var(--vb);color:var(--vb-on);display:grid;place-items:center;font-weight:600;font-size:16px;flex:none}
+.o .b1.dim{opacity:.45}
+.o .bo{height:50px;border-radius:999px;border:1px solid var(--edge);display:flex;align-items:center;justify-content:center;gap:8px;font-weight:600;font-size:15px;flex:none}
+.o .oro{display:flex;align-items:center;gap:12px;color:var(--a-muted);font-size:13px;margin:16px 0}
+.o .oro::before,.o .oro::after{content:"";flex:1;height:1px;background:var(--a-sep)}
+.o .ft{text-align:center;font-size:14px;color:var(--a-muted);padding-top:12px}
+.o .ft b{color:var(--vb);font-weight:600}
+.o .pv{text-align:center;font-size:11px;color:var(--a-muted);padding:10px 0}
+.o .eb{display:flex;gap:10px;background:var(--a-red-tint);color:var(--a-red-ink);border-radius:10px;padding:12px 14px;font-size:14px;margin:2px 0 12px}
+.o .eb svg{width:18px;height:18px;margin-top:1px}
+.o .ferr{font-size:11px;font-weight:500;color:var(--a-red-ink);padding:5px 0 0 32px}
+.o .tile52{width:52px;height:52px;border-radius:16px;background:var(--vb-tint);color:var(--vb);display:grid;place-items:center}
+.o .tile52 svg{width:28px;height:28px}
+.o .gb44{width:44px;height:44px}
+.o .gb44 svg{width:22px;height:22px;color:var(--vb);stroke-width:2.3;transform:scaleX(-1)}
+.o .meter{display:flex;align-items:center;gap:8px;padding:10px 4px 0;font-size:12px;color:var(--a-muted)}
+.o .meter i{flex:1;height:4px;border-radius:2px;background:var(--a-fill2)} .o .meter i.on{background:var(--vb)}
+.o .terms{display:flex;align-items:center;gap:12px;font-size:14px;padding:12px 4px 16px}
+.o .terms span{width:22px;height:22px;border-radius:6px;border:1.5px solid var(--edge)}
+.o .pill7{align-self:center;display:inline-flex;align-items:center;gap:7px;background:var(--vb-tint);color:var(--vb-ink);border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;margin-top:10px}
+.o .pill7 i{width:7px;height:7px;border-radius:50%;background:var(--vb)}
+.o .wrow{display:flex;align-items:center;gap:14px;padding:11px 14px;position:relative}
+.o .wrow + .wrow::before{content:"";position:absolute;top:0;left:68px;right:0;height:1px;background:var(--a-sep)}
+.o .ws{width:40px;height:40px;border-radius:10px;background:var(--vb-tint);color:var(--vb);display:grid;place-items:center;font-size:13px;font-weight:600;letter-spacing:.02em;flex:none}
+.o .wrow .c{flex:1;min-width:0}
+.o .wrow b{display:block;font-size:16px;font-weight:600;line-height:1.35}
+.o .wrow small{font-size:13px;color:var(--a-muted)}
+.o .wrow > svg{width:22px;height:22px;color:var(--a-muted)}
+.o .mailc{display:flex;align-items:center;gap:12px;padding:10px 8px 10px 14px}
+.o .mailc .ic{width:36px;height:36px;border-radius:10px;background:var(--vb-tint);color:var(--vb);display:grid;place-items:center}
+.o .mailc .ic svg{width:18px;height:18px}
+.o .mailc .c{flex:1;min-width:0}
+.o .mailc b{display:block;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.o .mailc small{font-size:11px;color:var(--a-muted)}
+.o .mailc a{font-size:13px;font-weight:600;color:var(--vb);padding:0 8px;white-space:nowrap}
+.o .none{flex:1;display:grid;place-items:center;text-align:center;color:var(--a-muted);font-size:15px;padding:0 30px}
+.o .none b{display:block;color:var(--a-ink);font-size:17px;margin-bottom:6px}
+
+/* ----- ĐỀ XUẤT ----- */
+.p .au{padding-top:8px}
+.p .mk56{width:56px;height:56px;margin:0 auto;box-shadow:0 1px 2px rgba(11,26,51,.10),0 6px 16px rgba(11,26,51,.08)}
+.p .h1{font-size:28px;font-weight:800;letter-spacing:-.02em;line-height:1.2;margin:16px 0 0;white-space:nowrap}
+.p .h1.c{text-align:center}
+.p .meta{font-size:15px;color:var(--a-muted);margin-top:6px;line-height:1.4}
+.p .meta b{color:var(--a-ink);font-weight:600}
+.p .soc{display:flex;flex-direction:column;gap:12px}
+.p .b2{height:52px;border-radius:999px;background:var(--a-card);border:1px solid var(--edge2);display:flex;align-items:center;justify-content:center;gap:10px;font-weight:600;font-size:17px;color:var(--a-ink);flex:none;white-space:nowrap}
+.p .b2.apple{background:var(--ap-bg);color:var(--ap-fg);border-color:var(--ap-bg)}
+.p .or{display:flex;align-items:center;gap:12px;color:var(--a-muted);font-size:14px;margin:20px 0 16px}
+.p .or::before,.p .or::after{content:"";flex:1;height:1px;background:var(--a-sep)}
+.p .fl{display:flex;justify-content:space-between;align-items:baseline;font-size:14px;font-weight:600;color:var(--a-ink2);margin:0 2px 6px;white-space:nowrap}
+.p .fl a{color:var(--vb);font-weight:600}
+.p .fld{height:52px;border-radius:10px;background:var(--a-card);border:1px solid var(--edge);display:flex;align-items:center;gap:8px;padding:0 6px 0 14px;font-size:17px;flex:none}
+.p .fld .v{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:clip}
+.p .fld .v.ph{color:var(--a-muted)}
+.p .fld .v.dots{letter-spacing:3px;font-size:19px}
+.p .fld .eye{width:44px;height:44px;display:grid;place-items:center;color:var(--a-muted)}
+.p .fld .eye svg{width:22px;height:22px}
+.p .fld.foc{border:2px solid var(--vb);padding-left:13px;padding-right:5px}
+.p .fld.bad{border:2px solid var(--a-red-ink);padding-left:13px;padding-right:5px}
+.p .fld .caret{display:inline-block;width:2px;height:22px;background:var(--vb);vertical-align:-4px;margin-left:1px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.p .gap{height:14px;flex:none}
+.p .b1{height:52px;border-radius:999px;background:var(--vb);color:var(--vb-on);display:flex;align-items:center;justify-content:center;gap:10px;font-weight:700;font-size:17px;flex:none;
+  box-shadow:0 1px 2px rgba(11,26,51,.12);white-space:nowrap}
+.p .b1 .spin{width:20px;height:20px;border-radius:50%;border:2.5px solid color-mix(in srgb,var(--vb-on) 35%,transparent);border-top-color:var(--vb-on);animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.p .b3{height:44px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;color:var(--vb);flex:none;white-space:nowrap}
+.p .b3.off{color:var(--a-muted);font-weight:500}
+.p .b3.red{color:var(--a-red-ink)}
+.p .ft{text-align:center;font-size:15px;color:var(--a-muted);white-space:nowrap}
+.p .ft b{color:var(--vb);font-weight:600}
+.p .lg{text-align:center;font-size:12px;color:var(--a-muted);line-height:1.5;margin-top:12px;text-wrap:balance}
+.p .lg u{color:var(--a-ink2);text-underline-offset:2px}
+.p .eb{display:flex;gap:10px;align-items:flex-start;background:var(--a-red-tint);color:var(--a-red-ink);border-radius:10px;padding:12px 14px;font-size:15px;line-height:1.4;margin-bottom:14px}
+.p .eb svg{width:20px;height:20px;margin-top:1px}
+.p .eb b{font-weight:600;text-decoration:underline;text-underline-offset:2px}
+.p .ferr{font-size:13px;color:var(--a-red-ink);margin:6px 2px 0}
+.p .meter{display:flex;align-items:center;gap:6px;margin:8px 2px 0;font-size:13px;color:var(--a-muted);white-space:nowrap}
+.p .meter i{flex:1;height:4px;border-radius:2px;background:var(--a-fill2)} .p .meter i.on{background:var(--a-ok,#008650)}
+.p .meter span{min-width:34px;text-align:right;font-weight:600;color:var(--a-ink2)}
+.p .chipm{align-self:flex-start;display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 6px 0 4px;border-radius:999px;background:var(--a-card);border:1px solid var(--edge2);font-size:15px;font-weight:500;white-space:nowrap;margin-top:14px}
+.p .chipm .av{width:28px;height:28px;border-radius:50%;background:var(--vb-tint);color:var(--vb-ink);display:grid;place-items:center;font-size:12px;font-weight:700}
+.p .chipm a{color:var(--vb);font-weight:600;padding:0 8px}
+.p .wl{background:var(--a-card);border-radius:16px;overflow:hidden;margin-top:6px}
+.p .wr{display:flex;align-items:center;gap:12px;padding:0 12px 0 14px;height:72px;position:relative}
+.p .wr + .wr::before{content:"";position:absolute;top:0;left:70px;right:0;height:1px;background:var(--a-sep)}
+.p .ws{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;color:#fff;font-size:15px;font-weight:700;flex:none}
+.p .wr .c{flex:1;min-width:0}
+.p .wr b{display:block;font-size:16px;font-weight:600;line-height:1.35}
+.p .wr small{font-size:14px;color:var(--a-muted);white-space:nowrap}
+.p .wr > svg{width:18px;height:18px;color:var(--a-muted);opacity:.7}
+.p .wr .spin{width:20px;height:20px;border-radius:50%;border:2.5px solid var(--a-fill2);border-top-color:var(--vb);animation:sp .8s linear infinite}
+.p .wr.busy{background:var(--a-fill)}
+.p .sec{font-size:13px;font-weight:600;color:var(--a-muted);text-transform:uppercase;letter-spacing:.03em;padding:22px 16px 0}
+.p .bigic{width:64px;height:64px;border-radius:50%;background:var(--vb-tint);color:var(--vb);display:grid;place-items:center;margin-top:24px}
+.p .bigic svg{width:30px;height:30px;stroke-width:1.8}
+.p .navd{margin-bottom:0}
+
+/* bàn phím iOS giản lược */
+.kb{position:absolute;left:0;right:0;bottom:0;height:336px;background:var(--kb);z-index:5;padding:0 3px 0;display:flex;flex-direction:column}
+.kb .qt{height:44px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;color:var(--keyfg);font-weight:500}
+.kb .qt svg{width:18px;height:18px}
+.kb .rw{display:flex;justify-content:center;gap:6px;margin-top:11px;padding:0 3px}
+.kb .rw span{height:42px;flex:1;max-width:33px;border-radius:5px;background:var(--key);box-shadow:0 1px 0 rgba(0,0,0,.3);color:var(--keyfg);display:grid;place-items:center;font-size:21px}
+.kb .rw span.w{max-width:46px;background:var(--key2)} .kb .rw span.sp{max-width:none;flex:4.6} .kb .rw span.ret{max-width:92px;background:var(--vb);color:#fff;font-size:15px;font-weight:600}
+
+/* phần dưới */
+.learn{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:16px}
+.learn .box p{font-size:14px;color:var(--fg2)}
+.learn .src{font-size:12px;color:var(--muted);font-weight:600}
+.seg.ap button{padding:0 14px}
+</style>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+  <symbol id="i-updown" viewBox="0 0 24 24"><path d="m8 9 4-4 4 4M8 15l4 4 4-4"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 5 5L20 7"/></symbol>
+  <symbol id="i-house" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-bag" viewBox="0 0 24 24"><path d="M5 7h14l-1 13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1z"/><path d="M9 10V6a3 3 0 0 1 6 0v4"/></symbol>
+  <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h13v4"/><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M16 13.5h2"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18.5 14.5A6.5 6.5 0 0 1 21.5 20"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M7.86 2h8.28L22 7.86v8.28L16.14 22H7.86L2 16.14V7.86z"/><path d="M12 8v4M12 16h.01"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></symbol>
+  <symbol id="i-order" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></symbol>
+  <symbol id="i-box" viewBox="0 0 24 24"><path d="m21 8-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8M12 13v8"/></symbol>
+  <symbol id="i-task" viewBox="0 0 24 24"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M8 10h8M8 14h5"/></symbol>
+  <symbol id="i-top" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18"/></symbol>
+  <symbol id="i-sel" viewBox="0 0 24 24"><rect x="3" y="15" width="18" height="6" rx="3"/><path d="m7 8 3 3 6-6"/></symbol>
+  <symbol id="i-btn" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="5"/></symbol>
+  <symbol id="i-seg" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="3"/><path d="M9 7v10M15 7v10"/></symbol>
+  <symbol id="i-sheet" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 11h18M10 14h4"/></symbol>
+  <symbol id="i-v" viewBox="0 0 32 24"><path d="M3 4l11 17L27 3" stroke-width="4.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="16" cy="12" rx="14" ry="5.5" transform="rotate(-18 16 12)" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-status" viewBox="0 0 66 12"><g fill="currentColor"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="5" y="5" width="3" height="7" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/><path d="M30 3.2a10 10 0 0 1 13 0l-1.6 1.7a7.6 7.6 0 0 0-9.8 0zM33 6.3a5.6 5.6 0 0 1 7 0L36.5 10z"/><rect x="41" y="0.5" width="22" height="11" rx="3.2" fill="none" stroke="currentColor" opacity=".45"/><rect x="43" y="2.5" width="16" height="7" rx="1.6"/><rect x="64" y="4" width="1.6" height="4" rx=".8" opacity=".45"/></g></symbol>
+  <symbol id="l-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="l-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+  <symbol id="l-flag" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></symbol>
+  <symbol id="l-star-o" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></symbol>
+  <symbol id="l-paperclip" viewBox="0 0 24 24"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></symbol>
+  <symbol id="l-piano" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 12h18M8 12v8M13 12v8M17 12v8"/><path d="M7 12V9.5M11.5 12V9.5M15.5 12V9.5" stroke-width="2.6"/></symbol>
+</svg>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="vl" x1="18" y1="22" x2="54" y2="82" gradientUnits="userSpaceOnUse"><stop offset="0" style="stop-color:var(--l1)"/><stop offset=".55" style="stop-color:var(--l2)"/><stop offset="1" style="stop-color:var(--l3)"/></linearGradient>
+    <linearGradient id="vr" x1="78" y1="22" x2="46" y2="78" gradientUnits="userSpaceOnUse"><stop offset="0" style="stop-color:var(--l1)"/><stop offset=".6" style="stop-color:var(--l2)"/><stop offset="1" style="stop-color:var(--r3)"/></linearGradient>
+    <linearGradient id="vs" x1="14" y1="68" x2="90" y2="24" gradientUnits="userSpaceOnUse"><stop offset="0" style="stop-color:var(--l1)"/><stop offset=".5" style="stop-color:var(--s2)"/><stop offset="1" style="stop-color:var(--s3)"/></linearGradient>
+  </defs>
+  <!-- nét logo (viewBox 0 0 100 100) -->
+  <symbol id="logop" viewBox="0 0 100 100">
+    <path d="M47 50 L60 28 C62.5 23.8 66.5 22 71.5 22 H79 L52.5 68 C49.5 73 45 73 42.5 68 Z" fill="url(#vr)"/>
+    <path d="M47 50 L54.5 60.5 C57.5 58.5 61 55.5 64 51.5 L55 36.5 Z" fill="#2DABFF" opacity=".45"/>
+    <path d="M17 22 H33 C38 22 42 24.2 44.5 28.5 L57.5 52 L51.5 62.5 L35.5 66.5 L17 22 Z" fill="url(#vl)"/>
+    <path d="M39.5 69.5 L57.5 61.5 L51 74 C48.5 78.5 43.2 78.5 40.8 74 Z" style="fill:var(--ap)"/>
+    <path d="M61 19 C78 14.5 89.5 19.5 87 30.5 C83.5 44.5 60.5 61 36.5 68.5 C19.5 73.8 11.5 69.5 15.5 57.5 C17.5 51.8 22 46.2 27.5 41.5 C23.2 46.8 20.8 52 21.8 56.2 C23.5 63.2 35.8 63.5 53 56.5 C69.5 49.8 81.2 38.2 79.8 29.5 C78.8 23.2 71.5 19.8 61 19 Z" fill="url(#vs)"/>
+  </symbol>
+  <!-- logo có ô (chỉ cho icon app / bản hiện tại) -->
+  <symbol id="logo" viewBox="0 0 100 100">
+    <rect width="100" height="100" rx="24" style="fill:var(--tile)"/>
+    <use href="#logop" width="100" height="100"/>
+  </symbol>
+  <!-- logo trần: không ô, phóng 1,12 như OmniBrandMark(framed:false) -->
+  <symbol id="logob" viewBox="5.4 5.4 89.2 89.2">
+    <use href="#logop" width="100" height="100"/>
+  </symbol>
+  <symbol id="g" viewBox="0 0 24 24">
+    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+  </symbol>
+  <symbol id="apple" viewBox="0 0 24 24"><path d="M16.37 12.62c-.02-2.33 1.9-3.45 1.99-3.5-1.08-1.59-2.77-1.8-3.37-1.83-1.43-.15-2.8.84-3.53.84-.73 0-1.85-.82-3.04-.8-1.56.02-3 .91-3.81 2.31-1.62 2.82-.41 6.99 1.17 9.28.77 1.12 1.69 2.38 2.89 2.33 1.16-.05 1.6-.75 3-.75s1.8.75 3.03.73c1.25-.02 2.04-1.14 2.81-2.27.88-1.3 1.25-2.56 1.27-2.62-.03-.01-2.43-.93-2.41-3.72zM14.06 5.77c.64-.78 1.07-1.85.95-2.93-.92.04-2.04.61-2.7 1.39-.59.69-1.11 1.79-.97 2.85 1.03.08 2.07-.52 2.72-1.31z"/></symbol>
+  <symbol id="mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.5 7 8.5 6 8.5-6"/></symbol>
+  <symbol id="lock" viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5 12 5s9.5 7 9.5 7-3.5 7-9.5 7-9.5-7-9.5-7z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></symbol>
+  <symbol id="bld" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 7h1M14 7h1M9 11h1M14 11h1M9 15h1M14 15h1M10 21v-3h4v3"/></symbol>
+  <symbol id="key" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><circle cx="12" cy="12" r="2"/><path d="M14 12h4v2"/></symbol>
+  <symbol id="mailok" viewBox="0 0 24 24"><path d="M21 12.5V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h8"/><path d="m3.5 7 8.5 6 8.5-6"/><path d="m16 19 2 2 4-4"/></symbol>
+  <symbol id="alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M12 7.5v5.5M12 16.5v.01"/></symbol>
+  <symbol id="right" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+  <symbol id="pkey" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M15 8l2 2"/></symbol>
+</svg>
+
+<div class="wrap">
+  <header class="top">
+    <span class="eyebrow">Viomni · App mobile · Xác thực</span>
+    <h1>Đăng nhập gọn, rõ, một chạm cho người quay lại</h1>
+    <p class="lede">Từ lúc mở app tới chọn công ty: bản đang chạy dựng lại từ code, bản đề xuất theo gói iOS 26/11. Logo chỉ đóng khung ở icon app.</p>
+  </header>
+
+  <section aria-label="So sánh">
+    <div class="bar">
+      <div class="seg" role="group" aria-label="Chọn màn">
+        <button type="button" data-screen="intro">Mở app</button>
+        <button type="button" data-screen="tai">Chờ tải</button>
+        <button type="button" data-screen="dn">Đăng nhập</button>
+        <button type="button" data-screen="loi">Sai mật khẩu</button>
+        <button type="button" data-screen="phim">Bàn phím</button>
+        <button type="button" data-screen="dk">Đăng ký</button>
+        <button type="button" data-screen="quen">Quên mật khẩu</button>
+        <button type="button" data-screen="gui">Đã gửi</button>
+        <button type="button" data-screen="moi">✚ Mật khẩu mới</button>
+        <button type="button" data-screen="cty">Chọn công ty</button>
+      </div>
+      <div class="seg" role="group" aria-label="Hiệu ứng">
+        <button type="button" id="replay">Phát lại</button>
+      </div>
+      <div class="seg ap" role="group" aria-label="Nút Apple">
+        <button type="button" data-apple="1">Có Apple</button>
+        <button type="button" data-apple="0">Không</button>
+      </div>
+      <div class="seg" role="group" aria-label="Chế độ màu">
+        <button type="button" data-th="light">Sáng</button>
+        <button type="button" data-th="dark">Tối</button>
+      </div>
+    </div>
+
+    <div class="stage">
+      <!-- ================= HIỆN TẠI ================= -->
+      <div class="col">
+        <span class="tag old"><i></i>Hiện tại</span>
+        <div class="ph-hold"><div class="phone o">
+          <div class="island"></div><div class="home"></div>
+
+          <!-- Mở app (dựng lại từ omni_splash.dart + launch_splash.dart) -->
+          <div class="scr glow" data-s="intro">
+            <div class="sb"><span>9:41</span><svg viewBox="0 0 66 12"><use href="#i-status"/></svg></div>
+            <div class="au">
+              <svg class="mk mk64 hide"><use href="#logo"/></svg>
+              <div class="wm">Vi<b>omni</b></div>
+              <div class="h1o">Chào mừng trở lại</div>
+              <div class="subo">Đăng nhập không gian làm việc của bạn</div>
+              <div style="height:24px"></div>
+              <div class="grpo">
+                <div class="fo"><svg class="i"><use href="#mail"/></svg><div class="c"><small>Email làm việc</small><div class="in ph">ten@congty.vn</div></div></div>
+                <div class="fo"><svg class="i"><use href="#lock"/></svg><div class="c"><small>Mật khẩu</small><div class="in ph">Nhập mật khẩu</div></div><span class="eye"><svg class="i"><use href="#eye"/></svg></span></div>
+              </div>
+              <span class="fp">Quên mật khẩu?</span>
+              <div class="b1">Đăng nhập</div>
+              <div class="oro">hoặc</div>
+              <div class="bo"><svg class="gg"><use href="#g"/></svg>Tiếp tục với Google</div>
+            </div>
+            <div class="ospl">
+              <div class="halo h1"></div><div class="halo h2"></div>
+              <div class="ctr owm"><span>V</span><span>i</span><span class="bl">o</span><span class="bl">m</span><span class="bl">n</span><span class="bl">i</span></div>
+              <div class="ctr otag">Mọi khách hàng, một quỹ đạo</div>
+            </div>
+            <div class="otile"><svg><use href="#logop"/></svg></div>
+          </div>
+
+          <!-- Chờ tải (splash_page.dart: khung cuối + vạch chạy) -->
+          <div class="scr glow" data-s="tai">
+            <div class="sb"><span>9:41</span><svg viewBox="0 0 66 12"><use href="#i-status"/></svg></div>
+            <div class="ospl" style="opacity:1">
+              <div class="halo h1"></div><div class="halo h2"></div>
+              <div class="ctr owm"><span>V</span><span>i</span><span class="bl">o</span><span class="bl">m</span><span class="bl">n</span><span class="bl">i</span></div>
+              <div class="ctr otag">Mọi khách hàng, một quỹ đạo</div>
+              <div class="ctr obar"><i></i></div>
+            </div>
+            <div class="otile big"><svg><use href="#logop"/></svg></div>
+          </div>
+
+          <!-- Đăng nhập -->
+          <div class="scr glow" data-s="dn">
+            <div class="sb"><span>9:41</span><svg viewBox="0 0 66 12"><use href="#i-status"/></svg></div>
+            <div class="au">
+              <svg class="mk mk64"><use href="#logo"/></svg>
+              <div class="wm">Vi<b>omni</b></div>
+              <div class="h1o">Chào mừng trở lại</div>
+              <div class="subo">Đăng nhập không gian làm việc của bạn</div>
+              <div style="height:24px"></div>
+              <div class="grpo">
+                <div class="fo"><svg class="i"><use href="#mail"/></svg><div class="c"><small>Email làm việc</small><div class="in ph">ten@congty.vn</div></div></div>
+                <div class="fo"><svg class="i"><use href="#lock"/></svg><div class="c"><small>Mật khẩu</small><div class="in ph">Nhập mật khẩu</div></div><span class="eye"><svg class="i"><use href="#eye"/></svg></span></div>
+              </div>
+              <span class="fp">Quên mật khẩu?</span>
+              <div class="b1">Đăng nhập</div>
+              <div class="oro">hoặc</div>
+              <div class="bo"><svg class="gg"><use href="#g"/></svg>Tiếp tục với Google</div>
+              <div class="ft" style="padding-top:22px">Chưa có tài khoản? <b>Đăng ký</b></div>
+              <div class="pv">Chính sách bảo mật</div>
+            </div>
+          </div>
+
+          <!-- Sai mật khẩu -->
+          <div class="scr glow" data-s="loi">
+            <div class="sb"><span>9:41</span><svg viewBox="0 0 66 12"><use href="#i-status"/></svg></div>
+            <div class="au">
+              <svg class="mk mk64"><use href="#logo"/></svg>
+              <div class="wm">Vi<b>omni</b></div>
+              <div class="h1o">Chào mừng trở lại</div>
+              <div class="subo">Đăng nhập không gian làm việc của bạn</div>
+              <div style="height:24px"></div>
+              <div class="grpo">
+                <div class="fo"><svg class="i"><use href="#mail"/></svg><div class="c"><small>Email làm việc</small><div class="in">nam.nguyen@congty.vn</div></div></div>
+                <div class="fo bad"><svg class="i"><use href="#lock"/></svg><div class="c"><small>Mật khẩu</small><div class="in">••••••••</div><div class="ferr" style="padding-left:0">Thông tin đăng nhập không đúng.</div></div><span class="eye"><svg class="i"><use href="#eye"/></svg></span></div>
+              </div>
+              <span class="fp">Quên mật khẩu?</span>
+              <div class="eb"><svg class="i"><use href="#alert"/></svg><span>Thông tin đăng nhập không đúng.</span></div>
+              <div class="b1">Đăng nhập</div>
+              <div class="oro">hoặc</div>
+              <div class="bo"><svg class="gg"><use href="#g"/></svg>Tiếp tục với Google</div>
+            </div>
+          </div>
+
+          <!-- Bàn phím -->
+          <div class="scr glow" data-s="phim">
+            <div class="sb"><span>9:41</span><svg viewBox="0 0 66 12"><use href="#i-status"/></svg></div>
+            <div class="au" style="padding-top:0;margin-top:-72px">
+              <svg class="mk mk64"><use href="#logo"/></svg>
+              <div class="wm">Vi<b>omni</b></div>
+              <div class="h1o">Chào mừng trở lại</div>
+              <div class="subo">Đăng nhập không gian làm việc của bạn</div>
+              <div style="height:24px"></div>
+              <div class="grpo">
+                <div class="fo"><svg class="i"><use href="#mail"/></svg><div class="c"><small>Email làm việc</small><div class="in">nam.nguyen@congty.vn</div></div></div>
+                <div class="fo foc"><svg class="i"><use href="#lock"/></svg><div class="c"><small>Mật khẩu</small><div class="in">•••••</div></div><span class="eye"><svg class="i"><use href="#eye"/></svg></span></div>
+              </div>
+              <span class="fp">Quên mật khẩu?</span>
+              <div class="b1">Đăng nhập</div>
+            </div>
+            <div class="kb"></div>
+          </div>
+
+          <!-- Đăng ký -->
+          <div class="scr glow" data-s="dk">
+            <div class="sb"><span>9:41</span><svg viewBox="0 0 66 12"><use href="#i-status"/></svg></div>
+            <div class="au" style="padding-top:8px">
+              <span class="gbtn gb44"><svg class="i"><use href="#i-chev"/></svg></span>
+              <div class="h1o l">Tạo tài khoản</div>
+              <div class="subo l">Thiết lập hồ sơ quản trị và không gian công ty của bạn.</div>
+              <div style="height:18px"></div>
+              <div class="gt">Tài khoản &amp; Tổ chức</div>
+              <div class="grpo">
+                <div class="fo"><svg class="i"><use href="#user"/></svg><div class="c"><small>Họ và tên</small><div class="in ph">Nguyễn Hoàng Nam</div></div></div>
+                <div class="fo"><svg class="i"><use href="#mail"/></svg><div class="c"><small>Email làm việc</small><div class="in ph">ten@congty.vn</div></div></div>
+                <div class="fo"><svg class="i"><use href="#bld"/></svg><div class="c"><small>Tên công ty / tổ chức</small><div class="in ph">Cửa hàng hoặc doanh nghiệp</div></div></div>
+              </div>
+              <div style="height:16px"></div>
+              <div class="gt"><span>Bảo mật</span><span>Tối thiểu 8 ký tự</span></div>
+              <div class="grpo">
+                <div class="fo"><svg class="i"><use href="#lock"/></svg><div class="c"><small>Mật khẩu</small><div class="in ph">Nhập ít nhất 8 ký tự</div></div><span class="eye"><svg class="i"><use href="#eye"/></svg></span></div>
+              </div>
+              <div class="meter"><i></i><i></i><i></i><i></i><span>Độ mạnh</span></div>
+              <div class="terms"><span></span>Đồng ý Điều khoản sử dụng</div>
+              <div class="b1 dim">Tạo tài khoản</div>
+              <div class="oro">hoặc</div>
+              <div class="bo"><svg class="gg"><use href="#g"/></svg>Đăng ký với Google</div>
+            </div>
+          </div>
+
+          <!-- Quên mật khẩu -->
+          <div class="scr glow" data-s="quen">
+            <div class="sb"><span>9:41</span><svg viewBox="0 0 66 12"><use href="#i-status"/></svg></div>
+            <div class="au" style="padding-top:8px">
+              <span class="gbtn gb44"><svg class="i"><use href="#i-chev"/></svg></span>
+              <div style="height:16px"></div>
+              <div class="tile52"><svg class="i"><use href="#key"/></svg></div>
+              <div class="h1o l" style="margin-top:16px">Quên mật khẩu?</div>
+              <div class="subo l">Nhập email làm việc để nhận liên kết khôi phục mật khẩu.</div>
+              <div style="height:20px"></div>
+              <div class="grpo">
+                <div class="fo"><svg class="i"><use href="#mail"/></svg><div class="c"><small>Email làm việc</small><div class="in ph">ten@congty.vn</div></div></div>
+              </div>
+              <div style="height:22px"></div>
+              <div class="b1">Gửi liên kết</div>
+            </div>
+          </div>
+
+          <!-- Đã gửi -->
+          <div class="scr glow" data-s="gui">
+            <div class="sb"><span>9:41</span><svg viewBox="0 0 66 12"><use href="#i-status"/></svg></div>
+            <div class="au" style="padding-top:8px">
+              <span class="gbtn gb44"><svg class="i"><use href="#i-chev"/></svg></span>
+              <div style="height:16px"></div>
+              <div class="tile52"><svg class="i"><use href="#mailok"/></svg></div>
+              <div class="h1o l" style="margin-top:16px">Kiểm tra email</div>
+              <div class="subo l">Đã gửi tới nam.nguyen@congty.vn</div>
+              <div style="height:16px"></div>
+              <div class="grpo"><div class="mailc"><span class="ic"><svg class="i"><use href="#mail"/></svg></span><div class="c"><b>nam.nguyen@congty.vn</b><small>Liên kết khôi phục có hiệu lực 30 phút</small></div><a>Đổi email</a></div></div>
+              <div style="height:22px"></div>
+              <div class="b1">Mở ứng dụng email</div>
+              <div style="height:12px"></div>
+              <div class="bo" style="color:var(--a-muted);border-color:var(--a-sep)">Gửi lại sau 42 giây</div>
+            </div>
+          </div>
+
+          <!-- Mật khẩu mới (chưa có) -->
+          <div class="scr glow" data-s="moi">
+            <div class="sb"><span>9:41</span><svg viewBox="0 0 66 12"><use href="#i-status"/></svg></div>
+            <div class="none"><div><b>Chưa có trong app</b>Liên kết trong email mở trang web để đặt mật khẩu mới.</div></div>
+          </div>
+
+          <!-- Chọn công ty -->
+          <div class="scr glow" data-s="cty">
+            <div class="sb"><span>9:41</span><svg viewBox="0 0 66 12"><use href="#i-status"/></svg></div>
+            <div class="au">
+              <svg class="mk mk64"><use href="#logo"/></svg>
+              <div class="h1o">Chọn không gian làm việc</div>
+              <span class="pill7"><i></i>nam.nguyen@congty.vn</span>
+              <div style="height:20px"></div>
+              <div class="gt">Công ty của bạn (3)</div>
+              <div class="grpo">
+                <div class="wrow"><span class="ws">TNP</span><div class="c"><b>Thép Nam Phát</b><small>48 nhân viên · Doanh nghiệp</small></div><svg class="i"><use href="#right"/></svg></div>
+                <div class="wrow"><span class="ws">HMA</span><div class="c"><b>Cửa hàng Hoa Mai</b><small>6 nhân viên</small></div><svg class="i"><use href="#right"/></svg></div>
+                <div class="wrow"><span class="ws">NTS</span><div class="c"><b>Nội thất Sen Việt</b><small>17 nhân viên · Chuyên nghiệp</small></div><svg class="i"><use href="#right"/></svg></div>
+              </div>
+              <div class="grow"></div>
+              <div class="bo">Đăng xuất</div>
+            </div>
+          </div>
+        </div></div>
+        <ul class="pts bad" data-pts="o"></ul>
+      </div>
+
+      <!-- ================= ĐỀ XUẤT ================= -->
+      <div class="col">
+        <span class="tag new"><i></i>Đề xuất</span>
+        <div class="ph-hold"><div class="phone p">
+          <div class="island"></div><div class="home"></div>
+
+          <!-- Mở app: khung đầu trùng màn hệ thống -->
+          <div class="scr" data-s="intro">
+            <div class="sb"><span>9:41</span><svg viewBox="0 0 66 12"><use href="#i-status"/></svg></div>
+            <div class="au lgc" style="padding-top:28px">
+              <svg class="lb lb56 ghost"><use href="#logob"/></svg>
+              <div class="h1 c">Đăng nhập Viomni</div>
+              <div style="height:28px"></div>
+              <div class="soc">
+                <div class="b2"><svg class="gg"><use href="#g"/></svg>Tiếp tục với Google</div>
+                <div class="b2 apple"><svg class="apl"><use href="#apple"/></svg>Tiếp tục với Apple</div>
+              </div>
+              <div class="or">hoặc</div>
+              <div class="fl">Email</div>
+              <div class="fld"><span class="v ph">ten@congty.vn</span></div>
+              <div class="gap"></div>
+              <div class="fl"><span>Mật khẩu</span><a>Quên?</a></div>
+              <div class="fld"><span class="v ph">Mật khẩu</span><span class="eye"><svg class="i"><use href="#eye"/></svg></span></div>
+              <div style="height:20px"></div>
+              <div class="b1">Đăng nhập</div>
+              <div class="grow"></div>
+              <div class="ft">Chưa có tài khoản? <b>Đăng ký</b></div>
+              <div class="lg"><u>Điều khoản</u> · <u>Chính sách bảo mật</u></div>
+            </div>
+            <div class="aura"><div class="phalo h1"></div><div class="phalo h2"></div><div class="ring"></div></div>
+            <div class="ctr pwm">Vi<b>omni</b></div>
+            <svg class="lb fly"><use href="#logob"/></svg>
+          </div>
+
+          <!-- Chờ tải -->
+          <div class="scr" data-s="tai">
+            <div class="sb"><span>9:41</span><svg viewBox="0 0 66 12"><use href="#i-status"/></svg></div>
+            <div class="aura"><div class="phalo h1 on"></div><div class="phalo h2 on"></div><div class="ring loop"></div><div class="ring loop d2"></div></div>
+            <svg class="lb fly mid"><use href="#logob"/></svg>
+          </div>
+
+          <!-- Đăng nhập -->
+          <div class="scr" data-s="dn">
+            <div class="sb"><span>9:41</span><svg viewBox="0 0 66 12"><use href="#i-status"/></svg></div>
+            <div class="au" style="padding-top:28px">
+              <svg class="lb lb56"><use href="#logob"/></svg>
+              <div class="h1 c">Đăng nhập Viomni</div>
+              <div style="height:28px"></div>
+              <div class="soc">
+                <div class="b2"><svg class="gg"><use href="#g"/></svg>Tiếp tục với Google</div>
+                <div class="b2 apple"><svg class="apl"><use href="#apple"/></svg>Tiếp tục với Apple</div>
+              </div>
+              <div class="or">hoặc</div>
+              <div class="fl">Email</div>
+              <div class="fld"><span class="v ph">ten@congty.vn</span></div>
+              <div class="gap"></div>
+              <div class="fl"><span>Mật khẩu</span><a>Quên?</a></div>
+              <div class="fld"><span class="v ph">Mật khẩu</span><span class="eye"><svg class="i"><use href="#eye"/></svg></span></div>
+              <div style="height:20px"></div>
+              <div class="b1">Đăng nhập</div>
+              <div class="grow"></div>
+              <div class="ft">Chưa có tài khoản? <b>Đăng ký</b></div>
+              <div class="lg"><u>Điều khoản</u> · <u>Chính sách bảo mật</u></div>
+            </div>
+          </div>
+
+          <!-- Sai mật khẩu -->
+          <div class="scr" data-s="loi">
+            <div class="sb"><span>9:41</span><svg viewBox="0 0 66 12"><use href="#i-status"/></svg></div>
+            <div class="au" style="padding-top:28px">
+              <svg class="lb lb56"><use href="#logob"/></svg>
+              <div class="h1 c">Đăng nhập Viomni</div>
+              <div style="height:28px"></div>
+              <div class="soc">
+                <div class="b2"><svg class="gg"><use href="#g"/></svg>Tiếp tục với Google</div>
+                <div class="b2 apple"><svg class="apl"><use href="#apple"/></svg>Tiếp tục với Apple</div>
+              </div>
+              <div class="or">hoặc</div>
+              <div class="fl">Email</div>
+              <div class="fld"><span class="v">nam.nguyen@congty.vn</span></div>
+              <div class="gap"></div>
+              <div class="fl"><span>Mật khẩu</span><a>Quên?</a></div>
+              <div class="fld bad"><span class="v dots">••••••••</span><span class="eye"><svg class="i"><use href="#eye"/></svg></span></div>
+              <div style="height:14px"></div>
+              <div class="eb"><svg class="i"><use href="#alert"/></svg><span>Email hoặc mật khẩu chưa đúng. Thử lại hoặc <b>đặt lại mật khẩu</b>.</span></div>
+              <div class="b1">Đăng nhập</div>
+            </div>
+          </div>
+
+          <!-- Bàn phím -->
+          <div class="scr" data-s="phim">
+            <div class="sb"><span>9:41</span><svg viewBox="0 0 66 12"><use href="#i-status"/></svg></div>
+            <div class="au" style="padding-top:12px">
+              <div class="h1">Đăng nhập Viomni</div>
+              <div style="height:20px"></div>
+              <div class="fl">Email</div>
+              <div class="fld"><span class="v">nam.nguyen@congty.vn</span></div>
+              <div class="gap"></div>
+              <div class="fl"><span>Mật khẩu</span><a>Quên?</a></div>
+              <div class="fld foc"><span class="v"><span class="dots" style="letter-spacing:3px;font-size:19px">•••••</span><span class="caret"></span></span><span class="eye"><svg class="i"><use href="#eye"/></svg></span></div>
+              <div style="height:16px"></div>
+              <div class="b1">Đăng nhập</div>
+            </div>
+            <div class="kb" data-pw="1"></div>
+          </div>
+
+          <!-- Đăng ký -->
+          <div class="scr" data-s="dk">
+            <div class="sb"><span>9:41</span><svg viewBox="0 0 66 12"><use href="#i-status"/></svg></div>
+            <div class="au">
+              <div class="navd"><span class="back"><svg class="i"><use href="#i-chev"/></svg></span><span class="t"></span><span></span></div>
+              <div class="h1" style="margin-top:4px">Tạo tài khoản</div>
+              <div style="height:20px"></div>
+              <div class="soc"><div class="b2"><svg class="gg"><use href="#g"/></svg>Đăng ký với Google</div></div>
+              <div class="or" style="margin:18px 0 14px">hoặc</div>
+              <div class="fl">Họ và tên</div>
+              <div class="fld"><span class="v ph">Nguyễn Hoàng Nam</span></div>
+              <div class="gap" style="height:12px"></div>
+              <div class="fl">Email làm việc</div>
+              <div class="fld"><span class="v ph">ten@congty.vn</span></div>
+              <div class="gap" style="height:12px"></div>
+              <div class="fl">Tên công ty</div>
+              <div class="fld"><span class="v ph">Cửa hàng hoặc doanh nghiệp</span></div>
+              <div class="gap" style="height:12px"></div>
+              <div class="fl">Mật khẩu</div>
+              <div class="fld"><span class="v dots">••••••••••</span><span class="eye"><svg class="i"><use href="#eye"/></svg></span></div>
+              <div class="meter"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><span>Khá</span></div>
+              <div style="height:18px"></div>
+              <div class="b1">Tạo tài khoản</div>
+              <div class="lg" style="margin-top:10px">Tạo tài khoản là đồng ý <u>Điều khoản</u> và <u>Chính sách bảo&nbsp;mật</u></div>
+            </div>
+          </div>
+
+          <!-- Quên mật khẩu -->
+          <div class="scr" data-s="quen">
+            <div class="sb"><span>9:41</span><svg viewBox="0 0 66 12"><use href="#i-status"/></svg></div>
+            <div class="au">
+              <div class="navd"><span class="back"><svg class="i"><use href="#i-chev"/></svg></span><span class="t"></span><span></span></div>
+              <div class="h1" style="margin-top:4px">Quên mật khẩu</div>
+              <div style="height:24px"></div>
+              <div class="fl">Email</div>
+              <div class="fld foc"><span class="v">nam.nguyen@congty.vn<span class="caret"></span></span></div>
+              <div style="height:20px"></div>
+              <div class="b1">Gửi liên kết đặt lại</div>
+            </div>
+            <div class="kb"></div>
+          </div>
+
+          <!-- Đã gửi -->
+          <div class="scr" data-s="gui">
+            <div class="sb"><span>9:41</span><svg viewBox="0 0 66 12"><use href="#i-status"/></svg></div>
+            <div class="au">
+              <div class="navd"><span class="back"><svg class="i"><use href="#i-chev"/></svg></span><span class="t"></span><span></span></div>
+              <div class="bigic"><svg class="i"><use href="#mailok"/></svg></div>
+              <div class="h1" style="margin-top:20px">Kiểm tra email</div>
+              <div class="meta">Liên kết đặt lại đã gửi tới<br><b>nam.nguyen@congty.vn</b></div>
+              <div class="meta" style="font-size:14px;margin-top:4px">Hết hạn sau 30 phút</div>
+              <div class="grow"></div>
+              <div class="b1">Mở ứng dụng email</div>
+              <div style="height:8px"></div>
+              <div class="b3 off tnum">Gửi lại sau 0:42</div>
+              <div class="b3">Dùng email khác</div>
+            </div>
+          </div>
+
+          <!-- Mật khẩu mới -->
+          <div class="scr" data-s="moi">
+            <div class="sb"><span>9:41</span><svg viewBox="0 0 66 12"><use href="#i-status"/></svg></div>
+            <div class="au" style="padding-top:28px">
+              <div class="h1">Đặt mật khẩu mới</div>
+              <div class="meta">Cho <b>nam.nguyen@congty.vn</b></div>
+              <div style="height:24px"></div>
+              <div class="fl">Mật khẩu mới</div>
+              <div class="fld foc"><span class="v"><span class="dots" style="letter-spacing:3px;font-size:19px">•••••••••••</span><span class="caret"></span></span><span class="eye"><svg class="i"><use href="#eye"/></svg></span></div>
+              <div class="meter"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><span>Mạnh</span></div>
+              <div style="height:20px"></div>
+              <div class="b1">Lưu và đăng nhập</div>
+            </div>
+            <div class="kb" data-pw="1"></div>
+          </div>
+
+          <!-- Chọn công ty -->
+          <div class="scr" data-s="cty">
+            <div class="sb"><span>9:41</span><svg viewBox="0 0 66 12"><use href="#i-status"/></svg></div>
+            <div class="au" style="padding-top:20px;padding-left:16px;padding-right:16px">
+              <div class="h1" style="margin-top:0">Chọn công ty</div>
+              <span class="chipm"><span class="av">NN</span>nam.nguyen@congty.vn</span>
+              <div class="sec">Công ty <span class="tnum">3</span></div>
+              <div class="wl">
+                <div class="wr busy"><span class="ws" style="background:#1D5FD1">TN</span><div class="c"><b>Thép Nam Phát</b><small>48 nhân viên</small></div><span class="spin"></span></div>
+                <div class="wr"><span class="ws" style="background:#0D9488">HM</span><div class="c"><b>Cửa hàng Hoa Mai</b><small>6 nhân viên</small></div><svg class="i"><use href="#right"/></svg></div>
+                <div class="wr"><span class="ws" style="background:#7C5CD6">SV</span><div class="c"><b>Nội thất Sen Việt</b><small>17 nhân viên</small></div><svg class="i"><use href="#right"/></svg></div>
+              </div>
+              <div class="grow"></div>
+              <div class="b3 red">Đăng xuất</div>
+            </div>
+          </div>
+        </div></div>
+        <ul class="pts good" data-pts="p"></ul>
+      </div>
+    </div>
+  </section>
+
+  <section aria-label="Học từ đâu">
+    <h2>Học từ đâu</h2>
+    <div class="learn">
+      <div class="box"><span class="src">Notion · Todoist · Craft</span><h3>Nút bên thứ ba lên đầu, đủ nhãn</h3><p>“Tiếp tục với Google” cao 52, viên thuốc; Apple nền đen. Người quay lại đăng nhập một chạm.</p></div>
+      <div class="box"><span class="src">Craft · Joule · TotalAV</span><h3>Ô nhập rời, nhãn luôn hiện</h3><p>Ô 52 bo 10, không icon trang trí. “Quên?” nằm cùng hàng nhãn mật khẩu, bớt một dòng.</p></div>
+      <div class="box"><span class="src">Notion · Todoist · Notability</span><h3>Pháp lý một dòng ở chân</h3><p>“Khi tiếp tục là đồng ý…” thay ô tích. Logo nhỏ, một tiêu đề, không câu phụ.</p></div>
+      <div class="box"><span class="src">Craft (mã xác minh)</span><h3>Màn sau khi gửi: một việc</h3><p>Nút mở hộp thư là việc chính; gửi lại và đổi email là nút chữ, không thêm nút viền thứ hai.</p></div>
+    </div>
+  </section>
+
+  <section aria-label="Cần chốt">
+    <h2>Cần chốt</h2>
+    <div class="decide">
+      <div class="box"><span class="num">1</span><h3>Thêm “Tiếp tục với Apple”?</h3><p>App có Google mà chưa có Apple: App Store có thể từ chối (mục 4.8). Cần thêm API mới.</p></div>
+      <div class="box"><span class="num">2</span><h3>Bỏ ô tích Điều khoản ở Đăng ký?</h3><p>Thay bằng dòng “Khi tạo tài khoản, bạn đồng ý…” dưới nút, như Notion, Todoist.</p></div>
+      <div class="box"><span class="num">3</span><h3>Đặt mật khẩu mới ngay trong app?</h3><p>API đã có. App cần mở liên kết email (Universal Link); hiện đang mở trang web.</p></div>
+    </div>
+  </section>
+</div>
+
+<script>
+window.KIT_POINTS = {
+  intro:{ o: ['Logo đóng trong ô trắng', 'Khẩu hiệu, chữ chạy từng ký tự', 'Kéo dài 2,45 giây'],
+          p: ['Hào quang tỏa quanh, không lấn logo', 'Khung đầu trùng màn hệ thống', 'Logo bay về chỗ, 1,6 giây'] },
+  tai:  { o: ['Logo đóng trong ô trắng', 'Khẩu hiệu, vạch chạy'],
+          p: ['Hào quang tỏa thay vòng quay', 'Chỉ tỏa ngoài, không lấn logo', 'Logo đứng yên, không khung'] },
+  dn:   { o: ['Câu phụ, logo lẫn chữ Viomni', 'Logo đóng khung trắng', 'Google nằm cuối, dễ bỏ sót'],
+          p: ['Logo trần, một tiêu đề', 'Google lên đầu, một chạm', '“Quên?” cùng hàng nhãn'] },
+  loi:  { o: ['Một lỗi hiện hai lần', 'Không chỉ cách sửa', 'Đẩy nút xuống dưới'],
+          p: ['Lỗi một chỗ, sát nút', 'Có lối đặt lại mật khẩu', 'Giữ nguyên chữ đã gõ'] },
+  phim: { o: ['Bàn phím che nút Đăng nhập', 'Phải cuộn mới bấm được', 'Logo chiếm chỗ'],
+          p: ['Nút ngay trên bàn phím', 'Gợi ý mật khẩu đã lưu', 'Ẩn logo khi gõ'] },
+  dk:   { o: ['Câu phụ dài dưới tiêu đề', 'Nút mờ, không nói vì sao', 'Google nằm cuối'],
+          p: ['Google lên đầu', 'Nút luôn bấm được, báo lỗi tại ô', 'Đồng ý pháp lý một dòng'] },
+  quen: { o: ['Ô icon trang trí', 'Câu giải thích dài', 'Phải gõ lại email'],
+          p: ['Điền sẵn email vừa nhập', 'Nút nói rõ việc', 'Bàn phím bật sẵn'] },
+  gui:  { o: ['Hai nút lớn tranh nhau', 'Email lặp hai lần', 'Đổi email nằm khuất'],
+          p: ['Một nút chính ở đáy', 'Gửi lại, đổi email là nút chữ', 'Đếm ngược dạng 0:42'] },
+  moi:  { o: ['Chưa có trong app', 'Phải sang trình duyệt'],
+          p: ['Mở thẳng từ email', 'Một ô, có nút hiện mật khẩu', 'Lưu xong vào luôn app'] },
+  cty:  { o: ['Logo sau khi đã đăng nhập', 'Nút Đăng xuất to như việc chính', 'Ô chữ tắt cùng một màu'],
+          p: ['Tên màn 28, không logo', 'Đăng xuất là nút chữ đỏ', 'Ô màu riêng mỗi công ty'] }
+};
+// Bàn phím iOS giản lược
+document.querySelectorAll('.kb').forEach(k => {
+  const rows = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'];
+  const qt = k.dataset.pw ? '<div class="qt"><svg class="i"><use href="#pkey"/></svg>Mật khẩu đã lưu</div>' : '<div class="qt">nam.nguyen@congty.vn</div>';
+  let h = qt;
+  rows.forEach((r, i) => {
+    let keys = [...r].map(c => '<span>' + c + '</span>').join('');
+    if (i === 2) keys = '<span class="w">⇧</span>' + keys + '<span class="w">⌫</span>';
+    h += '<div class="rw">' + keys + '</div>';
+  });
+  h += '<div class="rw"><span class="w">123</span><span class="w">🌐</span><span class="sp"></span><span class="ret">Xong</span></div>';
+  k.innerHTML = h;
+});
+// Bật/tắt nút Apple
+(function () {
+  const r = document.documentElement, bs = document.querySelectorAll('[data-apple]');
+  function set(v) { r.dataset.apple = v; bs.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.apple === v))); }
+  bs.forEach(b => b.addEventListener('click', () => set(b.dataset.apple)));
+  set('1');
+})();
+// Hiệu ứng mở app: chạy khi vào màn, lặp mỗi 4 giây, nút Phát lại
+(function () {
+  const segIntro = document.querySelector('[data-screen="intro"]');
+  function play() {
+    document.querySelectorAll('.scr[data-s="intro"]').forEach(s => { s.classList.remove('run'); void s.offsetWidth; s.classList.add('run'); });
+  }
+  const visible = () => { const s = document.querySelector('.phone.p .scr[data-s="intro"]'); return s && !s.hidden; };
+  document.getElementById('replay').addEventListener('click', () => { if (!visible()) segIntro.click(); play(); });
+  segIntro.addEventListener('click', play);
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    setInterval(() => { if (visible()) play(); }, 4000);
+    play();
+  }
+})();
+</script>
+<script>/* Bộ kit artifact mobile-designvip: chuyển màn, sáng/tối, co khung máy 410×864 theo cột,
+   chip/tab bấm được, đọc #<màn>[-dark|-light] để chụp kiểm. Không phụ thuộc thư viện. */
+(function () {
+  const root = document.documentElement;
+  const POINTS = window.KIT_POINTS || {}; // { man: { o: [...], p: [...] } } — tối đa 3 ý ngắn mỗi bên
+  const X = '<svg class="i"><use href="#i-x"/></svg>', V = '<svg class="i"><use href="#i-check"/></svg>';
+  const segBtns = document.querySelectorAll('[data-screen]');
+  const ulO = document.querySelector('[data-pts="o"]'), ulP = document.querySelector('[data-pts="p"]');
+  const screens = [...new Set([...document.querySelectorAll('.scr[data-s]')].map(s => s.dataset.s))];
+
+  function show(s) {
+    if (!screens.includes(s)) s = screens[0];
+    document.querySelectorAll('.scr[data-s]').forEach(el => { el.hidden = el.dataset.s !== s; });
+    segBtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.screen === s)));
+    const p = POINTS[s];
+    if (ulO) ulO.innerHTML = p ? p.o.map(t => '<li>' + X + t + '</li>').join('') : '';
+    if (ulP) ulP.innerHTML = p ? p.p.map(t => '<li>' + V + t + '</li>').join('') : '';
+  }
+  segBtns.forEach(b => b.addEventListener('click', () => show(b.dataset.screen)));
+
+  const thBtns = document.querySelectorAll('[data-th]');
+  function syncTh() {
+    const cur = root.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    thBtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.th === cur)));
+  }
+  thBtns.forEach(b => b.addEventListener('click', () => { root.dataset.theme = b.dataset.th; syncTh(); }));
+  try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', syncTh); } catch (e) {}
+
+  // Màn dưới sheet: <div class="under" data-clone="id-màn"></div> chép lại màn đó.
+  document.querySelectorAll('.under[data-clone]').forEach(u => {
+    const src = document.getElementById(u.dataset.clone);
+    if (src) [...src.children].forEach(c => u.appendChild(c.cloneNode(true)));
+  });
+
+  // Chip chọn một (.pm) và thanh tab (.p .tabs) bấm thử được.
+  document.querySelectorAll('.p .pm').forEach(g => {
+    const bs = g.querySelectorAll('button');
+    bs.forEach(b => b.addEventListener('click', () => bs.forEach(x => x.setAttribute('aria-pressed', String(x === b)))));
+  });
+  document.querySelectorAll('.p .tabs').forEach(t => {
+    const items = t.querySelectorAll('span');
+    items.forEach(s => s.addEventListener('click', () => items.forEach(x => x.classList.toggle('on', x === s))));
+  });
+
+  function fit() {
+    document.querySelectorAll('.ph-hold').forEach(h => {
+      const s = Math.min(1, h.clientWidth / 410), ph = h.querySelector('.phone');
+      ph.style.transform = s < 1 ? 'scale(' + s + ')' : '';
+      h.style.height = (864 * s) + 'px';
+    });
+  }
+  try { new ResizeObserver(fit).observe(document.querySelector('.stage')); } catch (e) { addEventListener('resize', fit); }
+  fit();
+
+  function fromHash() {
+    const raw = (location.hash || '').slice(1), m = raw.match(/^(.*?)-?(dark|light)?$/);
+    if (m[2]) root.dataset.theme = m[2];
+    show(m[1]); syncTh();
+  }
+  addEventListener('hashchange', fromHash);
+  fromHash();
+})();
+</script>

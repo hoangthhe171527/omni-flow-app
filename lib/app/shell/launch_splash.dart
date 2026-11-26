@@ -10,17 +10,17 @@ import '../../design/platform/omni_motion_scope.dart';
 /// chỉ sống chừng nào phiên còn đang khôi phục, mà khôi phục thường xong trong
 /// vài trăm ms — đặt hiệu ứng ở đó thì hoặc nó bị cắt ngang giữa chừng, hoặc
 /// phải bắt router CHỜ nó. Ở đây hai việc chạy song song: router khôi phục
-/// phiên và điều hướng ngay bên dưới, còn hiệu ứng dựng hình 1,8 giây rồi bay.
+/// phiên và điều hướng ngay bên dưới, còn hiệu ứng dựng hình ~1 giây rồi bay.
 /// Không có lượt điều hướng nào bị làm chậm; thứ duy nhất người dùng "chờ" là
 /// chính hiệu ứng, và chỉ ở lần mở đầu tiên.
 ///
-/// Pha bay (1850ms → hết): nếu màn đích có logo neo bằng [BrandAnchor] (header
-/// các tab gốc, màn đăng nhập), logo bay tới đúng chỗ đó, nền splash tan thành
-/// trong suốt, khẩu hiệu và vòng sáng mờ đi — chữ "Viomni" bay theo nếu đích
-/// có chữ, không thì mờ và trượt lên. Không có neo thì cả lớp phủ mờ dần.
+/// Pha bay (960ms → hết): nếu màn đích có logo neo bằng [BrandAnchor] (màn đăng
+/// nhập, header có logo), logo bay tới đúng chỗ đó và nền splash tan thành
+/// trong suốt (hào quang đã tắt từ trước) — chữ "Viomni" bay theo nếu đích có
+/// chữ, không thì mờ và trượt lên. Không có neo thì cả lớp phủ mờ dần.
 ///
-/// Nếu khôi phục phiên lâu hơn hiệu ứng (mạng chậm), bên dưới là [SplashPage]
-/// vẽ đúng khung hình cuối của hiệu ứng, nên lúc mờ đi không có cú giật nào.
+/// Nếu khôi phục phiên lâu hơn hiệu ứng (mạng chậm), bên dưới là [SplashPage]:
+/// cùng logo ở cùng chỗ, hào quang tỏa theo nhịp.
 ///
 /// Bỏ qua hẳn khi máy bật "giảm chuyển động" — thiết kế ghi rõ "tắt hết".
 class LaunchSplash extends StatefulWidget {
@@ -28,11 +28,11 @@ class LaunchSplash extends StatefulWidget {
 
   final Widget child;
 
-  /// Tổng thời lượng lớp phủ: dựng hình 1800 + 650 (nghỉ 50, bay 600).
-  static const total = Duration(milliseconds: 1800 + 650);
+  /// Tổng thời lượng lớp phủ: dựng hình 960 + bay 640 (artifact duyệt 26/11).
+  static const total = Duration(milliseconds: 960 + 640);
 
-  /// Mốc bắt đầu bay — giữ khung hoàn chỉnh một nhịp 50ms sau phần dựng hình.
-  static const _flyStartMs = 1850;
+  /// Mốc bắt đầu bay — ngay sau phần dựng hình.
+  static const _flyStartMs = 960;
 
   /// Đã chạy trong tiến trình này chưa. Tĩnh chứ không nằm trong State: cây
   /// widget có thể dựng lại (đổi theme, đổi tenant dựng lại router) mà hiệu

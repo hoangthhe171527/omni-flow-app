@@ -46,7 +46,10 @@ class AuthModule extends OmniModule {
     ModuleRoute(
       path: forgotPath,
       name: forgot,
-      builder: (_, _) => const ForgotPasswordPage(),
+      // Email vừa gõ ở màn đăng nhập đi qua `extra`, không lên URL.
+      builder: (_, state) => ForgotPasswordPage(
+        initialEmail: state.extra is String ? state.extra! as String : null,
+      ),
     ),
   ];
 }

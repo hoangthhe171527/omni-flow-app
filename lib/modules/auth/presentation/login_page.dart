@@ -1,8 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
@@ -10,9 +11,10 @@ import '../application/login_controller.dart';
 import '../auth_module.dart';
 import 'widgets/auth_widgets.dart';
 
-/// Màn đăng nhập (`#s-auth-login`): cụm `BrandAnchor` ôm `OmniBrandMark(64)` +
-/// `OmniWordmark`, thẻ nhóm 2 ô nhập xếp chồng, nút chính xanh đặc, Google vector
-/// 4 màu và liên kết tạo tài khoản ở chân màn.
+/// Màn đăng nhập (artifact "Màn xác thực" duyệt 26/11): logo trần 56 neo cho
+/// màn mở app bay về, tiêu đề "Đăng nhập Viomni", Google lên đầu, rồi hai ô
+/// rời có nhãn ("Quên?" cùng hàng nhãn mật khẩu), nút chính xanh đặc; chân màn
+/// là "Chưa có tài khoản? Đăng ký" và Chính sách bảo mật.
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
 
@@ -23,8 +25,12 @@ class LoginPage extends ConsumerStatefulWidget {
 class _LoginPageState extends ConsumerState<LoginPage>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
+  final _submitKey = GlobalKey();
   final _email = TextEditingController();
   final _password = TextEditingController();
+  final _emailFocus = FocusNode();
+  final _passwordFocus = FocusNode();
+  Timer? _revealTimer;
   bool _obscure = true;
 
   /// Cú rung 400ms của ô lỗi.
@@ -34,11 +40,46 @@ class _LoginPageState extends ConsumerState<LoginPage>
   );
 
   @override
+  void initState() {
+    super.initState();
+    _emailFocus.addListener(_revealSubmit);
+    _passwordFocus.addListener(_revealSubmit);
+  }
+
+  @override
   void dispose() {
+    _revealTimer?.cancel();
+    _emailFocus.removeListener(_revealSubmit);
+    _passwordFocus.removeListener(_revealSubmit);
+    _emailFocus.dispose();
+    _passwordFocus.dispose();
     _shake.dispose();
     _email.dispose();
     _password.dispose();
     super.dispose();
+  }
+
+  bool get _typing => _emailFocus.hasFocus || _passwordFocus.hasFocus;
+
+  /// Đang gõ email hay mật khẩu thì nút Đăng nhập phải nằm ngay trên bàn phím,
+  /// không bị che: đợi bàn phím bật xong rồi cuộn tới nút (hai ô + nút vừa
+  /// khung nhìn còn lại).
+  void _revealSubmit() {
+    _revealTimer?.cancel();
+    if (!_typing) return;
+    final duration = OmniMotion.enabled(context)
+        ? OmniDuration.base
+        : Duration.zero;
+    _revealTimer = Timer(OmniDuration.slow, () {
+      final target = _submitKey.currentContext;
+      if (!mounted || target == null || !_typing) return;
+      Scrollable.ensureVisible(
+        target,
+        alignment: 1,
+        duration: duration,
+        curve: OmniCurves.standard,
+      );
+    });
   }
 
   void _shakeIfAllowed() {
@@ -73,16 +114,33 @@ class _LoginPageState extends ConsumerState<LoginPage>
     await ref.read(loginControllerProvider.notifier).submitWithGoogle();
   }
 
+  /// Sang Quên mật khẩu mang theo email vừa gõ, khỏi gõ lại.
+  void _openForgot() {
+    final email = _email.text.trim();
+    context.pushNamed(AuthModule.forgot, extra: email.isEmpty ? null : email);
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.listen(loginControllerProvider.select((s) => s.error), (prev, next) {
       if (next != null && next != prev) _shakeIfAllowed();
     });
     final state = ref.watch(loginControllerProvider);
-    final scheme = Theme.of(context).colorScheme;
+    // Lỗi chỉ hiện MỘT chỗ: dưới ô khi server chỉ ra ô, không thì hộp chung.
+    final generalError = state.fieldErrors.isEmpty ? state.error : null;
 
     return AuthScaffold(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+      footer: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AuthSwitchLink(
+            prompt: 'Chưa có tài khoản?',
+            action: 'Đăng ký',
+            onTap: () => context.pushNamed(AuthModule.register),
+          ),
+          const AuthPrivacyLink(),
+        ],
+      ),
       child: AutofillGroup(
         child: Form(
           key: _formKey,
@@ -91,114 +149,76 @@ class _LoginPageState extends ConsumerState<LoginPage>
             children: [
               const AuthBrandHeader(
                 anchorBrand: true,
-                title: 'Chào mừng trở lại',
-                subtitle: 'Đăng nhập không gian làm việc của bạn',
+                title: 'Đăng nhập Viomni',
               ),
-              const SizedBox(height: 24),
-              AuthFieldGroup(
-                children: [
-                  AuthGroupField(
-                    controller: _email,
-                    label: 'Email làm việc',
-                    hint: 'ten@congty.vn',
-                    icon: LucideIcons.mail,
-                    shake: _shake,
-                    serverError: state.errorFor('email'),
-                    keyboardType: TextInputType.emailAddress,
-                    textInputAction: TextInputAction.next,
-                    autofillHints: const [
-                      AutofillHints.username,
-                      AutofillHints.email,
-                    ],
-                    validator: (value) {
-                      final text = value?.trim() ?? '';
-                      if (text.isEmpty) return 'Vui lòng nhập email';
-                      if (!text.contains('@')) return 'Email chưa hợp lệ';
-                      return null;
-                    },
-                  ),
-                  AuthGroupField(
-                    controller: _password,
-                    label: 'Mật khẩu',
-                    hint: 'Nhập mật khẩu',
-                    icon: LucideIcons.lock,
-                    shake: _shake,
-                    serverError: state.errorFor('password'),
-                    obscure: _obscure,
-                    textInputAction: TextInputAction.done,
-                    autofillHints: const [AutofillHints.password],
-                    onSubmitted: (_) => _submit(),
-                    validator: (value) =>
-                        (value ?? '').isEmpty ? 'Vui lòng nhập mật khẩu' : null,
-                    suffix: AuthPasswordToggle(
-                      obscure: _obscure,
-                      onToggle: () => setState(() => _obscure = !_obscure),
-                    ),
-                  ),
-                ],
-              ),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () => context.pushNamed(AuthModule.forgot),
-                  style: TextButton.styleFrom(
-                    textStyle: OmniType.caption.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  child: const Text('Quên mật khẩu?'),
-                ),
-              ),
-              if (state.error != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 2, bottom: 12),
-                  child: AuthErrorBox(message: state.error!),
-                ),
-              const SizedBox(height: 4),
-              AuthPrimaryButton(
-                label: 'Đăng nhập',
-                onPressed: state.submitting ? null : _submit,
-                busy: state.submittingMethod == LoginMethod.password,
-              ),
-              const SizedBox(height: 16),
-              const AuthDivider(),
-              const SizedBox(height: 16),
+              const SizedBox(height: 28),
               AuthGoogleButton(
                 label: 'Tiếp tục với Google',
                 onPressed: state.submitting ? null : _submitGoogle,
                 busy: state.submittingMethod == LoginMethod.google,
               ),
-              const SizedBox(height: 22),
-              Wrap(
-                alignment: WrapAlignment.center,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  Text(
-                    'Chưa có tài khoản? ',
-                    style: OmniType.bodySm.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                  InkWell(
-                    onTap: () => context.pushNamed(AuthModule.register),
-                    borderRadius: BorderRadius.circular(6),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 4,
-                        vertical: 10,
-                      ),
-                      child: Text(
-                        'Đăng ký',
-                        style: OmniType.bodySm.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: scheme.primary,
-                        ),
-                      ),
-                    ),
-                  ),
+              const AuthDivider(),
+              AuthField(
+                controller: _email,
+                focusNode: _emailFocus,
+                label: 'Email',
+                hint: 'ten@congty.vn',
+                shake: _shake,
+                serverError: state.errorFor('email'),
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+                autofillHints: const [
+                  AutofillHints.username,
+                  AutofillHints.email,
                 ],
+                validator: (value) {
+                  final text = value?.trim() ?? '';
+                  if (text.isEmpty) return 'Vui lòng nhập email';
+                  if (!text.contains('@')) return 'Email chưa hợp lệ';
+                  return null;
+                },
               ),
-              const AuthPrivacyLink(),
+              const SizedBox(height: 10),
+              AuthField(
+                controller: _password,
+                focusNode: _passwordFocus,
+                label: 'Mật khẩu',
+                hint: 'Nhập mật khẩu',
+                shake: _shake,
+                serverError: state.errorFor('password'),
+                obscure: _obscure,
+                textInputAction: TextInputAction.done,
+                autofillHints: const [AutofillHints.password],
+                onSubmitted: (_) => _submit(),
+                validator: (value) =>
+                    (value ?? '').isEmpty ? 'Vui lòng nhập mật khẩu' : null,
+                labelTrailing: AuthLabelLink(
+                  label: 'Quên?',
+                  semanticLabel: 'Quên mật khẩu',
+                  onTap: _openForgot,
+                ),
+                suffix: AuthPasswordToggle(
+                  obscure: _obscure,
+                  onToggle: () => setState(() => _obscure = !_obscure),
+                ),
+              ),
+              const SizedBox(height: 20),
+              if (generalError != null) ...[
+                AuthErrorBox(
+                  message: generalError,
+                  actionLabel: state.wrongCredentials
+                      ? 'Đặt lại mật khẩu'
+                      : null,
+                  onAction: _openForgot,
+                ),
+                const SizedBox(height: 14),
+              ],
+              AuthPrimaryButton(
+                key: _submitKey,
+                label: 'Đăng nhập',
+                onPressed: state.submitting ? null : _submit,
+                busy: state.submittingMethod == LoginMethod.password,
+              ),
             ],
           ),
         ),
