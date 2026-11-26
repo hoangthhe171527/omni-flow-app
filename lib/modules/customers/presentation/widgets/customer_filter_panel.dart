@@ -13,17 +13,14 @@ class CustomerSearchRow extends ConsumerWidget implements PreferredSizeWidget {
   const CustomerSearchRow({
     super.key,
     required this.filtersOpen,
-    this.onToggleFilters,
-    this.onOpenFilters,
+    required this.onOpenFilters,
     this.trailing = const [],
-  }) : assert(onToggleFilters != null || onOpenFilters != null);
+  });
 
   final bool filtersOpen;
 
-  /// Callback cũ vẫn được giữ cho các màn độc lập. Tab Khách truyền
-  /// [onOpenFilters] để menu có thể neo chính xác vào nút.
-  final VoidCallback? onToggleFilters;
-  final ValueChanged<Rect>? onOpenFilters;
+  /// Nhận khung của nút lọc để menu lọc neo đúng vào nút.
+  final ValueChanged<Rect> onOpenFilters;
   final List<Widget> trailing;
 
   @override
@@ -51,14 +48,9 @@ class CustomerSearchRow extends ConsumerWidget implements PreferredSizeWidget {
                 count: count,
                 onTap: () {
                   HapticFeedback.selectionClick();
-                  final anchored = onOpenFilters;
-                  if (anchored == null) {
-                    onToggleFilters?.call();
-                    return;
-                  }
                   final box = buttonContext.findRenderObject() as RenderBox?;
                   if (box == null || !box.hasSize) return;
-                  anchored(box.localToGlobal(Offset.zero) & box.size);
+                  onOpenFilters(box.localToGlobal(Offset.zero) & box.size);
                 },
               ),
             ),
