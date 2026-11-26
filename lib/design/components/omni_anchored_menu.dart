@@ -1,10 +1,8 @@
 import 'dart:math' as math;
-import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 
 import '../platform/omni_motion_scope.dart';
-import '../platform/omni_performance.dart';
 import '../tokens/tokens.dart';
 import 'omni_motion_widgets.dart';
 
@@ -106,12 +104,12 @@ class _OmniAnchoredMenuRoute<T> extends PopupRoute<T> {
       ),
     );
     final pop = CurvedAnimation(parent: animation, curve: _popCurve);
-    // Màn sau mờ hẳn như menu ngữ cảnh iOS (viomni-apple-uiux.html `.veil2`):
-    // mắt chỉ còn bám vào menu. Tương phản cao: chỉ phủ màu, không nhoè.
+    // Màn sau chỉ tối đi, KHÔNG nhoè (bớt kính mờ 26/11/2026): vẫn thấy ngữ
+    // cảnh, mắt bám vào menu nhờ nền đặc + bóng.
     final scrim = OmniColors.byBrightness(
       context,
-      OmniColors.ink.withValues(alpha: .12),
-      Colors.black.withValues(alpha: .35),
+      OmniColors.ink.withValues(alpha: .16),
+      Colors.black.withValues(alpha: .45),
     );
 
     return Stack(
@@ -162,14 +160,7 @@ class _OmniAnchoredMenuRoute<T> extends PopupRoute<T> {
   ) {
     final blurred = FadeTransition(
       opacity: fade,
-      // Lớp phủ toàn màn: chỉ làm mờ ở bậc hiệu năng đầy đủ.
-      child: !OmniPerformance.scrimBlur(context)
-          ? ColoredBox(color: scrim)
-          : BackdropFilter(
-              // Mờ vừa (người dùng 2026-11-08: 18 quá mờ, mất ngữ cảnh).
-              filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-              child: ColoredBox(color: scrim),
-            ),
+      child: ColoredBox(color: scrim),
     );
     if (!dismissOnOutsideTap) {
       return ExcludeSemantics(child: AbsorbPointer(child: blurred));
@@ -209,26 +200,21 @@ class _MenuSurface extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
     final solid = MediaQuery.highContrastOf(context);
-    final noBlur = OmniPerformance.solidGlass(context);
-    // Viên kính rời bo 22 (`.pop.glass`): nền thẻ ~78% + nhoè 22 + viền sáng
-    // 1px. Đậm hơn thanh tab vì chữ menu phải đọc được trên mọi nội dung.
-    // Bậc hiệu năng tối giản: không nhoè, nền gần đặc để chữ vẫn đọc rõ.
+    // Nền ĐẶC màu thẻ + viền mảnh + bóng (bớt kính mờ 26/11/2026): menu trong
+    // suốt để lộ cột, ảnh bìa, bong bóng chat qua chữ — khó đọc.
     const radius = BorderRadius.all(Radius.circular(16));
-    final fill = solid
-        ? scheme.surface
-        : noBlur
-        ? scheme.surface.withValues(alpha: .96)
-        : scheme.surface.withValues(alpha: dark ? .72 : .78);
-    final sigma = OmniPerformance.glassSigma(context);
+    final fill = scheme.surface;
 
     final surface = Material(
       color: fill,
       shape: RoundedRectangleBorder(
         borderRadius: radius,
         side: BorderSide(
-          color: dark
-              ? Colors.white.withValues(alpha: .10)
-              : Colors.white.withValues(alpha: .70),
+          color: solid
+              ? scheme.outline
+              : dark
+              ? Colors.white.withValues(alpha: .08)
+              : OmniColors.ink.withValues(alpha: .06),
         ),
       ),
       clipBehavior: Clip.antiAlias,
@@ -257,31 +243,10 @@ class _MenuSurface extends StatelessWidget {
           ),
         ],
       ),
-      child: solid || noBlur
-          ? surface
-          : ClipRRect(
-              borderRadius: radius,
-              child: BackdropFilter(
-                filter: OmniPerformance.saturate(context)
-                    ? ImageFilter.compose(
-                        outer: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
-                        inner: const ColorFilter.matrix(_saturate),
-                      )
-                    : ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
-                child: surface,
-              ),
-            ),
+      child: surface,
     );
   }
 }
-
-/// Bão hoà 1.8 như `saturate(180%)` của kính CSS.
-const List<double> _saturate = [
-  1.6302, -0.5722, -0.0580, 0, 0, //
-  -0.1698, 1.2278, -0.0580, 0, 0, //
-  -0.1698, -0.5722, 1.7420, 0, 0, //
-  0, 0, 0, 1, 0,
-];
 
 /// Một dòng hành động trong [showOmniAnchoredMenu].
 class OmniAnchoredMenuItem extends StatelessWidget {

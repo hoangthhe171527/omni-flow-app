@@ -161,6 +161,7 @@ class OmniBottomDock extends StatelessWidget {
       },
     );
     return OmniGlass(
+      opaque: true,
       radius: 26,
       padding: EdgeInsets.fromLTRB(hasText ? 16 : 10, 10, 10, 10),
       child: Column(

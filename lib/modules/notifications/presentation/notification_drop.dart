@@ -1,5 +1,3 @@
-import 'dart:ui' show ImageFilter;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -51,18 +49,11 @@ Future<void> showNotificationDrop(
       // hình để tránh compile lại shader blur); bậc thấp chỉ phủ scrim nhẹ.
       final scrim = FadeTransition(
         opacity: fade,
-        child: !OmniPerformance.scrimBlur(context)
-            ? ColoredBox(
-                color: Colors.black.withValues(alpha: 0.14),
-                child: const SizedBox.expand(),
-              )
-            : BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-                child: ColoredBox(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  child: const SizedBox.expand(),
-                ),
-              ),
+        // Chỉ tối nhẹ, không nhoè (bớt kính mờ 26/11/2026).
+        child: ColoredBox(
+          color: Colors.black.withValues(alpha: 0.14),
+          child: const SizedBox.expand(),
+        ),
       );
       final Widget panel = reduce
           ? FadeTransition(opacity: fade, child: child)
@@ -236,9 +227,9 @@ class _NotificationDropState extends ConsumerState<_NotificationDrop> {
               namesRoute: true,
               explicitChildNodes: true,
               label: 'Thông báo',
-              // Popover đang mở: GIỮ kính (spec phong cách iOS §3.1), bo 16
-              // như menu neo.
+              // Popover đang mở: nền đặc, bo 16 như menu neo.
               child: OmniGlass(
+                opaque: true,
                 key: const ValueKey('notification-drop'),
                 radius: 16,
                 child: DecoratedBox(

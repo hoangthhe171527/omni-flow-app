@@ -3,16 +3,16 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 
 import '../platform/omni_performance.dart';
+import '../tokens/omni_colors.dart';
 
-/// Viên kính nổi kiểu "liquid glass" (`liquid-glass-uiux.html`, duyệt 07/11).
+/// Lớp nổi của điều hướng: "kính phẳng" (bớt kính mờ, duyệt 26/11/2026 —
+/// `docs/superpowers/specs/phong-cach-ios/bot-kinh-mo.html`).
 ///
-/// Mờ 22 + tăng bão hoà màu nền phía sau, viền sáng 1px, vệt sáng ở nửa trên,
-/// bóng mềm. Từ 25/11/2026 (spec phong cách iOS) CHỈ dùng cho lớp điều hướng:
-/// thanh tab, thanh trên khi đã cuộn, menu bật lên, khay đáy. Nút, thẻ, sheet,
-/// chip, thanh chọn là nền đặc.
-///
-/// Flutter chưa có Liquid Glass thật của iOS 26 (khúc xạ) — đây là bản dựng
-/// lại chạy được cả Android. Chế độ tương phản cao: nền đặc, không mờ.
+/// Nền gần đặc .92 + nhoè nhẹ, viền mảnh, bóng mềm — không vệt sáng, không mép
+/// sáng, không tăng bão hoà màu (dáng "liquid glass" cũ bị chê nặng, mờ nhạt).
+/// Chỉ dùng cho thanh tab, thanh trên khi đã cuộn, thanh chọn nhiều, lớp nổi
+/// trên ảnh. Menu, popover, khay nút đáy dùng [opaque]: nền đặc, không nhoè.
+/// Chế độ tương phản cao: nền đặc, viền đậm.
 class OmniGlass extends StatelessWidget {
   const OmniGlass({
     super.key,
@@ -21,6 +21,7 @@ class OmniGlass extends StatelessWidget {
     this.padding = EdgeInsets.zero,
     this.blur = true,
     this.shadow = true,
+    this.opaque = false,
   });
 
   final Widget child;
@@ -35,6 +36,10 @@ class OmniGlass extends StatelessWidget {
   /// false: bỏ bóng đổ ngoài (vd nút tròn trong thanh trên có chiều cao cố
   /// định 48, bóng blur 16 dễ bị cắt thành khung mờ chữ nhật).
   final bool shadow;
+
+  /// true: nền đặc màu thẻ, không nhoè — menu, popover, khay nút đáy (nội
+  /// dung phía sau không được loang qua chữ).
+  final bool opaque;
 
   /// Màu mục đang chọn (phong cách iOS 25/11/2026): nền xanh nhạt của màu
   /// chính, không còn viên trắng mờ.
@@ -73,67 +78,32 @@ class OmniGlass extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
-    // `solid`: tương phản cao (trợ năng) — nền đặc + viền đậm, không vệt sáng.
-    // `noBlur`: thêm bậc hiệu năng tối giản / [blur] = false — bỏ làm mờ
-    // nhưng GIỮ dáng kính (vệt sáng, mép sáng) với nền mờ đặc hơn bù lại.
+    // `solid`: tương phản cao (trợ năng) — nền đặc + viền đậm.
+    // `noBlur`: [opaque], [blur] = false hoặc bậc hiệu năng tối giản.
     final solid = MediaQuery.highContrastOf(context);
-    final noBlur = !blur || OmniPerformance.solidGlass(context);
+    final noBlur = opaque || !blur || OmniPerformance.solidGlass(context);
     final shape = BorderRadius.circular(radius);
 
-    final fill = solid
+    final fill = solid || opaque
         ? scheme.surface
-        : noBlur
-        ? (dark
-              ? const Color(0xFF1C2A42).withValues(alpha: 0.86)
-              : Colors.white.withValues(alpha: 0.84))
-        // Token `glass` (Chuẩn Mobile UI, gói Viomni): nền .86 / .88 + mờ 8 —
-        // kính chỉ ở lớp nổi, phải đọc rõ chữ dưới nó mà không cần mờ đậm.
+        // Token `glass` (gói Viomni, 26/11): nền .92 — đọc rõ chữ dưới nó,
+        // nhoè nhẹ chỉ để mép nội dung cuộn qua không sắc.
         : dark
-        ? const Color(0xFF132033).withValues(alpha: 0.88)
-        : Colors.white.withValues(alpha: 0.86);
-    final edge = dark
-        ? Colors.white.withValues(alpha: 0.14)
-        : Colors.white.withValues(alpha: 0.85);
-    final highlight = dark
-        ? Colors.white.withValues(alpha: 0.16)
-        : Colors.white.withValues(alpha: 0.85);
+        ? const Color(0xFF132033).withValues(alpha: 0.92)
+        : Colors.white.withValues(alpha: 0.92);
+    final edge = solid
+        ? scheme.outline
+        : dark
+        ? Colors.white.withValues(alpha: 0.08)
+        : OmniColors.ink.withValues(alpha: 0.06);
 
     final body = DecoratedBox(
       decoration: BoxDecoration(
         color: fill,
         borderRadius: shape,
-        border: Border.all(color: solid ? scheme.outline : edge),
-        gradient: solid
-            ? null
-            : LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                stops: const [0, 0.45],
-                colors: [highlight, highlight.withValues(alpha: 0)],
-              ),
+        border: Border.all(color: edge),
       ),
-      // Đường sáng mảnh sát mép trên — "mép kính bắt sáng" như iOS.
-      position: DecorationPosition.background,
-      child: DecoratedBox(
-        position: DecorationPosition.foreground,
-        decoration: BoxDecoration(
-          borderRadius: shape,
-          gradient: solid
-              ? null
-              : LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  stops: const [0, 0.06, 0.94, 1],
-                  colors: [
-                    Colors.white.withValues(alpha: dark ? 0.28 : 0.9),
-                    Colors.white.withValues(alpha: 0),
-                    Colors.white.withValues(alpha: 0),
-                    Colors.black.withValues(alpha: dark ? 0.18 : 0.05),
-                  ],
-                ),
-        ),
-        child: Padding(padding: padding, child: child),
-      ),
+      child: Padding(padding: padding, child: child),
     );
 
     final sigma = OmniPerformance.glassSigma(context);
@@ -143,12 +113,7 @@ class OmniGlass extends StatelessWidget {
         : ClipRRect(
             borderRadius: shape,
             child: BackdropFilter(
-              filter: OmniPerformance.saturate(context)
-                  ? ImageFilter.compose(
-                      outer: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
-                      inner: const ColorFilter.matrix(_saturate180),
-                    )
-                  : ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+              filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
               child: body,
             ),
           );
@@ -160,12 +125,15 @@ class OmniGlass extends StatelessWidget {
           ? DecoratedBox(
               decoration: BoxDecoration(
                 borderRadius: shape,
-                // Bóng nhẹ: nền kính trong suốt nên bóng đậm lộ qua và làm kính xám.
+                // Bóng mềm: lớp nổi tách khỏi nội dung bằng bóng, không bằng
+                // nhoè. Nền đặc ([opaque]) cần bóng rõ hơn một chút.
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: dark ? 0.28 : 0.07),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
+                    color: Colors.black.withValues(
+                      alpha: dark ? 0.32 : (opaque ? 0.12 : 0.07),
+                    ),
+                    blurRadius: opaque ? 24 : 16,
+                    offset: Offset(0, opaque ? 8 : 4),
                   ),
                 ],
               ),
@@ -176,19 +144,12 @@ class OmniGlass extends StatelessWidget {
   }
 }
 
-/// Ma trận tăng bão hoà 1.8× (như `saturate(180%)` của CSS).
-const List<double> _saturate180 = <double>[
-  1.6302, -0.5722, -0.0580, 0, 0, //
-  -0.1698, 1.2278, -0.0580, 0, 0, //
-  -0.1698, -0.5722, 1.7420, 0, 0, //
-  0, 0, 0, 1, 0,
-];
-
-/// Dải mờ dần ở mép màn hình (scroll edge effect của iOS 26): nội dung chạy
-/// tới gần thanh trên / thanh tab thì nhoè và nhạt dần thay vì bị cắt sắc.
+/// Dải mờ dần ở mép màn hình: nội dung chạy tới gần thanh trên / thanh tab
+/// thì nhạt dần vào màu nền thay vì bị cắt sắc.
 ///
-/// Mờ tăng dần theo 3 dải (2 → 5 → 9) và phủ màu nền từ trong suốt tới 85% ở
-/// sát mép. Không nhận chạm.
+/// Chỉ dải màu từ trong suốt tới 85% ở sát mép — không nhoè (bớt kính mờ
+/// 26/11/2026; lớp nhoè đè nội dung cuộn phải vẽ lại mỗi khung). Không nhận
+/// chạm.
 class OmniScrollEdge extends StatelessWidget {
   const OmniScrollEdge({super.key, required this.atTop});
 
@@ -199,41 +160,20 @@ class OmniScrollEdge extends StatelessWidget {
   Widget build(BuildContext context) {
     final base = Theme.of(context).scaffoldBackgroundColor;
     final solid = MediaQuery.highContrastOf(context);
-    // MỘT lớp mờ σ6 ở nửa sát mép (trước: 3 dải σ2/5/9 = 3 BackdropFilter mỗi
-    // mép, 6 lớp mỗi màn tab đè nội dung cuộn). Dải màu chuyển dần phía trên
-    // vẫn tạo cảm giác "nhoè dần". Bậc hiệu năng thấp: chỉ dải màu.
-    final blurStrip = OmniPerformance.edgeBlur(context)
-        ? Expanded(
-            child: RepaintBoundary(
-              child: ClipRect(
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-                  child: const SizedBox.expand(),
-                ),
-              ),
-            ),
-          )
-        : const Expanded(child: SizedBox.expand());
-    final strips = [const Expanded(child: SizedBox.expand()), blurStrip];
-
     return IgnorePointer(
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Column(children: atTop ? strips.reversed.toList() : strips),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: atTop ? Alignment.bottomCenter : Alignment.topCenter,
-                end: atTop ? Alignment.topCenter : Alignment.bottomCenter,
-                colors: [
-                  base.withValues(alpha: 0),
-                  base.withValues(alpha: solid ? 1 : 0.85),
-                ],
-              ),
+      child: SizedBox.expand(
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: atTop ? Alignment.bottomCenter : Alignment.topCenter,
+              end: atTop ? Alignment.topCenter : Alignment.bottomCenter,
+              colors: [
+                base.withValues(alpha: 0),
+                base.withValues(alpha: solid ? 1 : 0.85),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }

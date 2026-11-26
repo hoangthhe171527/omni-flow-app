@@ -41,6 +41,13 @@ Hướng mới làm theo cách Apple dùng Liquid Glass trên iOS 26: kính ch�
 
 Lớp phủ phía sau sheet được mờ. Bản thân sheet thì đặc.
 
+**Bớt kính mờ (duyệt 26/11/2026, thay một phần bảng trên):** người dùng vẫn thấy menu và vài chỗ "nặng liquid kính mờ quá". So sánh ảnh thật: `phong-cach-ios/bot-kinh-mo.html`.
+
+- Menu neo, menu giữ tin, xem trước hội thoại, bảng thông báo, khay nút đáy (`OmniDockLayer`, khay Cơ hội): **nền thẻ đặc** + viền mảnh + bóng (`OmniGlass(opaque: true)`).
+- Lớp phủ toàn màn sau menu / popover / ô tìm: chỉ tối đi, **không nhoè**.
+- Kính còn lại (thanh tab, thanh trên khi cuộn, thanh chọn nhiều, nút trên ảnh bìa) là **kính phẳng**: nền .92, nhoè 8, viền mảnh; bỏ vệt sáng, mép sáng, tăng bão hoà.
+- Mép cuộn (`OmniScrollEdge`): chỉ dải màu, không nhoè.
+
 ### 3.2 Thứ bậc nút
 
 | Bậc | Nền | Chữ | Dùng cho |
@@ -58,7 +65,7 @@ Nút cao 44–52, dáng viên thuốc. Nhấn: thu nhỏ 0.97 trong 120ms. Khôn
 - **Thanh tab:** viên kính nổi, cách mép trái/phải 16, cách đáy 26, cao 66. 5 icon cỡ 26, cách đều. Mục chọn: icon xanh, nét đậm hơn, nền ô tròn 52×46 xanh nhạt. Huy hiệu số giữ nguyên.
 - **Mép cuộn:** nội dung mờ dần vào màu nền ở 118pt cuối màn, phía dưới thanh tab.
 - **Nút +:** tròn 56, cách phải 20, nằm trên thanh tab. Bóng xanh mảnh. **Khe chưa chốt:** artifact vẽ 12; code hiện `OmniFabLayer.gap = 32` (ghim bởi `fab_clearance_test.dart`) vì ngày 12/11 khe 20 bị chê "sát" (dải mờ + bóng kính chồng nhau). Đợt 2 chụp thật khe 12/20/32 với nút đặc mới rồi chốt; chưa chốt thì giữ 32.
-- **Khay đáy** (`OmniDockLayer`, chứa nút Nhận hàng, Bán…): là lớp nổi → giữ kính cho khay, nút trong khay là nút chính đặc.
+- **Khay đáy** (`OmniDockLayer`, chứa nút Nhận hàng, Bán…): lớp nổi nền đặc + bóng (26/11), nút trong khay là nút chính đặc.
 - **Màn gốc của tab:** hàng đầu cao 48 gồm tên màn (28/800) bên trái, chuông là icon trơn màu mực bên phải. Chấm đỏ báo tin mới giữ nguyên.
 - **Màn con:** thanh trên cao 44 gồm ‹ xanh trơn bên trái; giữa là tiêu đề (17/700) kèm dòng phụ (12/500, vd mã đơn). Không còn vòng kính quanh ‹.
 

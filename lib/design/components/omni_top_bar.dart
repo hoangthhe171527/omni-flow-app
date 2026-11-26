@@ -1,5 +1,3 @@
-import 'dart:ui' show ImageFilter;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,7 +5,6 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/nav/search_mode.dart';
 import '../platform/omni_motion_scope.dart';
-import '../platform/omni_performance.dart';
 import '../platform/omni_platform.dart';
 import '../tokens/tokens.dart';
 import 'brand_anchor.dart';
@@ -523,16 +520,10 @@ class _SearchVeil extends StatelessWidget {
               button: true,
               label: 'Thoát tìm kiếm',
               child: ClipRect(
-                child: solid
-                    ? ColoredBox(color: base)
-                    // Làm mờ toàn màn là lớp đắt nhất: bậc hiệu năng thấp chỉ
-                    // phủ màu nền gần đặc.
-                    : !OmniPerformance.scrimBlur(context)
-                    ? ColoredBox(color: base.withValues(alpha: 0.45))
-                    : BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-                        child: ColoredBox(color: base.withValues(alpha: 0.22)),
-                      ),
+                // Phủ màu nền, không nhoè (bớt kính mờ 26/11/2026).
+                child: ColoredBox(
+                  color: solid ? base : base.withValues(alpha: 0.45),
+                ),
               ),
             ),
           ),
