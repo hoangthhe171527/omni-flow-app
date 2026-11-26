@@ -44,6 +44,10 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
   _Seg _seg = _Seg.all;
   final _open = <String>{};
   bool _payOpen = false;
+
+  /// Thanh chọn Cây · Chi phí · Thanh toán (Chuẩn Mobile UI, Đợt C): lô dài
+  /// 80+ nhóm chia ba phần, mỗi lần một phần. Chỉ khi có quyền tiền.
+  int _tab = 0;
   bool _busy = false;
 
   /// "Trả nhiều khoản": đang chọn khoản dự kiến để ghi đã trả một lần.
@@ -332,43 +336,61 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
                         : OmniDockLayer.listBottom(context),
                   ),
                   children: [
-                    ..._summary(lot, perms, units),
-                    if (perms.write && lot.status != LotStatus.received) ...[
+                    ..._summary(lot, perms, units, part: 0),
+                    if (perms.pay) ...[
                       const SizedBox(height: OmniGroupSection.gap),
-                      OmniGroupSection(
-                        children: [
-                          OmniGroupRow(
-                            key: const ValueKey('inv-lot-paste'),
-                            icon: LucideIcons.clipboardPaste,
-                            accent: true,
-                            title: 'Dán packing list',
-                            subtitle: lot.units == 0
-                                ? 'Copy các dòng từ Excel'
-                                : null,
-                            onTap: () => openPasteSheet(context, lot: lot),
-                          ),
-                          OmniGroupRow.add(
-                            key: const ValueKey('inv-lot-add-unit'),
-                            title: 'Thêm cây',
-                            onTap: () => openAddUnitSheet(
-                              context,
-                              lot: lot,
-                              known: [
-                                ...units,
-                                // Tồn kho đang mở (nếu có) cho thêm gợi ý.
-                                if (ref.exists(stockProvider))
-                                  ...?ref
-                                      .read(stockProvider)
-                                      .valueOrNull
-                                      ?.items,
-                              ],
-                            ),
-                          ),
-                        ],
+                      OmniSegmented(
+                        key: const ValueKey('inv-lot-tabs'),
+                        labels: const ['Cây', 'Chi phí', 'Thanh toán'],
+                        counts: [units.length, null, null],
+                        index: _tab,
+                        onChanged: (i) => setState(() {
+                          _tab = i;
+                          // Phần Thanh toán: mở sẵn danh sách khoản trả.
+                          if (i == 2) _payOpen = true;
+                        }),
                       ),
                     ],
-                    const SizedBox(height: OmniGroupSection.gap),
-                    ..._unitList(lot, units, unitsAsync, perms),
+                    if (perms.pay && _tab != 0) ...[
+                      ..._summary(lot, perms, units, part: _tab),
+                    ] else ...[
+                      if (perms.write && lot.status != LotStatus.received) ...[
+                        const SizedBox(height: OmniGroupSection.gap),
+                        OmniGroupSection(
+                          children: [
+                            OmniGroupRow(
+                              key: const ValueKey('inv-lot-paste'),
+                              icon: LucideIcons.clipboardPaste,
+                              accent: true,
+                              title: 'Dán packing list',
+                              subtitle: lot.units == 0
+                                  ? 'Copy các dòng từ Excel'
+                                  : null,
+                              onTap: () => openPasteSheet(context, lot: lot),
+                            ),
+                            OmniGroupRow.add(
+                              key: const ValueKey('inv-lot-add-unit'),
+                              title: 'Thêm cây',
+                              onTap: () => openAddUnitSheet(
+                                context,
+                                lot: lot,
+                                known: [
+                                  ...units,
+                                  // Tồn kho đang mở (nếu có) cho thêm gợi ý.
+                                  if (ref.exists(stockProvider))
+                                    ...?ref
+                                        .read(stockProvider)
+                                        .valueOrNull
+                                        ?.items,
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                      const SizedBox(height: OmniGroupSection.gap),
+                      ..._unitList(lot, units, unitsAsync, perms),
+                    ],
                   ],
                 ),
               ),
@@ -379,8 +401,9 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
   List<Widget> _summary(
     Lot lot,
     InventoryPerms perms,
-    List<InventoryUnit> units,
-  ) {
+    List<InventoryUnit> units, {
+    required int part,
+  }) {
     final supplierId = lot.supplierId;
     final head = OmniGroupSection(
       children: [
@@ -492,13 +515,21 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
     final costs = lot.costs ?? const <LotCost>[];
     final paid = costs.where((c) => c.status == CostStatus.paid).length;
     final selecting = _pmsOn && _payOpen;
+    // part 0: đầu lô · 1: Chi phí (tiền, ¥) · 2: Thanh toán (khoản đòi, khoản trả).
+    if (part == 0) return [head];
+    if (part == 1) {
+      return [
+        if (money.isNotEmpty) ...[
+          const SizedBox(height: OmniGroupSection.gap),
+          OmniGroupSection(
+            key: const ValueKey('inv-lot-money'),
+            children: money,
+          ),
+        ],
+        ..._yen(lot, perms),
+      ];
+    }
     return [
-      head,
-      if (money.isNotEmpty) ...[
-        const SizedBox(height: OmniGroupSection.gap),
-        OmniGroupSection(key: const ValueKey('inv-lot-money'), children: money),
-      ],
-      ..._yen(lot, perms),
       ..._claims(lot, units, perms),
       if (perms.pay) ...[
         const SizedBox(height: OmniGroupSection.gap),
