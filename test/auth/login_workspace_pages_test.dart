@@ -90,7 +90,7 @@ void main() {
       expect(find.widgetWithText(FilledButton, 'Đăng nhập'), findsOneWidget);
       expect(find.text('Tiếp tục với Google'), findsOneWidget);
       expect(find.text('hoặc'), findsOneWidget);
-      expect(find.text('Quên?'), findsOneWidget);
+      expect(find.text('Quên mật khẩu?'), findsOneWidget);
       expect(find.text('Đăng ký'), findsOneWidget);
       expect(find.text('Chính sách bảo mật'), findsOneWidget);
       expect(find.text('Quyền riêng tư'), findsNothing);
@@ -250,7 +250,7 @@ void main() {
 
       router.pop();
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Quên?'));
+      await tester.tap(find.text('Quên mật khẩu?'));
       await tester.pumpAndSettle();
       expect(find.text('trang-quen:null'), findsOneWidget);
 
@@ -258,7 +258,7 @@ void main() {
       router.pop();
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField).first, ' lan@acme.vn ');
-      await tester.tap(find.text('Quên?'));
+      await tester.tap(find.text('Quên mật khẩu?'));
       await tester.pumpAndSettle();
       expect(find.text('trang-quen:lan@acme.vn'), findsOneWidget);
     });
