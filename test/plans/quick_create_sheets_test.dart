@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:omni_app/core/error/app_exception.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/plans/application/plans_providers.dart';
+import 'package:omni_app/modules/plans/data/plan_cover_upload.dart';
 import 'package:omni_app/modules/plans/data/plans_api.dart';
 import 'package:omni_app/modules/plans/domain/plan.dart';
 import 'package:omni_app/modules/plans/domain/team.dart';
@@ -15,11 +17,13 @@ import 'package:omni_app/modules/team/domain/team_member.dart';
 /// hoạch đầu tiên.
 void main() {
   late _RecordingApi api;
+  late _RecordingCoverApi coverApi;
   QuickCreated? result;
   var resolved = false;
 
   setUp(() {
     api = _RecordingApi();
+    coverApi = _RecordingCoverApi();
     result = null;
     resolved = false;
   });
@@ -36,6 +40,7 @@ void main() {
   }) => ProviderScope(
     overrides: [
       plansApiProvider.overrideWithValue(api),
+      planCoverApiProvider.overrideWithValue(coverApi),
       teamsWithPlansProvider.overrideWith((ref) async => groups),
       teamMembersProvider.overrideWith(
         (ref) async => const [
@@ -196,6 +201,91 @@ void main() {
     expect(api.createPlanCalls, 0);
     expect(result, (id: 't1', name: 'Tổ sơn', isTeam: true));
   });
+
+  FilledButton saveButton(WidgetTester t) =>
+      t.widget<FilledButton>(find.byKey(const Key('quick-plan-save')));
+
+  testWidgets('kế hoạch: tên chỉ có khoảng trắng không tính là có tên', (
+    t,
+  ) async {
+    phone(t);
+    await t.pumpWidget(host(showQuickCreatePlan));
+    await t.tap(find.text('mở'));
+    await t.pumpAndSettle();
+
+    await t.enterText(find.byKey(const Key('quick-plan-name')), '   ');
+    await t.pump();
+    expect(saveButton(t).onPressed, isNull);
+    await t.testTextInput.receiveAction(TextInputAction.done);
+    await t.pumpAndSettle();
+    expect(api.createPlanCalls, 0);
+  });
+
+  // Hai nhóm cuối là chỗ việc được tuyên bố xong: vào đó thì việc con phải
+  // xong hết. Chỉ đặt cho bộ điền sẵn của kế hoạch mới.
+  testWidgets('kế hoạch: gửi cổng cho Chờ duyệt và Xong', (t) async {
+    phone(t);
+    await t.pumpWidget(host(showQuickCreatePlan));
+    await t.tap(find.text('mở'));
+    await t.pumpAndSettle();
+
+    await t.enterText(find.byKey(const Key('quick-plan-name')), 'Đàn cơ');
+    await t.pump();
+    await t.tap(find.byKey(const Key('quick-plan-save')));
+    await t.pumpAndSettle();
+
+    expect(api.createdGated, {'Chờ duyệt', 'Xong'});
+  });
+
+  Future<QuickCreated?> withCover(BuildContext c) =>
+      showQuickCreatePlan(c, pickImage: () async => '/tmp/cover.jpg');
+
+  testWidgets('kế hoạch: tạo xong tải ảnh nền qua endpoint riêng', (t) async {
+    phone(t);
+    await t.pumpWidget(host(withCover));
+    await t.tap(find.text('mở'));
+    await t.pumpAndSettle();
+
+    await t.enterText(find.byKey(const Key('quick-plan-name')), 'Có ảnh');
+    await t.ensureVisible(find.byKey(const Key('quick-plan-cover')));
+    await t.tap(find.byKey(const Key('quick-plan-cover')));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('quick-plan-save')));
+    await t.pumpAndSettle();
+
+    expect(api.createPlanCalls, 1);
+    expect(coverApi.uploads, [('p1', '/tmp/cover.jpg')]);
+    expect(result, (id: 'p1', name: 'Có ảnh', isTeam: false));
+  });
+
+  testWidgets('kế hoạch: ảnh lỗi, bấm lại chỉ tải ảnh, không tạo trùng', (
+    t,
+  ) async {
+    phone(t);
+    coverApi.failFirstUpload = true;
+    await t.pumpWidget(host(withCover));
+    await t.tap(find.text('mở'));
+    await t.pumpAndSettle();
+
+    await t.enterText(find.byKey(const Key('quick-plan-name')), 'Thử lại');
+    await t.ensureVisible(find.byKey(const Key('quick-plan-cover')));
+    await t.tap(find.byKey(const Key('quick-plan-cover')));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('quick-plan-save')));
+    await t.pumpAndSettle();
+
+    expect(api.createPlanCalls, 1);
+    expect(find.text('Thử tải ảnh lại'), findsOneWidget);
+    expect(resolved, isFalse);
+
+    await t.tap(find.byKey(const Key('quick-plan-save')));
+    await t.pumpAndSettle();
+
+    expect(api.createPlanCalls, 1);
+    expect(coverApi.attempts, 2);
+    expect(coverApi.uploads, [('p1', '/tmp/cover.jpg')]);
+    expect(resolved, isTrue);
+  });
 }
 
 /// Ghi lại lần gọi tạo, không đi mạng.
@@ -206,6 +296,7 @@ class _RecordingApi implements PlansApi {
   String? createdName;
   String? createdTeamId;
   List<String>? createdSections;
+  Set<String>? createdGated;
   int createPlanCalls = 0;
   String? createdTeamName;
   Set<String>? createdMemberIds;
@@ -222,6 +313,7 @@ class _RecordingApi implements PlansApi {
     createdName = name;
     createdTeamId = teamId;
     createdSections = sectionNames;
+    createdGated = gatedSectionNames;
     return Plan.fromJson({'id': 'p1', 'name': name});
   }
 
@@ -235,4 +327,23 @@ class _RecordingApi implements PlansApi {
     createdMemberIds = memberIds;
     return Team.fromJson({'id': 't1', 'name': name});
   }
+}
+
+class _RecordingCoverApi implements PlanCoverApi {
+  final uploads = <(String, String)>[];
+  int attempts = 0;
+  bool failFirstUpload = false;
+
+  @override
+  Future<String> upload(String planId, String filePath) async {
+    attempts++;
+    if (failFirstUpload && attempts == 1) {
+      throw const NetworkException('Mất kết nối');
+    }
+    uploads.add((planId, filePath));
+    return '/api/v1/projects/media/tenant/new.jpg';
+  }
+
+  @override
+  Future<void> remove(String planId) async {}
 }

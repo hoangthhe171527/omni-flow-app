@@ -36,8 +36,6 @@ import 'package:omni_app/modules/plans/domain/feed_entry.dart';
 import 'package:omni_app/modules/plans/domain/plan.dart';
 import 'package:omni_app/modules/plans/domain/team.dart';
 import 'package:omni_app/modules/plans/domain/workshop_kpi.dart';
-import 'package:omni_app/modules/plans/presentation/create_plan_page.dart';
-import 'package:omni_app/modules/plans/presentation/create_team_page.dart';
 import 'package:omni_app/modules/plans/presentation/plan_board_page.dart';
 import 'package:omni_app/modules/plans/presentation/teams_page.dart';
 import 'package:omni_app/modules/plans/presentation/timeline_page.dart';
@@ -611,14 +609,6 @@ void main() {
       ),
       '05b-bang-du-an-nen',
     ),
-  );
-  testWidgets(
-    '06 tao du an',
-    (t) => shoot(t, app(const CreatePlanPage(teamId: 't1')), '06-tao-du-an'),
-  );
-  testWidgets(
-    '07 tao team',
-    (t) => shoot(t, app(const CreateTeamPage()), '07-tao-team'),
   );
   testWidgets(
     '08 thong bao',

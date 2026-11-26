@@ -165,9 +165,9 @@ void main() {
   ProviderContainer containerOf(WidgetTester tester) =>
       ProviderScope.containerOf(tester.element(find.byType(InboxPage)));
 
-  // Số trên nút đếm cả tài khoản kênh và nhãn; panel phải xoá được mọi thứ
+  // Số trên nút đếm cả tài khoản kênh và nhãn; menu phải xoá được mọi thứ
   // nó đếm, không thì huy hiệu kẹt mãi một con số không gỡ được.
-  testWidgets('Xoá bộ lọc trong panel đưa mọi mục được đếm về mặc định', (
+  testWidgets('Đặt lại trong menu đưa mọi mục được đếm về mặc định', (
     tester,
   ) async {
     final semantics = tester.ensureSemantics();
@@ -224,8 +224,8 @@ void main() {
     await closePage(tester);
   });
 
-  /// Hàng tìm + panel mở dựng trần, không qua InboxPage: chỉ soi màu của
-  /// chính thanh lọc.
+  /// Hàng tìm + menu lọc dựng trần, không qua InboxPage: chỉ soi màu của
+  /// chính thanh lọc và menu nó mở.
   Widget barHost(ThemeData theme) => ProviderScope(
     overrides: [
       inboxApiProvider.overrideWithValue(api),
@@ -241,22 +241,41 @@ void main() {
     child: MaterialApp(
       theme: theme,
       home: Scaffold(
-        body: Column(
-          children: [
-            InboxSearchRow(filtersOpen: false, onToggleFilters: () {}),
-            const InboxFilterPanel(open: true),
-          ],
+        body: Builder(
+          builder: (context) => InboxSearchRow(
+            filtersOpen: false,
+            onOpenFilters: (anchor) =>
+                showInboxFilterMenu(context: context, anchor: anchor),
+          ),
         ),
       ),
     ),
   );
+
+  /// Dựng thanh lọc, bật một bộ lọc (để huy hiệu và chip chọn cùng hiện) rồi
+  /// mở menu.
+  Future<void> openBarMenu(WidgetTester tester, ThemeData theme) async {
+    await tester.pumpWidget(barHost(theme));
+    await tester.pumpAndSettle();
+    ProviderScope.containerOf(
+      tester.element(find.byType(InboxSearchRow)),
+    ).read(inboxFilterProvider.notifier).setQuick(InboxQuickFilter.urgent);
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsLabel('Bộ lọc'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('inbox-filter-menu')), findsOneWidget);
+  }
 
   /// Mọi màu nền / viền / bóng mà thanh lọc tự vẽ.
   List<Color> surfaceColors(WidgetTester tester, {Finder? within}) {
     final roots =
         within ??
         find.byWidgetPredicate(
-          (w) => w is InboxSearchRow || w is InboxFilterPanel,
+          (w) =>
+              w is InboxSearchRow ||
+              w.key == const Key('inbox-filter-section-scope') ||
+              w.key == const Key('inbox-filter-section-channel') ||
+              w.key == const Key('inbox-filter-section-state'),
         );
     final colors = <Color>[];
     void decoration(Decoration? d) {
@@ -298,16 +317,11 @@ void main() {
     return colors;
   }
 
-  testWidgets('giao diện tối: hàng tìm và panel mở không có nền trắng', (
+  testWidgets('giao diện tối: hàng tìm và menu lọc không có nền trắng', (
     tester,
   ) async {
-    await tester.pumpWidget(barHost(OmniTheme.dark(TargetPlatform.android)));
-    await tester.pumpAndSettle();
-    // Bật một bộ lọc để huy hiệu đếm (viền) và chip được chọn cùng hiện.
-    ProviderScope.containerOf(
-      tester.element(find.byType(InboxSearchRow)),
-    ).read(inboxFilterProvider.notifier).setQuick(InboxQuickFilter.urgent);
-    await tester.pumpAndSettle();
+    final semantics = tester.ensureSemantics();
+    await openBarMenu(tester, OmniTheme.dark(TargetPlatform.android));
     expect(find.byKey(const Key('inbox-filter-count')), findsOneWidget);
 
     final colors = surfaceColors(tester);
@@ -322,6 +336,7 @@ void main() {
     expect(colors, isNot(contains(OmniColors.accent)));
     final field = tester.widget<TextField>(find.byType(TextField));
     expect(field.style!.color, OmniColors.darkForeground);
+    semantics.dispose();
   });
 
   testWidgets('giao diện tối: mặt phẳng của InboxPage không lọt màu sáng', (
@@ -342,12 +357,8 @@ void main() {
   });
 
   testWidgets('giao diện sáng dùng đúng màu hệ thống', (tester) async {
-    await tester.pumpWidget(barHost(OmniTheme.light(TargetPlatform.android)));
-    await tester.pumpAndSettle();
-    ProviderScope.containerOf(
-      tester.element(find.byType(InboxSearchRow)),
-    ).read(inboxFilterProvider.notifier).setQuick(InboxQuickFilter.urgent);
-    await tester.pumpAndSettle();
+    final semantics = tester.ensureSemantics();
+    await openBarMenu(tester, OmniTheme.light(TargetPlatform.android));
     final colors = surfaceColors(tester);
     // Liquid: chip kính (chọn = trắng mờ) thay nền xanh nhạt / viền primary.
     expect(colors, contains(Colors.white));
@@ -356,6 +367,7 @@ void main() {
     expect(colors, isNot(contains(const Color(0x1F0B1A33))));
     final field = tester.widget<TextField>(find.byType(TextField));
     expect(field.style!.color, OmniColors.ink);
+    semantics.dispose();
   });
   group('chip "Đã chặn" (Hộp thư mobile)', () {
     Future<void> openPanel(WidgetTester tester, Set<String> permissions) async {

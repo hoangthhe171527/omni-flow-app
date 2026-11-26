@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../design/components/components.dart';
-import '../../../../design/platform/omni_motion_scope.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../application/inbox_providers.dart';
 import '../../domain/inbox_filter.dart';
@@ -12,19 +11,17 @@ import '../inbox_page.dart';
 
 /// Hàng tìm kiếm của hộp thư: ô tìm và nút bộ lọc có huy hiệu đếm.
 ///
-/// Bộ lọc không còn là một dải chip luôn hiện; tab Hộp thư mở nó thành menu
-/// neo tại nút. [InboxFilterPanel] chỉ còn cho màn nhúng cũ tương thích.
+/// Bộ lọc không còn là một dải chip luôn hiện; nút mở nó thành menu neo tại
+/// nút ([showInboxFilterMenu]).
 class InboxSearchRow extends ConsumerWidget implements PreferredSizeWidget {
   const InboxSearchRow({
     super.key,
     required this.filtersOpen,
-    this.onToggleFilters,
-    this.onOpenFilters,
-  }) : assert(onToggleFilters != null || onOpenFilters != null);
+    required this.onOpenFilters,
+  });
 
   final bool filtersOpen;
-  final VoidCallback? onToggleFilters;
-  final ValueChanged<Rect>? onOpenFilters;
+  final ValueChanged<Rect> onOpenFilters;
 
   @override
   // Nằm trong viên kính của OmniTopBar: cao 44, lề ngang nhỏ.
@@ -49,14 +46,9 @@ class InboxSearchRow extends ConsumerWidget implements PreferredSizeWidget {
                 count: count,
                 onTap: () {
                   HapticFeedback.selectionClick();
-                  final anchored = onOpenFilters;
-                  if (anchored == null) {
-                    onToggleFilters?.call();
-                    return;
-                  }
                   final box = buttonContext.findRenderObject() as RenderBox?;
                   if (box == null || !box.hasSize) return;
-                  anchored(box.localToGlobal(Offset.zero) & box.size);
+                  onOpenFilters(box.localToGlobal(Offset.zero) & box.size);
                 },
               ),
             ),
@@ -188,7 +180,7 @@ Future<void> showInboxFilterMenu({
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       _InboxFilterMenuHeader(onClose: () => Navigator.of(menuContext).pop()),
-      const _PanelBody(inMenu: true),
+      const _PanelBody(),
     ],
   ),
 );
@@ -243,44 +235,6 @@ class _InboxFilterMenuHeader extends ConsumerWidget {
   }
 }
 
-/// Panel bộ lọc trượt xuống dưới header. Các lựa chọn được chia thành ba nhóm
-/// theo đúng mô hình người dùng: phạm vi hiển thị, kênh và tình trạng đặc biệt.
-///
-/// Đóng thì không dựng nội dung nên cao 0; mở/đóng chạy `AnimatedSize`, và
-/// "giảm chuyển động" của hệ điều hành đưa mọi thời lượng về 0.
-class InboxFilterPanel extends ConsumerWidget {
-  const InboxFilterPanel({super.key, required this.open});
-
-  final bool open;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Giảm chuyển động: dựng thẳng, không qua AnimatedSize. Thời lượng 0 vẫn
-    // chạy một lượt controller ngay trong lúc bố cục và RenderAnimatedSize
-    // ném lỗi "mutated in its own performLayout".
-    if (!OmniMotion.enabled(context)) {
-      return open ? const _PanelBody() : const SizedBox(width: double.infinity);
-    }
-
-    // Mở: trượt xuống 400ms và nội dung hiện dần 300ms. Đóng: nội dung gỡ ngay,
-    // chiều cao co lại theo AnimatedSize.
-    return AnimatedSize(
-      duration: const Duration(milliseconds: 400),
-      curve: OmniCurves.standard,
-      alignment: Alignment.topCenter,
-      child: open
-          ? TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: 1),
-              duration: const Duration(milliseconds: 300),
-              builder: (context, value, child) =>
-                  Opacity(opacity: value, child: child),
-              child: const _PanelBody(),
-            )
-          : const SizedBox(width: double.infinity),
-    );
-  }
-}
-
 /// Các lựa chọn "Hiển thị" của Hộp thư theo quyền xem người phụ trách.
 List<(InboxQuickFilter, String)> inboxQuickSegments(bool showsAssignee) => [
   (InboxQuickFilter.all, 'Tất cả'),
@@ -290,9 +244,7 @@ List<(InboxQuickFilter, String)> inboxQuickSegments(bool showsAssignee) => [
 ];
 
 class _PanelBody extends ConsumerWidget {
-  const _PanelBody({this.inMenu = false});
-
-  final bool inMenu;
+  const _PanelBody();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -312,16 +264,9 @@ class _PanelBody extends ConsumerWidget {
           channel,
     ];
 
-    final scheme = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.fromLTRB(16, inMenu ? 0 : 4, 16, 12),
-      decoration: inMenu
-          ? null
-          : BoxDecoration(
-              color: scheme.surface,
-              border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
-            ),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -395,19 +340,6 @@ class _PanelBody extends ConsumerWidget {
               ],
             ),
           ),
-          // Gỡ MỌI thứ huy hiệu đếm — cả tài khoản kênh và nhãn, vốn không có
-          // chip riêng trong panel. Menu đặt hành động này trên header để gọn;
-          // panel nhúng cũ vẫn giữ nó ở cuối.
-          if (!inMenu && filter.activeCount > 0)
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                key: const Key('inbox-filter-clear'),
-                onPressed: controller.clearFilters,
-                style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
-                child: const Text('Xoá bộ lọc'),
-              ),
-            ),
         ],
       ),
     );

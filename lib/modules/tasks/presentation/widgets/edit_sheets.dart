@@ -23,36 +23,6 @@ const kPriorities = <String, String>{
 String priorityLabel(String priority) =>
     kPriorities[priority == 'medium' ? 'med' : priority] ?? priority;
 
-Future<String?> showPrioritySheet({
-  required BuildContext context,
-  required String current,
-}) => showOmniSheet<String>(
-  context: context,
-  builder: (context) => OmniSheetBody(
-    semanticsLabel: 'Mức ưu tiên',
-    header: OmniSheetHeader(
-      title: 'Mức ưu tiên',
-      trailing: OmniSheetCloseButton(
-        onPressed: () => Navigator.of(context).maybePop(),
-      ),
-    ),
-    children: [
-      OmniGroupSection(
-        dividerIndent: 14,
-        children: [
-          for (final entry in kPriorities.entries)
-            OmniGroupRow(
-              title: entry.value,
-              selected: entry.key == (current == 'medium' ? 'med' : current),
-              chevron: false,
-              onTap: () => Navigator.of(context).pop(entry.key),
-            ),
-        ],
-      ),
-    ],
-  ),
-);
-
 /// Kết quả của bộ chọn hạn.
 ///
 /// Ba khả năng, và cả ba đều khác nhau: chọn một ngày, xoá hạn, hoặc đóng lại

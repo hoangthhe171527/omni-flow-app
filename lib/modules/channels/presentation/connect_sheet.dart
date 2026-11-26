@@ -6,17 +6,6 @@ import '../../../security/permissions/access_policy.dart';
 import '../domain/channel_permissions.dart';
 import '../domain/connectable_channel.dart';
 
-/// Chọn kênh muốn nối, hoặc null nếu người dùng đóng sheet.
-Future<Channel?> showConnectSheet(
-  BuildContext context, {
-  required AccessPolicy access,
-}) {
-  return showOmniSheet<Channel>(
-    context: context,
-    builder: (_) => _ConnectContent(access: access),
-  );
-}
-
 /// Menu nối kênh neo vào nút + của màn Kết nối kênh.
 Future<Channel?> showConnectMenu(
   BuildContext context, {
@@ -28,14 +17,13 @@ Future<Channel?> showConnectMenu(
   width: 344,
   menuKey: const Key('connect-channel-menu'),
   semanticsLabel: 'Chọn kênh kết nối',
-  builder: (_) => _ConnectContent(access: access, compact: true),
+  builder: (_) => _ConnectContent(access: access),
 );
 
 class _ConnectContent extends StatelessWidget {
-  const _ConnectContent({required this.access, this.compact = false});
+  const _ConnectContent({required this.access});
 
   final AccessPolicy access;
-  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -59,13 +47,6 @@ class _ConnectContent extends StatelessWidget {
           ],
         ),
     ];
-    if (!compact) {
-      return OmniSheetBody(
-        // Đầu sheet tự có nút ✕ tròn xám (spec phong cách iOS §3.4).
-        header: const OmniSheetHeader(title: 'Kết nối kênh mới'),
-        children: groups,
-      );
-    }
     return Padding(
       padding: const EdgeInsets.all(10),
       child: Column(
