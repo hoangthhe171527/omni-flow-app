@@ -29,17 +29,8 @@ class ExpensesPage extends ConsumerStatefulWidget {
 }
 
 class _ExpensesPageState extends ConsumerState<ExpensesPage> {
-  final TextEditingController _searchCtrl = TextEditingController();
-  final FocusNode _searchFocus = FocusNode();
   final GlobalKey _monthBtnKey = GlobalKey();
   final GlobalKey _sortBtnKey = GlobalKey();
-
-  @override
-  void dispose() {
-    _searchFocus.dispose();
-    _searchCtrl.dispose();
-    super.dispose();
-  }
 
   Future<void> _openMonthPickerMenu() async {
     final state = ref.read(financeLedgerProvider);
@@ -112,17 +103,6 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<String>(financeLedgerProvider.select((s) => s.searchQuery), (
-      _,
-      next,
-    ) {
-      if (_searchCtrl.text != next) {
-        _searchCtrl.value = TextEditingValue(
-          text: next,
-          selection: TextSelection.collapsed(offset: next.length),
-        );
-      }
-    });
     final state = ref.watch(financeLedgerProvider);
     final notifier = ref.read(financeLedgerProvider.notifier);
     final p = FinancePalette.of(context);
@@ -398,48 +378,21 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
       child: SizedBox(
         height: 44,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(10, 0, 2, 0),
+          padding: const EdgeInsets.fromLTRB(6, 0, 2, 0),
           child: Row(
             children: [
-              Icon(LucideIcons.search, size: OmniIconSize.md, color: p.muted),
-              const SizedBox(width: 8),
+              // Ô tìm chuẩn; lọc tại chỗ trên các tháng đã tải nên gửi ngay.
               Expanded(
-                child: TextField(
+                child: OmniSearchField(
                   key: const ValueKey('finance-search-input'),
-                  controller: _searchCtrl,
-                  focusNode: _searchFocus,
+                  hint: 'Tìm khoản chi, số tiền',
+                  flat: true,
+                  dense: true,
+                  debounce: Duration.zero,
+                  value: state.searchQuery,
                   onChanged: notifier.setSearchQuery,
-                  textInputAction: TextInputAction.search,
-                  style: OmniType.search.copyWith(
-                    color: p.ink,
-                    fontStyle: FontStyle.normal,
-                  ),
-                  decoration: InputDecoration(
-                    isDense: true,
-                    filled: false,
-                    hintText: 'Tìm khoản chi, số tiền',
-                    hintStyle: OmniType.searchHint.copyWith(color: p.muted),
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    contentPadding: EdgeInsets.zero,
-                  ),
                 ),
               ),
-              if (state.searchQuery.isNotEmpty)
-                IconButton(
-                  tooltip: 'Xoá tìm kiếm',
-                  onPressed: () {
-                    notifier.clearSearch();
-                    _searchFocus.requestFocus();
-                  },
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints.tightFor(
-                    width: 40,
-                    height: 44,
-                  ),
-                  icon: Icon(LucideIcons.x, size: 18, color: p.muted),
-                ),
               _buildBarIcon(
                 key: const ValueKey('finance-sort-btn'),
                 anchorKey: _sortBtnKey,

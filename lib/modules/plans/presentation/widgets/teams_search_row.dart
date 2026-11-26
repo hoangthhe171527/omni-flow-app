@@ -13,14 +13,13 @@ import '../../../../design/tokens/tokens.dart';
 class TeamsSearchRow extends StatefulWidget implements PreferredSizeWidget {
   const TeamsSearchRow({
     super.key,
-    required this.controller,
     required this.onChanged,
     this.showAdd = false,
     this.addOpen = false,
     this.onAdd,
   });
 
-  final TextEditingController controller;
+  /// Chữ tìm (đã bỏ khoảng trắng hai đầu), gửi theo từng phím: lọc tại chỗ.
   final ValueChanged<String> onChanged;
   final bool showAdd;
   final bool addOpen;
@@ -40,41 +39,8 @@ class TeamsSearchRow extends StatefulWidget implements PreferredSizeWidget {
 }
 
 class _TeamsSearchRowState extends State<TeamsSearchRow> {
-  late bool _hasText = widget.controller.text.isNotEmpty;
-
-  @override
-  void initState() {
-    super.initState();
-    widget.controller.addListener(_onTextChanged);
-  }
-
-  @override
-  void didUpdateWidget(TeamsSearchRow oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.controller != widget.controller) {
-      oldWidget.controller.removeListener(_onTextChanged);
-      _hasText = widget.controller.text.isNotEmpty;
-      widget.controller.addListener(_onTextChanged);
-    }
-  }
-
-  @override
-  void dispose() {
-    widget.controller.removeListener(_onTextChanged);
-    super.dispose();
-  }
-
-  void _onTextChanged() {
-    final hasText = widget.controller.text.isNotEmpty;
-    if (hasText != _hasText) {
-      setState(() => _hasText = hasText);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
     return SizedBox(
       height: TeamsSearchRow._fieldHeight + TeamsSearchRow._bottomPad,
       child: Padding(
@@ -87,41 +53,12 @@ class _TeamsSearchRowState extends State<TeamsSearchRow> {
               child: SizedBox(
                 key: const Key('teams-search-box'),
                 height: TeamsSearchRow._fieldHeight,
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 4),
-                  child: Row(
-                    children: [
-                      Icon(
-                        LucideIcons.search,
-                        size: 17,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: TextField(
-                          controller: widget.controller,
-                          onChanged: widget.onChanged,
-                          textInputAction: TextInputAction.search,
-                          style: OmniType.search.copyWith(
-                            color: scheme.onSurface,
-                            fontStyle: FontStyle.normal,
-                          ),
-                          decoration: InputDecoration(
-                            isDense: true,
-                            filled: false,
-                            border: InputBorder.none,
-                            enabledBorder: InputBorder.none,
-                            focusedBorder: InputBorder.none,
-                            contentPadding: EdgeInsets.zero,
-                            hintText: 'Tìm team, kế hoạch',
-                            hintStyle: OmniType.searchHint.copyWith(
-                              color: scheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                child: OmniSearchField(
+                  hint: 'Tìm team, kế hoạch',
+                  flat: true,
+                  dense: true,
+                  debounce: Duration.zero,
+                  onChanged: widget.onChanged,
                 ),
               ),
             ),

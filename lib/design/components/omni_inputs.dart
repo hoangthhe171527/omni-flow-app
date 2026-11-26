@@ -25,9 +25,14 @@ class OmniSearchField extends StatefulWidget {
     this.autofocus = false,
     this.onSubmitted,
     this.value,
+    this.onCover = false,
   });
 
   final ValueChanged<String> onChanged;
+
+  /// Ô nằm trên ảnh bìa (đầu Bảng kế hoạch): viên kính trắng mờ, chữ và icon
+  /// trắng. Tương phản cao thì viên đặc ([OmniCovers.glass]).
+  final bool onCover;
 
   /// Giá trị từ nơi giữ trạng thái (provider bộ lọc). Có thì ô là ô "có điều
   /// khiển": khi [value] đổi thành thứ khác chữ ô vừa gửi đi (bộ lọc bị đặt
@@ -48,6 +53,9 @@ class OmniSearchField extends StatefulWidget {
   final bool dense;
   final String hint;
   final String? initialValue;
+
+  /// Chờ ngừng gõ bao lâu mới gửi. `Duration.zero` = gửi ngay theo từng phím
+  /// (lọc tại chỗ trên danh sách đã tải, không gọi mạng).
   final Duration debounce;
   final Widget? trailing;
   final bool autofocus;
@@ -112,6 +120,11 @@ class _OmniSearchFieldState extends State<OmniSearchField> {
 
   void _onChanged(String value) {
     _timer?.cancel();
+    if (widget.debounce == Duration.zero) {
+      _emit(value.trim());
+      setState(() {});
+      return;
+    }
     _timer = Timer(widget.debounce, () {
       if (mounted) _emit(value.trim());
     });
@@ -121,6 +134,15 @@ class _OmniSearchFieldState extends State<OmniSearchField> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final onCover = widget.onCover;
+    final ink = onCover ? Colors.white : scheme.onSurface;
+    final muted = onCover
+        ? Colors.white.withValues(alpha: .82)
+        : scheme.onSurfaceVariant;
+    final coverBorder = OutlineInputBorder(
+      borderRadius: OmniRadius.pillAll,
+      borderSide: BorderSide(color: Colors.white.withValues(alpha: .36)),
+    );
 
     // Center: nơi gọi hay ép ô cao đúng 44 (hàng `stretch`, viên kính). Bị ép
     // thì ô nhập dồn nội dung lên mép trên — với phông thật (dòng cao hơn
@@ -139,39 +161,38 @@ class _OmniSearchFieldState extends State<OmniSearchField> {
                 widget.onSubmitted!(value.trim());
               },
         textInputAction: TextInputAction.search,
+        cursorColor: onCover ? Colors.white : null,
         style: OmniType.search.copyWith(
-          color: scheme.onSurface,
+          color: ink,
           fontStyle: FontStyle.normal,
         ),
         textAlignVertical: TextAlignVertical.center,
         decoration: InputDecoration(
           hintText: widget.hint,
-          hintStyle: OmniType.searchHint.copyWith(
-            color: scheme.onSurfaceVariant,
-          ),
+          hintStyle: OmniType.searchHint.copyWith(color: muted),
           prefixIcon: Icon(
             LucideIcons.search,
-            color: scheme.onSurfaceVariant,
+            color: muted,
             size: OmniIconSize.lg,
           ),
-          prefixIconConstraints: widget.dense
+          prefixIconConstraints: widget.dense || onCover
               ? const BoxConstraints(minWidth: 36, minHeight: 36)
               : null,
-          suffixIconConstraints: widget.dense
+          suffixIconConstraints: widget.dense || onCover
               ? const BoxConstraints(minWidth: 36, minHeight: 36)
               : null,
           suffixIcon: _controller.text.isEmpty
               ? widget.trailing
               : IconButton(
-                  padding: widget.dense ? EdgeInsets.zero : null,
-                  constraints: widget.dense
+                  padding: widget.dense || onCover ? EdgeInsets.zero : null,
+                  constraints: widget.dense || onCover
                       ? const BoxConstraints(minWidth: 36, minHeight: 36)
                       : null,
                   tooltip: 'Xoá tìm kiếm',
                   icon: Icon(
                     LucideIcons.x,
                     size: OmniIconSize.md,
-                    color: scheme.onSurfaceVariant,
+                    color: muted,
                   ),
                   onPressed: () {
                     _timer?.cancel();
@@ -184,16 +205,31 @@ class _OmniSearchFieldState extends State<OmniSearchField> {
           // Đệm 12 cho cả bản dense: 12 + dòng 20 + 12 = đúng 44, khớp viên kính
           // / hàng ép vào. Đệm 10 thì nội dung chỉ cao 40, nằm sát mép trên khung
           // 44 → kính lúp và chữ lệch lên 2px (thấy rõ trên viên kính).
-          contentPadding: const EdgeInsets.symmetric(vertical: 12),
-          filled: !widget.flat,
-          fillColor: widget.flat
+          // Trên ảnh bìa: viên 38 (9 + 20 + 9) nằm giữa hàng nút 44.
+          contentPadding: EdgeInsets.symmetric(vertical: onCover ? 9 : 12),
+          filled: onCover || !widget.flat,
+          fillColor: onCover
+              ? (MediaQuery.highContrastOf(context)
+                    ? OmniCovers.glass
+                    : Colors.white.withValues(alpha: .20))
+              : widget.flat
               ? Colors.transparent
               : widget.outlined
               ? scheme.surface
               : scheme.surfaceContainerHighest,
-          border: widget.flat ? InputBorder.none : _border(scheme),
-          enabledBorder: widget.flat ? InputBorder.none : _border(scheme),
-          focusedBorder: !widget.flat && widget.outlined
+          border: onCover
+              ? coverBorder
+              : widget.flat
+              ? InputBorder.none
+              : _border(scheme),
+          enabledBorder: onCover
+              ? coverBorder
+              : widget.flat
+              ? InputBorder.none
+              : _border(scheme),
+          focusedBorder: onCover
+              ? coverBorder
+              : !widget.flat && widget.outlined
               ? OutlineInputBorder(
                   borderRadius: OmniRadius.lgAll,
                   borderSide: BorderSide(
