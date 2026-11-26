@@ -12,11 +12,16 @@ class LoginState {
     this.submittingMethod,
     this.error,
     this.fieldErrors = const {},
+    this.wrongCredentials = false,
   });
 
   final LoginMethod? submittingMethod;
   final String? error;
   final Map<String, List<String>> fieldErrors;
+
+  /// Server từ chối email/mật khẩu (401) — màn đăng nhập mới mời đặt lại mật
+  /// khẩu; lỗi mạng hay lỗi Google thì không.
+  final bool wrongCredentials;
 
   bool get submitting => submittingMethod != null;
 
@@ -39,7 +44,10 @@ class LoginController extends Notifier<LoginState> {
       state = LoginState(error: error.message, fieldErrors: error.errors);
       return false;
     } on UnauthorizedException {
-      state = const LoginState(error: 'Email hoặc mật khẩu không đúng.');
+      state = const LoginState(
+        error: 'Email hoặc mật khẩu không đúng.',
+        wrongCredentials: true,
+      );
       return false;
     } on AppException catch (error) {
       state = LoginState(error: error.message);

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12+ tự vẽ màn khởi động hệ thống (mặc định là icon app trong vòng
+         tròn). Thay bằng logo trần 96dp trên nền tối của app để khớp khung đầu của màn
+         mở app Flutter. -->
+    <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
+        <item name="android:windowBackground">@drawable/launch_background</item>
+        <item name="android:windowSplashScreenBackground">#FF0B1A33</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/launch_logo_inset</item>
+    </style>
+    <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
+        <item name="android:windowBackground">?android:colorBackground</item>
+    </style>
+</resources>

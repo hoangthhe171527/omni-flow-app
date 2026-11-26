@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
@@ -12,9 +11,10 @@ import '../application/register_controller.dart';
 import '../auth_module.dart';
 import 'widgets/auth_widgets.dart';
 
-/// Màn đăng ký (`#s-auth-register`): `‹` xanh trơn, 2 thẻ nhóm
-/// bo 16, thanh độ mạnh mật khẩu 4 mức, dòng đồng ý vòng tròn Liquid 22×22 (bỏ
-/// `Checkbox` Material) và đăng ký nhanh qua Google vector.
+/// Màn đăng ký (artifact "Màn xác thực" duyệt 26/11): `‹` xanh trơn, tiêu đề
+/// lớn, "Đăng ký với Google" lên đầu, bốn ô rời có nhãn, thanh độ mạnh mật
+/// khẩu, nút chính LUÔN bấm được (thiếu gì báo ngay dưới ô đó) và một dòng
+/// pháp lý dưới nút thay cho ô tích.
 class RegisterPage extends ConsumerStatefulWidget {
   const RegisterPage({super.key});
 
@@ -30,24 +30,17 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
   final _company = TextEditingController();
   final _password = TextEditingController();
   bool _obscure = true;
-  bool _agreed = false;
 
   late final AnimationController _shake = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 400),
   );
 
-  late final Listenable _inputs = Listenable.merge([
-    _name,
-    _email,
-    _company,
-    _password,
-  ]);
-
   @override
   void initState() {
     super.initState();
-    _inputs.addListener(_refresh);
+    // Thanh độ mạnh đi theo từng ký tự gõ.
+    _password.addListener(_refresh);
     // loginControllerProvider dùng chung với màn đăng nhập: lỗi Google còn sót
     // ở đó không được chào đón người dùng ở màn đăng ký.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -57,7 +50,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
 
   @override
   void dispose() {
-    _inputs.removeListener(_refresh);
+    _password.removeListener(_refresh);
     _shake.dispose();
     _name.dispose();
     _email.dispose();
@@ -68,20 +61,14 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
 
   void _refresh() => setState(() {});
 
-  bool get _ready =>
-      _name.text.trim().isNotEmpty &&
-      looksLikeEmail(_email.text) &&
-      _company.text.trim().isNotEmpty &&
-      _password.text.length >= 8 &&
-      _agreed;
-
   void _shakeIfAllowed() {
+    HapticFeedback.heavyImpact();
     if (!OmniMotion.enabled(context)) return;
     _shake.forward(from: 0);
   }
 
   Future<void> _submit() async {
-    if (!_ready || ref.read(registerControllerProvider).submitting) return;
+    if (ref.read(registerControllerProvider).submitting) return;
     if (!_formKey.currentState!.validate()) {
       _shakeIfAllowed();
       return;
@@ -128,7 +115,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
     });
     final state = ref.watch(registerControllerProvider);
     final google = ref.watch(loginControllerProvider);
-    final scheme = Theme.of(context).colorScheme;
     final busy = state.submitting || google.submitting;
     // Lỗi chung: hộp riêng chỉ khi không có chữ nào đã hiện dưới từng ô.
     final generalError = state.fieldErrors.isEmpty
@@ -136,7 +122,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
         : null;
 
     return AuthScaffold(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+      top: 4,
       child: AutofillGroup(
         child: Form(
           key: _formKey,
@@ -144,170 +130,96 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               AuthSubBar(onBack: _back),
-              const SizedBox(height: 10),
-              Text(
-                'Tạo tài khoản',
-                style: OmniType.largeTitle.copyWith(
-                  color: scheme.onSurface,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
               const SizedBox(height: 4),
-              Text(
-                'Thiết lập hồ sơ quản trị và không gian công ty của bạn.',
-                style: OmniType.bodySm.copyWith(color: scheme.onSurfaceVariant),
+              Semantics(
+                header: true,
+                child: Text('Tạo tài khoản', style: authTitleStyle(context)),
               ),
-              const SizedBox(height: 18),
-              AuthFieldGroup(
-                title: 'Tài khoản & Tổ chức',
-                children: [
-                  AuthGroupField(
-                    controller: _name,
-                    label: 'Họ và tên',
-                    hint: 'Nguyễn Hoàng Nam',
-                    icon: LucideIcons.user,
-                    shake: _shake,
-                    serverError: state.errorFor('full_name'),
-                    textInputAction: TextInputAction.next,
-                    autofillHints: const [AutofillHints.name],
-                    validator: (v) => (v ?? '').trim().isEmpty
-                        ? 'Vui lòng nhập họ tên'
-                        : null,
-                  ),
-                  AuthGroupField(
-                    controller: _email,
-                    label: 'Email làm việc',
-                    hint: 'ten@congty.vn',
-                    icon: LucideIcons.mail,
-                    shake: _shake,
-                    serverError: state.errorFor('email'),
-                    keyboardType: TextInputType.emailAddress,
-                    textInputAction: TextInputAction.next,
-                    autofillHints: const [AutofillHints.email],
-                    validator: (v) {
-                      final text = v?.trim() ?? '';
-                      if (text.isEmpty) return 'Vui lòng nhập email';
-                      if (!looksLikeEmail(text)) {
-                        return 'Email chưa hợp lệ';
-                      }
-                      return null;
-                    },
-                  ),
-                  AuthGroupField(
-                    controller: _company,
-                    label: 'Tên công ty / tổ chức',
-                    hint: 'Cửa hàng hoặc doanh nghiệp',
-                    icon: LucideIcons.building2,
-                    shake: _shake,
-                    serverError: state.errorFor('company_name'),
-                    textInputAction: TextInputAction.next,
-                    autofillHints: const [AutofillHints.organizationName],
-                    validator: (v) => (v ?? '').trim().isEmpty
-                        ? 'Vui lòng nhập tên công ty'
-                        : null,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              AuthFieldGroup(
-                title: 'Bảo mật',
-                trailingTitle: Text(
-                  'Tối thiểu 8 ký tự',
-                  style: OmniType.micro.copyWith(
-                    color: scheme.onSurfaceVariant,
-                    fontFeatures: OmniType.tabular,
-                  ),
-                ),
-                children: [
-                  AuthGroupField(
-                    controller: _password,
-                    label: 'Mật khẩu',
-                    hint: 'Nhập ít nhất 8 ký tự',
-                    icon: LucideIcons.lock,
-                    shake: _shake,
-                    serverError: state.errorFor('password'),
-                    obscure: _obscure,
-                    textInputAction: TextInputAction.done,
-                    autofillHints: const [AutofillHints.newPassword],
-                    onSubmitted: (_) => _submit(),
-                    validator: (v) => (v ?? '').length < 8
-                        ? 'Mật khẩu cần ít nhất 8 ký tự'
-                        : null,
-                    suffix: AuthPasswordToggle(
-                      obscure: _obscure,
-                      onToggle: () => setState(() => _obscure = !_obscure),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: _StrengthMeter(score: passwordScore(_password.text)),
-              ),
-              const SizedBox(height: 12),
-              _TermsRow(
-                agreed: _agreed,
-                onChanged: (v) => setState(() => _agreed = v),
-              ),
-              if (generalError != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 10),
-                  child: AuthErrorBox(message: generalError),
-                ),
-              const SizedBox(height: 16),
-              AnimatedOpacity(
-                key: const ValueKey('register-opacity'),
-                duration: OmniMotion.enabled(context)
-                    ? OmniDuration.fast
-                    : Duration.zero,
-                opacity: _ready ? 1 : 0.45,
-                child: AuthPrimaryButton(
-                  key: const ValueKey('register-submit'),
-                  label: 'Tạo tài khoản',
-                  busy: state.submitting,
-                  onPressed: (_ready && !busy) ? _submit : null,
-                ),
-              ),
-              const SizedBox(height: 16),
-              const AuthDivider(),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               AuthGoogleButton(
                 label: 'Đăng ký với Google',
                 onPressed: busy ? null : _submitGoogle,
                 busy: google.submittingMethod == LoginMethod.google,
               ),
-              const SizedBox(height: 20),
-              Wrap(
-                alignment: WrapAlignment.center,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  Text(
-                    'Đã có tài khoản? ',
-                    style: OmniType.bodySm.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                  InkWell(
-                    onTap: _back,
-                    borderRadius: BorderRadius.circular(6),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 4,
-                        vertical: 10,
-                      ),
-                      child: Text(
-                        'Đăng nhập',
-                        style: OmniType.bodySm.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: scheme.primary,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+              const AuthDivider(),
+              AuthField(
+                controller: _name,
+                label: 'Họ và tên',
+                hint: 'Nguyễn Hoàng Nam',
+                shake: _shake,
+                serverError: state.errorFor('full_name'),
+                textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.name],
+                validator: (v) =>
+                    (v ?? '').trim().isEmpty ? 'Vui lòng nhập họ tên' : null,
               ),
-              const AuthPrivacyLink(),
+              const SizedBox(height: 6),
+              AuthField(
+                controller: _email,
+                label: 'Email làm việc',
+                hint: 'ten@congty.vn',
+                shake: _shake,
+                serverError: state.errorFor('email'),
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.email],
+                validator: (v) {
+                  final text = v?.trim() ?? '';
+                  if (text.isEmpty) return 'Vui lòng nhập email';
+                  if (!looksLikeEmail(text)) return 'Email chưa hợp lệ';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 6),
+              AuthField(
+                controller: _company,
+                label: 'Tên công ty',
+                hint: 'Cửa hàng hoặc doanh nghiệp',
+                shake: _shake,
+                serverError: state.errorFor('company_name'),
+                textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.organizationName],
+                validator: (v) => (v ?? '').trim().isEmpty
+                    ? 'Vui lòng nhập tên công ty'
+                    : null,
+              ),
+              const SizedBox(height: 6),
+              AuthField(
+                controller: _password,
+                label: 'Mật khẩu',
+                hint: 'Ít nhất 8 ký tự',
+                shake: _shake,
+                serverError: state.errorFor('password'),
+                obscure: _obscure,
+                textInputAction: TextInputAction.done,
+                autofillHints: const [AutofillHints.newPassword],
+                onSubmitted: (_) => _submit(),
+                validator: (v) => (v ?? '').length < 8
+                    ? 'Mật khẩu cần ít nhất 8 ký tự'
+                    : null,
+                suffix: AuthPasswordToggle(
+                  obscure: _obscure,
+                  onToggle: () => setState(() => _obscure = !_obscure),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: _StrengthMeter(score: passwordScore(_password.text)),
+              ),
+              if (generalError != null) ...[
+                const SizedBox(height: 14),
+                AuthErrorBox(message: generalError),
+              ],
+              const SizedBox(height: 20),
+              AuthPrimaryButton(
+                key: const ValueKey('register-submit'),
+                label: 'Tạo tài khoản',
+                busy: state.submitting,
+                onPressed: busy ? null : _submit,
+              ),
+              const SizedBox(height: 4),
+              const AuthPrivacyLink(prefix: 'Tạo tài khoản là đồng ý'),
             ],
           ),
         ),
@@ -367,89 +279,6 @@ class _StrengthMeter extends StatelessWidget {
                   ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// Dòng đồng ý điều khoản dùng vòng tick tròn 22×22 tự vẽ chuẩn Liquid (tuyệt
-/// đối không dùng `Checkbox` / `Checkbox.adaptive` của Material).
-class _TermsRow extends StatelessWidget {
-  const _TermsRow({required this.agreed, required this.onChanged});
-
-  final bool agreed;
-  final ValueChanged<bool> onChanged;
-
-  void _toggle() {
-    HapticFeedback.selectionClick();
-    onChanged(!agreed);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final duration = OmniMotion.of(context).fast;
-
-    return Semantics(
-      container: true,
-      checked: agreed,
-      label: 'Đồng ý Điều khoản sử dụng',
-      excludeSemantics: true,
-      onTap: _toggle,
-      child: Material(
-        color: scheme.surface,
-        shape: RoundedRectangleBorder(
-          // Thẻ bo 16 (thang 6/10/16/32).
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: scheme.outlineVariant),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          key: const ValueKey('terms-checkbox'),
-          onTap: _toggle,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 48),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              child: Row(
-                children: [
-                  AnimatedContainer(
-                    duration: duration,
-                    curve: Curves.easeOutCubic,
-                    width: 22,
-                    height: 22,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: agreed ? scheme.primary : Colors.transparent,
-                      border: Border.all(
-                        color: agreed ? scheme.primary : scheme.outline,
-                        width: 1.5,
-                      ),
-                    ),
-                    child: agreed
-                        ? Icon(
-                            LucideIcons.check,
-                            size: OmniIconSize.xs,
-                            color: scheme.onPrimary,
-                          )
-                        : null,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Đồng ý Điều khoản sử dụng',
-                      style: OmniType.bodySm.copyWith(
-                        color: scheme.onSurface,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }

@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Giao diện tối: màu mực (OmniColors.ink) như màn mở app Flutter ở nền tối. -->
+<!-- Màn khởi động: nền = OmniColors.ink của app, logo trần 96dp đúng giữa màn — trùng khung
+     đầu của màn mở app Flutter (OmniSplash), không loé, không nhảy hình. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
         <color android:color="#FF0B1A33" />
+    </item>
+    <item>
+        <bitmap
+            android:gravity="center"
+            android:src="@drawable/launch_logo" />
     </item>
 </layer-list>

@@ -14,14 +14,19 @@ import '../auth_module.dart';
 import '../data/auth_onboarding_api.dart';
 import 'widgets/auth_widgets.dart';
 
-/// Màn quên mật khẩu (`#s-auth-forgot`): `‹` xanh trơn (không vòng kính), quy
-/// trình 2 bước rõ ràng trong thẻ nhóm bo 16 (nhập email → kiểm tra hộp thư kèm
-/// thẻ email nhận + nút đổi email nhanh và bộ đếm lùi `tabularFigures`).
+/// Màn quên mật khẩu (artifact "Màn xác thực" duyệt 26/11), hai bước:
+/// 1. một ô email (điền sẵn email vừa gõ ở màn đăng nhập, bàn phím bật sẵn) +
+///    "Gửi liên kết đặt lại";
+/// 2. "Kiểm tra email": một nút chính "Mở ứng dụng email" ở đáy; gửi lại (đếm
+///    ngược m:ss) và đổi email là nút chữ.
 ///
 /// API trả 204 dù email có tồn tại hay không, nên màn này luôn báo trạng thái
 /// đã gửi như nhau để không lộ địa chỉ nào có tài khoản.
 class ForgotPasswordPage extends ConsumerStatefulWidget {
-  const ForgotPasswordPage({super.key});
+  const ForgotPasswordPage({super.key, this.initialEmail});
+
+  /// Email đã gõ ở màn đăng nhập (nếu có).
+  final String? initialEmail;
 
   @override
   ConsumerState<ForgotPasswordPage> createState() => _ForgotPasswordPageState();
@@ -32,7 +37,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage>
   static const _resendSeconds = 30;
 
   final _formKey = GlobalKey<FormState>();
-  final _email = TextEditingController();
+  late final _email = TextEditingController(text: widget.initialEmail ?? '');
 
   late final AnimationController _shake = AnimationController(
     vsync: this,
@@ -151,91 +156,60 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage>
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
     return AuthScaffold(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+      top: 4,
+      footer: _sent ? _sentActions() : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           AuthSubBar(onBack: _back),
-          const SizedBox(height: 16),
+          const SizedBox(height: 4),
           AnimatedSwitcher(
             duration: OmniMotion.of(context).base,
-            child: _sent ? _buildSent(scheme) : _buildForm(scheme),
+            child: _sent ? _sentBody() : _form(),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildForm(ColorScheme scheme) {
+  Widget _form() {
     return Form(
       key: _formKey,
       child: Column(
         key: const ValueKey('forgot-form'),
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: scheme.primaryContainer,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              alignment: Alignment.center,
-              child: Icon(
-                LucideIcons.rotateCcwKey,
-                size: OmniIconSize.xl,
-                color: scheme.primary,
-              ),
-            ),
+          Semantics(
+            header: true,
+            child: Text('Quên mật khẩu', style: authTitleStyle(context)),
           ),
-          const SizedBox(height: 16),
-          Text(
-            'Quên mật khẩu?',
-            style: OmniType.largeTitle.copyWith(
-              color: scheme.onSurface,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Nhập email làm việc để nhận liên kết khôi phục mật khẩu.',
-            style: OmniType.bodySm.copyWith(color: scheme.onSurfaceVariant),
-          ),
-          const SizedBox(height: 22),
-          AuthFieldGroup(
-            children: [
-              AuthGroupField(
-                controller: _email,
-                label: 'Email làm việc',
-                hint: 'ten@congty.vn',
-                icon: LucideIcons.mail,
-                shake: _shake,
-                serverError: _fieldError,
-                keyboardType: TextInputType.emailAddress,
-                textInputAction: TextInputAction.done,
-                autofillHints: const [AutofillHints.email],
-                onSubmitted: (_) => _submit(),
-                validator: (value) {
-                  final text = value?.trim() ?? '';
-                  if (text.isEmpty) return 'Vui lòng nhập email';
-                  if (!looksLikeEmail(text)) return 'Email chưa hợp lệ';
-                  return null;
-                },
-              ),
-            ],
+          const SizedBox(height: 18),
+          AuthField(
+            controller: _email,
+            label: 'Email',
+            hint: 'ten@congty.vn',
+            shake: _shake,
+            autofocus: true,
+            serverError: _fieldError,
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.done,
+            autofillHints: const [AutofillHints.email],
+            onSubmitted: (_) => _submit(),
+            validator: (value) {
+              final text = value?.trim() ?? '';
+              if (text.isEmpty) return 'Vui lòng nhập email';
+              if (!looksLikeEmail(text)) return 'Email chưa hợp lệ';
+              return null;
+            },
           ),
           if (_error != null) ...[
             const SizedBox(height: 12),
             AuthErrorBox(message: _error!),
           ],
-          const SizedBox(height: 22),
+          const SizedBox(height: 20),
           AuthPrimaryButton(
-            label: 'Gửi liên kết',
+            label: 'Gửi liên kết đặt lại',
             busy: _busy,
             onPressed: _busy ? null : _submit,
           ),
@@ -244,136 +218,107 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage>
     );
   }
 
-  Widget _buildSent(ColorScheme scheme) {
+  Widget _sentBody() {
+    final scheme = Theme.of(context).colorScheme;
+    final meta = OmniType.body.copyWith(color: scheme.onSurfaceVariant);
     return Column(
       key: const ValueKey('forgot-sent'),
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: scheme.primaryContainer,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            alignment: Alignment.center,
-            child: Icon(
-              LucideIcons.mailCheck,
-              size: OmniIconSize.xl,
-              color: scheme.primary,
-            ),
-          ),
-        ),
         const SizedBox(height: 16),
-        Text(
-          'Kiểm tra email',
-          style: OmniType.largeTitle.copyWith(
-            color: scheme.onSurface,
-            fontWeight: FontWeight.w600,
+        Container(
+          width: 64,
+          height: 64,
+          decoration: BoxDecoration(
+            color: scheme.primaryContainer,
+            shape: BoxShape.circle,
           ),
+          alignment: Alignment.center,
+          child: Icon(LucideIcons.mailCheck, size: 30, color: scheme.primary),
+        ),
+        const SizedBox(height: 20),
+        Semantics(
+          header: true,
+          child: Text('Kiểm tra email', style: authTitleStyle(context)),
         ),
         const SizedBox(height: 6),
         Semantics(
           liveRegion: true,
-          child: Text(
-            'Đã gửi tới $_sentTo',
-            style: OmniType.bodySm.copyWith(color: scheme.onSurfaceVariant),
-          ),
-        ),
-        const SizedBox(height: 16),
-        Material(
-          color: scheme.surface,
-          shape: RoundedRectangleBorder(
-            // Thẻ bo 16 (thang 6/10/16/32).
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: scheme.outlineVariant),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
-            child: Row(
+          child: Text.rich(
+            TextSpan(
+              text: 'Liên kết đặt lại đã gửi tới\n',
               children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: scheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(10),
+                TextSpan(
+                  text: _sentTo,
+                  style: TextStyle(
+                    color: scheme.onSurface,
+                    fontWeight: FontWeight.w600,
                   ),
-                  alignment: Alignment.center,
-                  child: Icon(
-                    LucideIcons.mail,
-                    size: OmniIconSize.md,
-                    color: scheme.primary,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        _sentTo,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: OmniType.bodySm.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: scheme.onSurface,
-                        ),
-                      ),
-                      Text(
-                        'Liên kết khôi phục có hiệu lực 30 phút',
-                        style: OmniType.micro.copyWith(
-                          fontWeight: FontWeight.w400,
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                TextButton(
-                  onPressed: _busy ? null : _changeEmail,
-                  style: TextButton.styleFrom(
-                    textStyle: OmniType.caption.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  child: const Text('Đổi email'),
                 ),
               ],
             ),
+            style: meta,
           ),
         ),
+        const SizedBox(height: 4),
+        Text(
+          'Hết hạn sau 30 phút',
+          style: OmniType.bodySm.copyWith(color: scheme.onSurfaceVariant),
+        ),
         if (_error != null) ...[
-          const SizedBox(height: 12),
-          AuthErrorBox(message: _error!),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: AuthErrorBox(message: _error!),
+          ),
         ],
-        const SizedBox(height: 22),
+      ],
+    );
+  }
+
+  Widget _sentActions() {
+    final scheme = Theme.of(context).colorScheme;
+    final textStyle = OmniType.input.copyWith(fontWeight: FontWeight.w600);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
         AuthPrimaryButton(label: 'Mở ứng dụng email', onPressed: _openMail),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         ValueListenableBuilder<int>(
           valueListenable: _left,
-          builder: (context, left, _) => OutlinedButton(
+          builder: (context, left, _) => TextButton(
             onPressed: left <= 0 && !_busy ? () => _send(_sentTo) : null,
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size.fromHeight(50),
-              shape: const StadiumBorder(),
-              textStyle: OmniType.bodyStrong.copyWith(
-                fontFeatures: OmniType.tabular,
-              ),
+            style: TextButton.styleFrom(
+              minimumSize: const Size.fromHeight(44),
+              foregroundColor: scheme.primary,
+              disabledForegroundColor: scheme.onSurfaceVariant,
+              textStyle: textStyle.copyWith(fontFeatures: OmniType.tabular),
             ),
             child: _busy
                 ? const SizedBox.square(
                     dimension: 20,
                     child: CircularProgressIndicator.adaptive(strokeWidth: 2),
                   )
-                : Text(left > 0 ? 'Gửi lại sau $left giây' : 'Gửi lại email'),
+                : Text(
+                    left > 0 ? 'Gửi lại sau ${_clock(left)}' : 'Gửi lại email',
+                  ),
           ),
+        ),
+        TextButton(
+          onPressed: _busy ? null : _changeEmail,
+          style: TextButton.styleFrom(
+            minimumSize: const Size.fromHeight(44),
+            foregroundColor: scheme.primary,
+            textStyle: textStyle,
+          ),
+          child: const Text('Dùng email khác'),
         ),
       ],
     );
   }
 }
+
+/// 42 → "0:42", 75 → "1:15".
+String _clock(int seconds) =>
+    '${seconds ~/ 60}:${(seconds % 60).toString().padLeft(2, '0')}';
