@@ -45,22 +45,31 @@ abstract final class OmniColors {
   /// Xanh Viomni — MÀU NHẤN DUY NHẤT (token `accent` của Chuẩn Mobile UI, gói
   /// Viomni): nút chính, nút +, liên kết, tab đang chọn, ‹ quay lại.
   ///
-  /// 6.08:1 trên thẻ, 5.67:1 trên nền trang, chữ trắng trên nó 6.08:1 — xem
-  /// `contrast_test.dart`. Đổi từ #0F6AE8 theo spec 25/11 (Đợt 0).
-  static const primary = Color(0xFF0159DB);
+  /// Xanh sapphire #1D5FD1 (hướng "iOS chuẩn", duyệt 26/11/2026): trầm hơn
+  /// #0159DB một bậc về phía navy của logo, bớt chói — xanh chỉ còn ở chỗ đang
+  /// chọn và hành động. Logo (`omni_brand.dart`) vẫn giữ dải màu gốc. Tương
+  /// phản: `contrast_test.dart`.
+  static const primary = Color(0xFF1D5FD1);
   static const primaryForeground = Color(0xFFFFFFFF);
 
   /// Nút chính khi đang nhấn, và chữ/icon trên nền nhạt [accent] (token
-  /// `accent-ink`: 7.16:1 trên [accent]).
-  static const primaryPressed = Color(0xFF0147B3);
+  /// `accent-ink`).
+  static const primaryPressed = Color(0xFF164CAB);
 
-  /// Nền nhạt sau bề mặt được chọn (token `accent-tint`): viên tab đang chọn,
-  /// nút phụ, chip đang chọn, nhãn trạng thái xanh.
-  static const accent = Color(0xFFE6F0FF);
+  /// Nền nhạt sau bề mặt được chọn (token `accent-tint`): nút phụ, nút trong
+  /// thẻ, chip đang chọn, nhãn trạng thái xanh.
+  static const accent = Color(0xFFE8EFFB);
   static const accentForeground = primaryPressed;
 
   /// Bản nhạt hơn nữa của [accent] — vầng sáng quanh ô nhập đang focus.
-  static const accentSoft = Color(0xFFF2F7FF);
+  static const accentSoft = Color(0xFFF3F6FC);
+
+  /// Icon và nhãn mục CHƯA chọn của thanh tab (iOS: xám, icon nét mảnh). Nhãn
+  /// đậm hơn icon để chữ 11 đạt 4.5:1 trên viên kính trắng.
+  static const tabInactiveIcon = Color(0xFF8A94A6);
+  static const tabInactiveLabel = Color(0xFF5F6B7E);
+  static const darkTabInactiveIcon = Color(0xFF7F8BA0);
+  static const darkTabInactiveLabel = Color(0xFF9AA8BD);
 
   // ---- Bề mặt -------------------------------------------------------------
   static const background = Color(0xFFF5F7FA);
@@ -231,7 +240,7 @@ abstract final class OmniColors {
 
   static const darkForeground = Color(0xFFE8EEF6);
   static const darkMutedForeground = Color(0xFF9AA8BD);
-  static const darkPrimary = Color(0xFF5AAEFF);
+  static const darkPrimary = Color(0xFF6EA2FF);
 
   /// Chữ trên nút chính ở nền tối.
   ///

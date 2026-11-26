@@ -76,6 +76,20 @@ void main() {
       min: t,
     ),
 
+    // ---- Thanh tab: nhãn mục chưa chọn (chữ 11) trên viên kính ----
+    (
+      what: 'nhãn tab chưa chọn / thẻ',
+      fg: OmniColors.tabInactiveLabel,
+      bg: OmniColors.card,
+      min: t,
+    ),
+    (
+      what: 'tối: nhãn tab chưa chọn / thẻ',
+      fg: OmniColors.darkTabInactiveLabel,
+      bg: OmniColors.darkCard,
+      min: t,
+    ),
+
     // ---- Sáng: màu chính ----
     (
       what: 'chữ trên nút chính',

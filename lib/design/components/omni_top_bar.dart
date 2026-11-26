@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,6 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/nav/search_mode.dart';
 import '../platform/omni_motion_scope.dart';
+import '../platform/omni_performance.dart';
 import '../platform/omni_platform.dart';
 import '../tokens/tokens.dart';
 import 'brand_anchor.dart';
@@ -144,6 +147,35 @@ class _OmniTopBarState extends State<OmniTopBar> {
   bool _focused = false;
   bool _hasQuery = false;
 
+  /// Nội dung đã cuộn vào dưới thanh → thanh hiện nền kính phẳng (chuẩn iOS,
+  /// gói Viomni: "thanh trên khi đã cuộn"). Đầu trang: trong suốt.
+  ScrollNotificationObserverState? _scrollObserver;
+  bool _scrolledUnder = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final observer = ScrollNotificationObserver.maybeOf(context);
+    if (observer != _scrollObserver) {
+      _scrollObserver?.removeListener(_onScroll);
+      _scrollObserver = observer?..addListener(_onScroll);
+    }
+  }
+
+  void _onScroll(ScrollNotification n) {
+    // Chỉ danh sách dọc của thân màn (độ sâu 0, hoặc 1 khi nằm trong một
+    // PageView ngang); dải chip / thẻ cuộn ngang không làm đổi thanh.
+    if (n is! ScrollUpdateNotification ||
+        n.depth > 1 ||
+        n.metrics.axis != Axis.vertical) {
+      return;
+    }
+    final under = n.metrics.extentBefore > 0;
+    if (under != _scrolledUnder && mounted) {
+      setState(() => _scrolledUnder = under);
+    }
+  }
+
   StateController<bool>? _searchMode() {
     if (_mode != null) return _mode;
     try {
@@ -158,6 +190,7 @@ class _OmniTopBarState extends State<OmniTopBar> {
 
   @override
   void dispose() {
+    _scrollObserver?.removeListener(_onScroll);
     _detach();
     if (_focused) {
       // Rời màn khi đang tìm: trả thanh tab về (sau khung hình, không sửa
@@ -432,7 +465,6 @@ class _OmniTopBarState extends State<OmniTopBar> {
             ),
           );
 
-    // Dải mờ dần phủ vùng thanh: nội dung cuộn dưới thanh nhoè dần.
     final overlayStyle = Theme.of(context).brightness == Brightness.dark
         ? SystemUiOverlayStyle.light
         : SystemUiOverlayStyle.dark;
@@ -445,41 +477,103 @@ class _OmniTopBarState extends State<OmniTopBar> {
           visible: _focused && !_hasQuery,
           onTap: _cancel,
         ),
-        child: Padding(
-          key: _barKey,
-          padding: EdgeInsets.fromLTRB(
-            16,
-            MediaQuery.paddingOf(context).top + OmniTopBar._topPad,
-            16,
-            OmniTopBar._bottomPad,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (motion == Duration.zero)
-                _focused
-                    ? const SizedBox(
-                        height: OmniTopBar._rowHeight,
-                        width: double.infinity,
-                      )
-                    : row
-              else
-                IgnorePointer(
-                  ignoring: _focused,
-                  child: AnimatedOpacity(
-                    duration: motion,
-                    opacity: _focused ? 0 : 1,
-                    child: row,
+        child: _TopBarBackdrop(
+          visible: _scrolledUnder,
+          child: Padding(
+            key: _barKey,
+            padding: EdgeInsets.fromLTRB(
+              16,
+              MediaQuery.paddingOf(context).top + OmniTopBar._topPad,
+              16,
+              OmniTopBar._bottomPad,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (motion == Duration.zero)
+                  _focused
+                      ? const SizedBox(
+                          height: OmniTopBar._rowHeight,
+                          width: double.infinity,
+                        )
+                      : row
+                else
+                  IgnorePointer(
+                    ignoring: _focused,
+                    child: AnimatedOpacity(
+                      duration: motion,
+                      opacity: _focused ? 0 : 1,
+                      child: row,
+                    ),
                   ),
-                ),
-              if (searchStrip != null) ...[
-                const SizedBox(height: OmniTopBar._bottomPad),
-                searchStrip,
+                if (searchStrip != null) ...[
+                  const SizedBox(height: OmniTopBar._bottomPad),
+                  searchStrip,
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Nền của thanh trên khi nội dung đã cuộn vào dưới nó: kính phẳng giống
+/// thanh tab (nền .92, nhoè nhẹ) + một viền mảnh ở mép dưới — thanh tách khỏi
+/// nội dung như iOS, chữ cuộn qua không đè lên tiêu đề. Hiện/ẩn bằng mờ dần;
+/// tương phản cao: nền đặc + viền đậm.
+class _TopBarBackdrop extends StatelessWidget {
+  const _TopBarBackdrop({required this.visible, required this.child});
+
+  final bool visible;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final solid = MediaQuery.highContrastOf(context);
+    final fill = solid
+        ? scheme.surface
+        : dark
+        ? const Color(0xFF132033).withValues(alpha: 0.92)
+        : Colors.white.withValues(alpha: 0.92);
+    final edge = solid
+        ? scheme.outline
+        : dark
+        ? Colors.white.withValues(alpha: 0.08)
+        : OmniColors.ink.withValues(alpha: 0.08);
+    final face = DecoratedBox(
+      decoration: BoxDecoration(
+        color: fill,
+        border: Border(bottom: BorderSide(color: edge, width: 0.5)),
+      ),
+    );
+    final blur = !solid && !OmniPerformance.solidGlass(context);
+    final sigma = OmniPerformance.glassSigma(context);
+
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: IgnorePointer(
+            child: AnimatedOpacity(
+              key: const Key('omni-top-bar-backdrop'),
+              opacity: visible ? 1 : 0,
+              duration: OmniMotion.of(context).base,
+              child: blur
+                  ? ClipRect(
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+                        child: face,
+                      ),
+                    )
+                  : face,
+            ),
+          ),
+        ),
+        child,
+      ],
     );
   }
 }

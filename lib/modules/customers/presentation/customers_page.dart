@@ -181,7 +181,6 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
           ? OmniLiquidFab(
               key: _addCustomerKey,
               tooltip: 'Thêm khách',
-              icon: LucideIcons.userPlus,
               onPressed: (_) => _openQuickCreate(),
             )
           : null,

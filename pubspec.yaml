@@ -117,3 +117,7 @@ flutter:
     - family: PhosphorFill
       fonts:
         - asset: assets/fonts/PhosphorFill.ttf
+    # Bản nét (Phosphor Regular) cho mục chưa chọn của thanh tab — cùng mã ký tự.
+    - family: PhosphorRegular
+      fonts:
+        - asset: assets/fonts/PhosphorRegular.ttf

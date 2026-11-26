@@ -19,6 +19,7 @@ import '../../security/session/api_capabilities.dart';
 import '../apps/app_shell_layout.dart';
 import '../perf/performance_controller.dart';
 import 'tab_bar_editor_sheet.dart';
+import 'tab_icons.dart';
 
 export '../../core/utils/text_search.dart' show foldDiacritics, matchesQuery;
 
@@ -38,16 +39,16 @@ Future<void> _openExternal(BuildContext context, Uri url) async {
   );
 }
 
-/// Ô icon một tông màu chính chuẩn [OmniIconTile] cho các dòng nhóm dưới lưới.
-Widget _directoryIconTile(BuildContext context, IconData icon) {
-  final scheme = Theme.of(context).colorScheme;
-  final dark = Theme.of(context).brightness == Brightness.dark;
-  return OmniIconTile(
-    icon,
-    color: scheme.primary,
-    background: scheme.primary.withValues(alpha: dark ? 0.16 : 0.09),
-  );
-}
+/// Icon đầu dòng cài đặt dưới lưới (phương án C, duyệt 26/11/2026): icon đặc
+/// màu mực, không ô nền — cùng kiểu với thanh tab. Khung 28 = cỡ
+/// [OmniIconTile] để lề chữ của dòng không đổi.
+Widget _directoryIconTile(BuildContext context, IconData icon) => SizedBox(
+  width: 28,
+  height: 28,
+  child: Center(
+    child: Icon(icon, size: 22, color: Theme.of(context).colorScheme.onSurface),
+  ),
+);
 
 /// "Cài đặt ứng dụng" và "Trợ giúp" ở cuối màn Tài khoản khi công ty bật khung
 /// ứng dụng (không còn màn "Tất cả"). Cắm qua `AccountExtrasSlot`; khung tắt
@@ -69,17 +70,14 @@ class AppSettingsSections extends ConsumerWidget {
           title: 'Cài đặt ứng dụng',
           children: [
             OmniGroupRow(
-              leading: _directoryIconTile(
-                context,
-                LucideIcons.bell,
-              ),
+              leading: _directoryIconTile(context, OmniFillIcons.bellRinging),
               title: 'Thông báo',
               onTap: () => context.pushNamed(SettingsModule.notifications),
             ),
             const _ThemeRow(),
             const _PerfRow(),
             OmniGroupRow(
-              leading: _directoryIconTile(context, LucideIcons.wallpaper),
+              leading: _directoryIconTile(context, OmniFillIcons.image),
               title: 'Nền',
               onTap: () => context.pushNamed(SettingsModule.background),
             ),
@@ -90,7 +88,7 @@ class AppSettingsSections extends ConsumerWidget {
           title: 'Trợ giúp',
           children: [
             OmniGroupRow(
-              leading: _directoryIconTile(context, LucideIcons.circleQuestionMark),
+              leading: _directoryIconTile(context, OmniFillIcons.question),
               title: 'Trung tâm hỗ trợ',
               trailing: Icon(
                 LucideIcons.externalLink,
@@ -101,7 +99,10 @@ class AppSettingsSections extends ConsumerWidget {
               onTap: () => _openExternal(context, AppConfig.supportUrl),
             ),
             OmniGroupRow(
-              leading: _directoryIconTile(context, LucideIcons.fileSearch),
+              leading: _directoryIconTile(
+                context,
+                OmniFillIcons.fileMagnifyingGlass,
+              ),
               title: 'Chính sách quyền riêng tư',
               trailing: Icon(
                 LucideIcons.externalLink,
@@ -112,7 +113,7 @@ class AppSettingsSections extends ConsumerWidget {
               onTap: () => _openExternal(context, AppConfig.privacyPolicyUrl),
             ),
             OmniGroupRow(
-              leading: _directoryIconTile(context, LucideIcons.info),
+              leading: _directoryIconTile(context, OmniFillIcons.info),
               title: 'Phiên bản',
               value: AppConfig.appVersion,
             ),
@@ -181,7 +182,8 @@ List<DirectorySection> buildDirectorySections(
   DirectoryTile fromEntry(ModuleNavEntry e) => DirectoryTile(
     label: e.label,
     subtitle: e.subtitle,
-    icon: e.icon,
+    // Cùng icon đặc với thanh tab (`tabIcons`) — một mục, một icon ở cả hai nơi.
+    icon: tabIconOf(e),
     hue: hueOfArea(e.area),
     onTap: () => open(e.routeName),
     badge: e.badge,
@@ -299,10 +301,7 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
     final settingsRows = <Widget>[
       if (shows('Thông báo'))
         OmniGroupRow(
-          leading: _directoryIconTile(
-            context,
-            LucideIcons.bell,
-          ),
+          leading: _directoryIconTile(context, OmniFillIcons.bellRinging),
           title: 'Thông báo',
           onTap: () => context.pushNamed(SettingsModule.notifications),
         ),
@@ -310,7 +309,7 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
       if (shows('Hiệu ứng mượt pin')) const _PerfRow(),
       if (shows('Nền'))
         OmniGroupRow(
-          leading: _directoryIconTile(context, LucideIcons.wallpaper),
+          leading: _directoryIconTile(context, OmniFillIcons.image),
           title: 'Nền',
           onTap: () => context.pushNamed(SettingsModule.background),
         ),
@@ -318,7 +317,7 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
     final helpRows = <Widget>[
       if (shows('Trung tâm hỗ trợ'))
         OmniGroupRow(
-          leading: _directoryIconTile(context, LucideIcons.circleQuestionMark),
+          leading: _directoryIconTile(context, OmniFillIcons.question),
           title: 'Trung tâm hỗ trợ',
           trailing: Icon(
             LucideIcons.externalLink,
@@ -330,7 +329,10 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
         ),
       if (shows('Chính sách quyền riêng tư'))
         OmniGroupRow(
-          leading: _directoryIconTile(context, LucideIcons.fileSearch),
+          leading: _directoryIconTile(
+            context,
+            OmniFillIcons.fileMagnifyingGlass,
+          ),
           title: 'Chính sách quyền riêng tư',
           trailing: Icon(
             LucideIcons.externalLink,
@@ -342,7 +344,7 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
         ),
       if (shows('Phiên bản'))
         OmniGroupRow(
-          leading: _directoryIconTile(context, LucideIcons.info),
+          leading: _directoryIconTile(context, OmniFillIcons.info),
           title: 'Phiên bản',
           value: AppConfig.appVersion,
         ),
@@ -580,10 +582,8 @@ class _FeatureTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    // Một tông màu cho mọi ô (app liquid glass): nền xanh nhạt, icon màu
-    // chính. Chỉ huy hiệu giữ màu riêng vì là tín hiệu.
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final toneBackground = scheme.primary.withValues(alpha: dark ? 0.16 : 0.09);
+    // Phương án C (26/11/2026): icon đặc màu mực, không ô nền — giống thanh
+    // tab. Chỉ huy hiệu giữ màu riêng vì là tín hiệu.
     final badgeProvider = tile.badge;
     final count = badgeProvider == null ? 0 : ref.watch(badgeProvider);
 
@@ -622,14 +622,16 @@ class _FeatureTile extends ConsumerWidget {
                     clipBehavior: Clip.none,
                     alignment: Alignment.bottomCenter,
                     children: [
-                      Container(
+                      SizedBox(
                         width: 40,
                         height: 40,
-                        decoration: BoxDecoration(
-                          color: toneBackground,
-                          borderRadius: OmniRadius.xlAll,
+                        child: Center(
+                          child: Icon(
+                            tile.icon,
+                            size: 30,
+                            color: scheme.onSurface,
+                          ),
                         ),
-                        child: Icon(tile.icon, size: 20, color: scheme.primary),
                       ),
                       if (count > 0)
                         Positioned(
@@ -841,7 +843,7 @@ class _PerfRow extends ConsumerWidget {
 
     return OmniGroupRow(
       key: const Key('directory-perf-row'),
-      leading: _directoryIconTile(context, LucideIcons.sparkles),
+      leading: _directoryIconTile(context, OmniFillIcons.sparkle),
       title: 'Hiệu ứng',
       subtitle: value,
       semanticsLabel: 'Hiệu ứng: $value',
@@ -900,7 +902,7 @@ class _ThemeRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final mode = ref.watch(themeModeProvider);
     return OmniGroupRow(
-      leading: _directoryIconTile(context, LucideIcons.contrast),
+      leading: _directoryIconTile(context, OmniFillIcons.circleHalf),
       title: 'Giao diện',
       trailing: SizedBox(
         width: 168,

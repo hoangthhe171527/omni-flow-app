@@ -221,13 +221,9 @@ void main() {
     await t.tapAt(icon + const Offset(20, 0));
     await t.pumpAndSettle();
     expect(find.text('VIP'), findsOneWidget);
-    // "Thêm khách" giờ là nút + kính góc phải dưới (rà soát 12/11).
-    final add = t.getSize(
-      find.ancestor(
-        of: find.byIcon(LucideIcons.userPlus),
-        matching: find.byType(OmniLiquidFab),
-      ),
-    );
+    // "Thêm khách" là nút + góc phải dưới (hướng iOS chuẩn 26/11: mọi màn
+    // dùng chung dấu +).
+    final add = t.getSize(find.byType(OmniLiquidFab));
     expect(add.shortestSide, greaterThanOrEqualTo(44));
   });
 

@@ -217,11 +217,27 @@ class _WorkshopCardState extends ConsumerState<_WorkshopCard> {
                     ? const HrPill('Đủ người', tone: OmniTone.success)
                     : _reminded
                     ? const HrPill('Đã nhắc', tone: OmniTone.success)
+                    // Nút trong thẻ = nút PHỤ (hướng "iOS chuẩn" 26/11/2026):
+                    // nền xanh nhạt, chữ xanh, thấp 36 — không khối xanh đặc
+                    // trong thẻ của màn Tổng quan.
                     : FilledButton(
                         key: const ValueKey('hr-home-remind'),
                         onPressed: _remind,
                         style: FilledButton.styleFrom(
-                          minimumSize: const Size(0, 46),
+                          minimumSize: const Size(0, 36),
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          backgroundColor: OmniColors.byBrightness(
+                            context,
+                            OmniColors.accent,
+                            OmniColors.darkAccent,
+                          ),
+                          foregroundColor: OmniColors.byBrightness(
+                            context,
+                            OmniColors.accentForeground,
+                            OmniColors.darkAccentForeground,
+                          ),
+                          elevation: 0,
+                          textStyle: OmniType.bodyStrong.copyWith(fontSize: 14),
                         ),
                         child: Text('Nhắc $notIn'),
                       ),

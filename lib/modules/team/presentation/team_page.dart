@@ -64,7 +64,6 @@ class TeamPage extends ConsumerWidget {
             ? OmniLiquidFab(
                 key: const Key('team-add-member'),
                 tooltip: 'Thêm nhân viên',
-                icon: LucideIcons.userPlus,
                 onPressed: (_) => showAddMemberSheet(context),
               )
             : null,

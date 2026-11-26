@@ -12,6 +12,7 @@ import '../../design/tokens/tokens.dart';
 import '../../modules/auth/application/login_controller.dart';
 import '../../security/session/session_controller.dart';
 import '../router/app_router.dart';
+import '../shell/tab_icons.dart';
 import 'app_manifest.dart';
 import 'app_shell_layout.dart';
 
@@ -308,6 +309,9 @@ OmniHue _hueOf(String key) => switch (key) {
   'stock' => OmniHue.orange,
   'work' => OmniHue.violet,
   'finance' => OmniHue.teal,
+  // Nhân sự chưa từng được khai: rơi vào mặc định (lưới 4 ô, xanh) trông như
+  // nút "Tất cả" và trùng màu Bàn làm việc.
+  'hr' => OmniHue.sky,
   'system' => OmniHue.neutral,
   _ => OmniHue.blue,
 };
@@ -318,8 +322,21 @@ IconData _iconOf(String key) => switch (key) {
   'stock' => LucideIcons.package,
   'work' => LucideIcons.squareKanban,
   'finance' => LucideIcons.wallet,
+  'hr' => LucideIcons.users,
   'system' => LucideIcons.settings,
   _ => LucideIcons.layoutGrid,
+};
+
+/// Icon ĐẶC (Phosphor Fill, cùng bộ với thanh tab) cho ô ứng dụng của lưới.
+IconData _glyphOf(String key) => switch (key) {
+  homeAppKey => OmniFillIcons.desktop,
+  'sales' => OmniFillIcons.shoppingBag,
+  'stock' => OmniFillIcons.package,
+  'work' => OmniFillIcons.kanban,
+  'finance' => OmniFillIcons.wallet,
+  'hr' => OmniFillIcons.usersThree,
+  'system' => OmniFillIcons.gearSix,
+  _ => OmniFillIcons.squaresFour,
 };
 
 String _descOf(ShellApp app) => switch (app.key) {
@@ -328,6 +345,7 @@ String _descOf(ShellApp app) => switch (app.key) {
   'stock' => 'Lô, tồn kho, kiểm kê',
   'work' => 'Dự án, tài liệu',
   'finance' => 'Chi phí, tiền hàng lô',
+  'hr' => 'Công tháng, đơn từ, thưởng đội',
   'system' => 'Kênh, cấu hình',
   _ => app.all.take(3).map((i) => i.entry.label).join(', '),
 };
@@ -408,6 +426,46 @@ class _AppIcon extends StatelessWidget {
   }
 }
 
+/// Ô ứng dụng kiểu màn hình chính iOS: nền màu ĐẶC dải trên → dưới theo tông,
+/// icon đặc trắng, bóng mảnh cùng tông. Tương phản cao: thêm viền mực.
+class _SolidAppIcon extends StatelessWidget {
+  const _SolidAppIcon({required this.icon, required this.hue});
+
+  final IconData icon;
+  final OmniHue hue;
+
+  static const double size = 56;
+
+  @override
+  Widget build(BuildContext context) {
+    final (top, bottom) = OmniFeatureTones.solid(hue);
+    final contrast = MediaQuery.highContrastOf(context);
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(15),
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [top, bottom],
+        ),
+        border: contrast
+            ? Border.all(color: Theme.of(context).colorScheme.onSurface)
+            : null,
+        boxShadow: [
+          BoxShadow(
+            color: bottom.withValues(alpha: .25),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Icon(icon, size: 28, color: Colors.white),
+    );
+  }
+}
+
 class _SectionLabel extends StatelessWidget {
   const _SectionLabel(this.text);
 
@@ -429,8 +487,10 @@ class _SectionLabel extends StatelessWidget {
   );
 }
 
-/// Lưới 3 cột (màn hẹp / chữ phóng to thì 2), Bàn làm việc là ô đầu: ô icon
-/// 64 bo 20 nền tông, tên 15/600, mô tả 12 ≤ 2 dòng, huy hiệu vàng góc ô.
+/// Lưới kiểu màn hình chính iOS (mẫu "Lưới iOS", duyệt 26/11/2026) trong một
+/// thẻ: 4 cột (màn hẹp / chữ phóng to thì 3), ô 56 màu đặc + icon trắng, chỉ
+/// tên (≤ 2 dòng, không "…"); mô tả vẫn tìm được qua ô tìm. Bàn làm việc là
+/// ô đầu, huy hiệu vàng góc ô.
 class _AppGrid extends StatelessWidget {
   const _AppGrid({required this.apps, required this.onOpen});
 
@@ -442,21 +502,27 @@ class _AppGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, box) {
         final scale = MediaQuery.textScalerOf(context).scale(1);
-        final columns = box.maxWidth < 260 || scale > 1.35 ? 2 : 3;
-        final width = box.maxWidth / columns;
-        return Wrap(
-          runSpacing: 20,
-          children: [
-            for (final app in apps)
-              SizedBox(
-                width: width,
-                child: _AppTile(
-                  key: ValueKey('app-tile-${app.key}'),
-                  app: app,
-                  onTap: () => onOpen(app),
+        // Trừ đệm ngang 6 + 6 và viền 1 + 1 của thẻ; làm tròn xuống để 4 ô
+        // không dư lẻ pixel mà bị Wrap đẩy xuống hàng.
+        final inner = box.maxWidth - 14;
+        final columns = inner < 300 || scale > 1.35 ? 3 : 4;
+        final width = (inner / columns).floorToDouble();
+        return OmniCard(
+          padding: const EdgeInsets.fromLTRB(6, 16, 6, 16),
+          child: Wrap(
+            runSpacing: 18,
+            children: [
+              for (final app in apps)
+                SizedBox(
+                  width: width,
+                  child: _AppTile(
+                    key: ValueKey('app-tile-${app.key}'),
+                    app: app,
+                    onTap: () => onOpen(app),
+                  ),
                 ),
-              ),
-          ],
+            ],
+          ),
         );
       },
     );
@@ -481,7 +547,6 @@ class _AppTileState extends ConsumerState<_AppTile> {
     final scheme = Theme.of(context).colorScheme;
     final app = widget.app;
     final (alert, unread) = _badgeOf(ref, app);
-    final desc = _descOf(app);
     final semantics = alert > 0
         ? '${app.name}, $alert'
         : unread
@@ -509,13 +574,7 @@ class _AppTileState extends ConsumerState<_AppTile> {
               Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  _AppIcon(
-                    icon: _iconOf(app.key),
-                    hue: _hueOf(app.key),
-                    size: 64,
-                    radius: 20,
-                    iconSize: 30,
-                  ),
+                  _SolidAppIcon(icon: _glyphOf(app.key), hue: _hueOf(app.key)),
                   if (alert > 0)
                     Positioned(
                       top: -6,
@@ -530,33 +589,21 @@ class _AppTileState extends ConsumerState<_AppTile> {
                     ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 7),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 2),
                 child: Text(
                   app.name,
                   maxLines: 2,
                   textAlign: TextAlign.center,
-                  style: OmniType.bodyStrong.copyWith(
-                    height: 1.3,
+                  style: OmniType.caption.copyWith(
+                    fontSize: 13,
+                    height: 1.25,
+                    fontWeight: FontWeight.w500,
                     color: scheme.onSurface,
                   ),
                 ),
               ),
-              if (desc.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(4, 2, 4, 0),
-                  child: Text(
-                    desc,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: OmniType.micro.copyWith(
-                      fontWeight: FontWeight.w400,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
             ],
           ),
         ),

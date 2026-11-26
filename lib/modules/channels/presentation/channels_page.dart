@@ -254,7 +254,6 @@ class _ChannelsPageState extends ConsumerState<ChannelsPage>
             ? OmniLiquidFab(
                 key: const Key('channels-connect'),
                 tooltip: 'Kết nối kênh',
-                icon: LucideIcons.link2,
                 onPressed: (anchor) {
                   if (_connecting) return;
                   _pickChannel(anchor);
