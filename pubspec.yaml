@@ -111,3 +111,9 @@ flutter:
           weight: 700
         - asset: assets/fonts/BeVietnamPro-ExtraBold.ttf
           weight: 800
+    # Icon đặc của thanh tab (Phosphor Fill, MIT — PhosphorFill-MIT.txt). Chép
+    # font thay vì dùng gói phosphor_flutter 2.1.0: gói đó kế thừa IconData,
+    # nay là lớp final nên không biên dịch được. Mã ký tự: lib/app/shell/tab_icons.dart.
+    - family: PhosphorFill
+      fonts:
+        - asset: assets/fonts/PhosphorFill.ttf
