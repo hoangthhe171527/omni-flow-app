@@ -7,6 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/core/network/api_client.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/design/tokens/tokens.dart';
+import 'package:omni_app/design/components/omni_liquid_fab.dart';
 import 'package:omni_app/modules/plans/application/plans_providers.dart';
 import 'package:omni_app/modules/plans/data/plans_api.dart';
 import 'package:omni_app/modules/plans/domain/plan.dart';
@@ -205,10 +206,10 @@ void main() {
       );
       // Dải tìm trong viên kính của thanh trên cao 44 (viomni-apple-uiux.html).
       expect(t.getSize(find.byKey(const Key('teams-search-box'))).height, 44);
-      // Dấu + rời ô tìm, thành nút kính lỏng tròn 58 góc dưới phải.
+      // Dấu + rời ô tìm, thành nút + tròn góc dưới phải ([OmniLiquidFab.size]).
       expect(find.byKey(const Key('teams-add-face')), findsNothing);
       final fab = t.getRect(find.byKey(const Key('work-create-fab')));
-      expect(fab.size, const Size(58, 58));
+      expect(fab.size, const Size.square(OmniLiquidFab.size));
       expect(fab.right, 390 - 20);
       expect(fab.center.dy, greaterThan(844 / 2));
       expect(

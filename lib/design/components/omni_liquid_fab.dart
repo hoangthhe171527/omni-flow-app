@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons_500.dart';
 
 /// Nút + tròn nổi ở góc dưới phải, phía trên thanh tab.
 ///
-/// Phong cách iOS 25/11/2026 (spec §3.3): tròn đặc màu chính, dấu + màu
-/// onPrimary, bóng mảnh cùng tông màu chính — không vệt sáng, không nhoè nền
-/// phía sau. Bấm thì nhún nhẹ; [open] xoay dấu + thành ✕. Tương phản cao: nền
-/// đặc viền màu chính. Giảm chuyển động: không nhún, không xoay động.
+/// Hướng "iOS chuẩn" (duyệt 26/11/2026): tròn 52 đặc màu chính, dấu + nét đậm
+/// màu onPrimary, bóng XÁM mảnh — bóng xanh loang rộng cũ làm nút nặng và
+/// chói. Mọi màn dùng chung dấu +. Bấm thì nhún nhẹ; [open] xoay dấu + thành
+/// ✕. Tương phản cao: nền đặc viền màu chính. Giảm chuyển động: không nhún,
+/// không xoay động.
 class OmniLiquidFab extends StatefulWidget {
   const OmniLiquidFab({
     super.key,
     required this.onPressed,
     required this.tooltip,
     this.open = false,
-    this.icon = LucideIcons.plus,
+    this.icon = LucideIcons500.plus,
   });
 
   /// Nhận khung của nút (toạ độ màn) để neo menu bật ra từ chính nút.
@@ -22,7 +23,7 @@ class OmniLiquidFab extends StatefulWidget {
   final bool open;
   final IconData icon;
 
-  static const double size = 58;
+  static const double size = 52;
 
   @override
   State<OmniLiquidFab> createState() => _OmniLiquidFabState();
@@ -97,7 +98,7 @@ class _OmniLiquidFabState extends State<OmniLiquidFab>
             curve: Curves.easeOutBack,
             child: Icon(
               widget.icon,
-              size: 28,
+              size: 24,
               color: solid ? scheme.primary : scheme.onPrimary,
             ),
           ),
@@ -111,16 +112,19 @@ class _OmniLiquidFabState extends State<OmniLiquidFab>
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           boxShadow: [
-            // Bóng mảnh cùng tông màu chính + một lớp mực rất nhẹ để tách nền.
-            // Gọn (16/6): bóng dài loang xuống thanh tab làm nút như dính menu.
+            // Bóng xám mảnh hai lớp (12/4 + 2/1), không bóng màu chính.
             BoxShadow(
-              color: scheme.primary.withValues(alpha: dark ? 0.30 : 0.30),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
+              color: const Color(
+                0xFF0B1A33,
+              ).withValues(alpha: dark ? 0.45 : 0.16),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
             BoxShadow(
-              color: Colors.black.withValues(alpha: dark ? 0.30 : 0.10),
-              blurRadius: 3,
+              color: const Color(
+                0xFF0B1A33,
+              ).withValues(alpha: dark ? 0.30 : 0.10),
+              blurRadius: 2,
               offset: const Offset(0, 1),
             ),
           ],

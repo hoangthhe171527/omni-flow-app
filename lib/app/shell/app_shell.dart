@@ -296,7 +296,9 @@ class _ShellNavigationRail extends ConsumerWidget {
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            Icon(tabIconOf(destination)),
+            Icon(
+              selected ? tabIconOf(destination) : tabIconLineOf(destination),
+            ),
             if (count > 0)
               Positioned(
                 right: -12,
@@ -318,20 +320,15 @@ class _ShellNavigationRail extends ConsumerWidget {
       labelType: NavigationRailLabelType.all,
       groupAlignment: -0.75,
       backgroundColor: scheme.surface,
-      // Mục đang chọn: nền xám trung tính + chữ mực, icon màu chính — không
-      // còn chữ teal nhỏ trên nền teal nhạt (`SPrinciples.dc.html` §6).
-      indicatorColor: scheme.surfaceContainerHighest,
-      // Ô chọn vuông bo 10 (thang 6/10/16/32).
-      indicatorShape: const RoundedRectangleBorder(
-        borderRadius: OmniRadius.xlAll,
-      ),
+      // Hướng "iOS chuẩn" (26/11/2026), như thanh dưới: không ô nền; mục đang
+      // chọn icon đặc + chữ mực navy, mục chưa chọn icon nét + chữ xám.
+      useIndicator: false,
       selectedIconTheme: IconThemeData(
-        color: scheme.primary,
+        color: scheme.onSurface,
         size: OmniIconSize.xl,
       ),
-      // Icon đặc, mục chưa chọn màu mực như thanh dưới (phương án C 26/11).
       unselectedIconTheme: IconThemeData(
-        color: scheme.onSurface,
+        color: _tabInactiveIcon(context),
         size: OmniIconSize.xl,
       ),
       selectedLabelTextStyle: OmniType.micro.copyWith(
@@ -339,7 +336,7 @@ class _ShellNavigationRail extends ConsumerWidget {
         fontWeight: FontWeight.w600,
       ),
       unselectedLabelTextStyle: OmniType.micro.copyWith(
-        color: scheme.onSurfaceVariant,
+        color: _tabInactiveLabel(context),
         fontWeight: FontWeight.w500,
       ),
       // Logo chỉ ở đăng nhập và màn khởi động (spec iOS Q4) → rail không còn
@@ -354,7 +351,7 @@ class _ShellNavigationRail extends ConsumerWidget {
           ),
         if (more case final more?)
           NavigationRailDestination(
-            icon: Icon(more.icon),
+            icon: Icon(more.lineIcon),
             selectedIcon: Icon(more.icon),
             label: Text(more.label),
           ),
@@ -364,9 +361,9 @@ class _ShellNavigationRail extends ConsumerWidget {
 }
 
 /// Thanh tab: viên kính nổi (một trong số ít chỗ còn giữ kính, spec phong
-/// cách iOS 25/11/2026 §3.3). Phương án C "đặc + nhãn" (duyệt 26/11/2026,
-/// thay "chỉ icon"): icon ĐẶC + nhãn ngắn dưới icon; mục chưa chọn màu mực,
-/// mục đang chọn màu chính; một viên xanh nhạt CHỈ sau icon trượt giữa các mục.
+/// cách iOS 25/11/2026 §3.3). Hướng "iOS chuẩn" (duyệt 26/11/2026): icon +
+/// nhãn ngắn; mục chưa chọn icon NÉT xám, mục đang chọn icon ĐẶC màu chính —
+/// không viên nền (viên chọn màu nhạt từng làm thanh nặng và sát chữ).
 class _ShellNavBar extends StatelessWidget {
   const _ShellNavBar({
     required this.tabs,
@@ -381,12 +378,6 @@ class _ShellNavBar extends StatelessWidget {
   final _MoreSlot? more;
   final int selectedIndex;
   final ValueChanged<int> onSelected;
-
-  /// Viên chọn 56×30 CHỈ bọc icon, nhãn nằm dưới viên (cách 3, duyệt
-  /// 26/11/2026 — viên bọc cả nhãn từng sát chữ "Tổng quan": hở 0,3px ở
-  /// khổ 390, lấn 0,5px ở 360). Tự co khi ô tab hẹp hơn.
-  static const double _markWidth = 56;
-  static const double _markHeight = 30;
 
   @override
   Widget build(BuildContext context) {
@@ -413,66 +404,25 @@ class _ShellNavBar extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: SizedBox(
               height: ShellBarInset.pillHeight,
-              child: LayoutBuilder(
-                builder: (context, box) {
-                  final count = tabs.length + (more == null ? 0 : 1);
-                  final slot = box.maxWidth / count;
-                  final motion = OmniMotion.enabled(context);
-                  final mark = slot < _markWidth ? slot : _markWidth;
-
-                  return Stack(
-                    children: [
-                      // MỘT ô chọn xanh nhạt trượt từ tab cũ sang tab mới —
-                      // không phải mỗi mục tự bật/tắt nền.
-                      AnimatedPositioned(
-                        duration: motion
-                            ? const Duration(milliseconds: 260)
-                            : Duration.zero,
-                        curve: Curves.easeOutCubic,
-                        left:
-                            slot * selectedIndex.clamp(0, count - 1) +
-                            (slot - mark) / 2,
-                        // Khớp ô icon của [_ShellNavItem]: khối icon+nhãn
-                        // cao [_ShellNavItem.contentHeight], căn giữa viên.
-                        top:
-                            (ShellBarInset.pillHeight -
-                                _ShellNavItem.contentHeight) /
-                            2,
-                        height: _markHeight,
-                        width: mark,
-                        child: DecoratedBox(
-                          key: const Key('shell-nav-selection'),
-                          decoration: BoxDecoration(
-                            color: OmniGlass.selectionOf(context),
-                            borderRadius: BorderRadius.circular(
-                              _markHeight / 2,
-                            ),
-                          ),
-                        ),
+              child: Row(
+                children: [
+                  for (var i = 0; i < tabs.length; i++)
+                    Expanded(
+                      child: _ShellNavItem(
+                        destination: tabs[i],
+                        selected: selectedIndex == i,
+                        onTap: () => onSelected(i),
                       ),
-                      Row(
-                        children: [
-                          for (var i = 0; i < tabs.length; i++)
-                            Expanded(
-                              child: _ShellNavItem(
-                                destination: tabs[i],
-                                selected: selectedIndex == i,
-                                onTap: () => onSelected(i),
-                              ),
-                            ),
-                          if (more case final more?)
-                            Expanded(
-                              child: _ShellNavItem.more(
-                                slot: more,
-                                selected: selectedIndex == tabs.length,
-                                onTap: () => onSelected(tabs.length),
-                              ),
-                            ),
-                        ],
+                    ),
+                  if (more case final more?)
+                    Expanded(
+                      child: _ShellNavItem.more(
+                        slot: more,
+                        selected: selectedIndex == tabs.length,
+                        onTap: () => onSelected(tabs.length),
                       ),
-                    ],
-                  );
-                },
+                    ),
+                ],
               ),
             ),
           ),
@@ -488,7 +438,8 @@ class _ShellNavItem extends ConsumerWidget {
     required this.selected,
     required this.onTap,
   }) : label = null,
-       icon = null;
+       icon = null,
+       lineIcon = null;
 
   _ShellNavItem.more({
     required _MoreSlot slot,
@@ -496,28 +447,33 @@ class _ShellNavItem extends ConsumerWidget {
     required this.onTap,
   }) : destination = null,
        label = slot.label,
-       icon = slot.icon;
+       icon = slot.icon,
+       lineIcon = slot.lineIcon;
 
   final ModuleNavEntry? destination;
   final String? label;
   final IconData? icon;
+  final IconData? lineIcon;
   final bool selected;
   final VoidCallback onTap;
 
-  /// Ô icon (= chiều cao viên chọn), khe, dòng nhãn — thanh dùng tổng này để
-  /// đặt viên chọn đúng sau icon.
-  static const double _iconBoxHeight = _ShellNavBar._markHeight;
+  static const double _iconBoxHeight = 30;
   static const double _labelGap = 4;
   static const double _labelHeight = 14;
-  static const double contentHeight = _iconBoxHeight + _labelGap + _labelHeight;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    // Mục đang chọn: viên xanh nhạt (vẽ ở thanh) + icon/nhãn màu chính; mục
-    // chưa chọn màu mực, không xám (phương án C 26/11).
-    final iconColor = selected ? scheme.primary : scheme.onSurface;
+    // iOS: mục đang chọn icon ĐẶC + nhãn màu MỰC NAVY (người dùng chọn
+    // 26/11/2026 thay xanh: xanh để dành cho hành động); mục chưa chọn icon
+    // NÉT xám, nhãn xám đậm hơn icon một bậc để chữ 11 vẫn đọc được. Đổi ngay,
+    // không chuyển màu dần — như thanh tab iOS. Tối: mực sáng (onSurface).
+    final iconColor = selected ? scheme.onSurface : _tabInactiveIcon(context);
+    final labelColor = selected ? scheme.onSurface : _tabInactiveLabel(context);
     final destination = this.destination;
+    final glyph = destination == null
+        ? (selected ? icon! : lineIcon!)
+        : (selected ? tabIconOf(destination) : tabIconLineOf(destination));
     final badgeProvider = destination?.badge;
     final count = badgeProvider == null ? 0 : ref.watch(badgeProvider);
     final text = destination == null ? label! : tabLabelOf(destination);
@@ -540,76 +496,81 @@ class _ShellNavItem extends ConsumerWidget {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: TweenAnimationBuilder<Color?>(
-          duration: OmniMotion.of(context).base,
-          curve: OmniCurves.standard,
-          tween: ColorTween(end: iconColor),
-          // Icon đặc trong ô cao bằng viên chọn + nhãn ngắn (≤ 9 ký tự,
-          // `tabLabels`) dưới viên — không thu nhỏ, không "…".
-          builder: (context, color, _) => Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SizedBox(
-                width: 44,
-                height: _iconBoxHeight,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  alignment: Alignment.center,
-                  children: [
-                    Icon(
-                      destination == null ? icon! : tabIconOf(destination),
-                      size: 26,
-                      color: color,
-                    ),
-                    if (count > 0)
-                      Positioned(
-                        right: -2,
-                        top: -3,
-                        child: _NavBadge(
-                          count: count,
-                          tone: destination!.badgeTone,
-                          display: destination.badgeDisplay,
-                        ),
+        // Icon + nhãn ngắn (≤ 9 ký tự, `tabLabels`) — không thu nhỏ, không "…".
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 44,
+              height: _iconBoxHeight,
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.center,
+                children: [
+                  Icon(glyph, size: 26, color: iconColor),
+                  if (count > 0)
+                    Positioned(
+                      right: -2,
+                      top: -3,
+                      child: _NavBadge(
+                        count: count,
+                        tone: destination!.badgeTone,
+                        display: destination.badgeDisplay,
                       ),
-                  ],
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: _labelGap),
+            SizedBox(
+              height: _labelHeight,
+              child: Text(
+                text,
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.visible,
+                textScaler: TextScaler.noScaling,
+                style: OmniType.micro.copyWith(
+                  color: labelColor,
+                  fontSize: 11,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                  height: 1.2,
                 ),
               ),
-              const SizedBox(height: _labelGap),
-              SizedBox(
-                height: _labelHeight,
-                child: Text(
-                  text,
-                  maxLines: 1,
-                  softWrap: false,
-                  overflow: TextOverflow.visible,
-                  textScaler: TextScaler.noScaling,
-                  style: OmniType.micro.copyWith(
-                    color: color,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    height: 1.2,
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
+Color _tabInactiveIcon(BuildContext context) => OmniColors.byBrightness(
+  context,
+  OmniColors.tabInactiveIcon,
+  OmniColors.darkTabInactiveIcon,
+);
+
+Color _tabInactiveLabel(BuildContext context) => OmniColors.byBrightness(
+  context,
+  OmniColors.tabInactiveLabel,
+  OmniColors.darkTabInactiveLabel,
+);
+
 /// Ô cuối của thanh dưới: "Tất cả" (danh bạ, khi không có khung ứng dụng)
 /// hoặc "Thêm" (sheet mục còn lại của ứng dụng đang mở).
 class _MoreSlot {
-  const _MoreSlot(this.label, this.icon);
+  const _MoreSlot(this.label, this.icon, this.lineIcon);
 
-  static const directory = _MoreSlot('Tất cả', tabIconAll);
+  static const directory = _MoreSlot('Tất cả', tabIconAll, tabIconAllLine);
 
-  static const app = _MoreSlot('Thêm', tabIconMore);
+  static const app = _MoreSlot('Thêm', tabIconMore, tabIconMoreLine);
 
   final String label;
+
+  /// Đặc khi đang chọn, nét khi chưa chọn.
   final IconData icon;
+  final IconData lineIcon;
 }
 
 /// "Thêm" của một ứng dụng: mục chính ngoài 4 mục trên thanh dưới, rồi báo

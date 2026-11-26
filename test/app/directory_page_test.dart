@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/app/perf/performance_controller.dart';
 import 'package:omni_app/app/shell/directory_page.dart';
+import 'package:omni_app/app/shell/tab_icons.dart';
 import 'package:omni_app/core/module/module_registry.dart';
 import 'package:omni_app/core/module/module_route.dart';
 import 'package:omni_app/core/module/nav_destination.dart';
@@ -441,26 +442,51 @@ void main() {
     expect(iconCenters, hasLength(1));
   });
 
-  testWidgets('mọi ô cùng một tông màu (nền xanh nhạt, icon màu chính)', (
+  testWidgets('mọi ô: icon đặc màu mực, không ô nền (phương án C 26/11)', (
     t,
   ) async {
     await pump(t);
-    Color? tileColor(int index) =>
-        (t
-                    .widget<Container>(
-                      find
-                          .ancestor(
-                            of: find.byIcon(LucideIcons.circle).at(index),
-                            matching: find.byType(Container),
-                          )
-                          .first,
-                    )
-                    .decoration!
-                as BoxDecoration)
-            .color;
-    final primary = OmniTheme.light().colorScheme.primary;
-    expect(tileColor(0), primary.withValues(alpha: 0.09));
-    expect(tileColor(2), tileColor(0));
+    final ink = OmniTheme.light().colorScheme.onSurface;
+    final icons = t.widgetList<Icon>(find.byIcon(LucideIcons.circle)).toList();
+    expect(icons, isNotEmpty);
+    for (final icon in icons) {
+      expect(icon.color, ink);
+      expect(icon.size, 30);
+    }
+    // Không còn ô nền màu bọc icon.
+    final tinted = find.ancestor(
+      of: find.byIcon(LucideIcons.circle).first,
+      matching: find.byWidgetPredicate(
+        (w) =>
+            w is Container &&
+            w.decoration is BoxDecoration &&
+            (w.decoration! as BoxDecoration).color != null,
+      ),
+    );
+    expect(tinted, findsNothing);
+  });
+
+  test('ô lưới dùng đúng icon đặc của thanh tab', () {
+    final sections = buildDirectorySections(
+      {
+        NavArea.work: [
+          ModuleNavEntry(
+            moduleId: 'dashboard',
+            area: NavArea.work,
+            label: 'Tổng quan',
+            icon: LucideIcons.chartColumn,
+            selectedIcon: LucideIcons.chartColumn,
+            routeName: 'dashboard.home',
+          ),
+        ],
+      },
+      open: (_) {},
+      query: '',
+    );
+    expect(
+      sections.expand((s) => s.tiles).single.icon,
+      tabIcons['dashboard.home'],
+    );
   });
 
   testWidgets('huy hiệu: tin chưa đọc là chấm, việc trễ vẫn là số đỏ', (
