@@ -13,7 +13,7 @@ import 'widgets/auth_widgets.dart';
 
 /// Màn đăng nhập (artifact "Màn xác thực" duyệt 26/11): logo trần 56 neo cho
 /// màn mở app bay về, tiêu đề "Đăng nhập Viomni", Google lên đầu, rồi hai ô
-/// rời có nhãn ("Quên?" cùng hàng nhãn mật khẩu), nút chính xanh đặc; chân màn
+/// rời có nhãn ("Quên mật khẩu?" cùng hàng nhãn mật khẩu), nút chính xanh đặc; chân màn
 /// là "Chưa có tài khoản? Đăng ký" và Chính sách bảo mật.
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -193,8 +193,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                 validator: (value) =>
                     (value ?? '').isEmpty ? 'Vui lòng nhập mật khẩu' : null,
                 labelTrailing: AuthLabelLink(
-                  label: 'Quên?',
-                  semanticLabel: 'Quên mật khẩu',
+                  label: 'Quên mật khẩu?',
                   onTap: _openForgot,
                 ),
                 suffix: AuthPasswordToggle(
