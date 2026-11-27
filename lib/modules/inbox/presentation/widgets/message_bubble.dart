@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/gestures.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -96,7 +97,7 @@ class MessageBubble extends StatelessWidget {
       notice = 'Không sao chép được. Vui lòng thử lại.';
     }
     if (!context.mounted) return;
-    messenger?.showSnackBar(composerSnackBar(context, notice));
+    showComposerToast(context, notice, messenger: messenger);
   }
 
   @override
@@ -544,9 +545,10 @@ class _MessageTextState extends State<_MessageText> {
           text: url,
           recognizer: recognizer,
           style: TextStyle(
-            color: widget.linkColor ?? OmniColors.chatPrimary,
+            color: widget.linkColor ?? Theme.of(context).colorScheme.primary,
             decoration: TextDecoration.underline,
-            decorationColor: widget.linkColor ?? OmniColors.chatPrimary,
+            decorationColor:
+                widget.linkColor ?? Theme.of(context).colorScheme.primary,
           ),
         ),
       );
@@ -778,6 +780,21 @@ class _ReplySwipeState extends State<_ReplySwipe>
     final direction = widget.outbound ? -1.0 : 1.0;
     final progress = (_distance / _triggerDistance).clamp(0.0, 1.0);
 
+    // Thao tác tin chỉ có qua vuốt / nhấn giữ / chạm đúp: mở cho trình đọc
+    // màn hình (C3, WCAG 2.5.7).
+    return Semantics(
+      customSemanticsActions: {
+        if (widget.onReply != null)
+          const CustomSemanticsAction(label: 'Trả lời'): widget.onReply!,
+        if (widget.onReact != null)
+          const CustomSemanticsAction(label: 'Thả tim'): _onDoubleTap,
+        const CustomSemanticsAction(label: 'Thao tác khác'): _showActions,
+      },
+      child: _gestures(direction, progress),
+    );
+  }
+
+  Widget _gestures(double direction, double progress) {
     return RawGestureDetector(
       behavior: HitTestBehavior.translucent,
       gestures: {
@@ -824,7 +841,8 @@ class _ReplySwipeState extends State<_ReplySwipe>
                   child: Icon(
                     LucideIcons.reply,
                     size: OmniIconSize.lg,
-                    color: OmniColors.chatPrimary,
+                    // Dấu kéo, không bấm được: chữ phụ, không màu nhấn (C4).
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
               ),
@@ -870,9 +888,9 @@ class _QuotedMessage extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     // Vạch trích theo màu chữ của bong bóng, không xanh (duyệt 26/11/2026).
     final accent = onPrimary ? Colors.white : scheme.onSurfaceVariant;
-    final bodyColor = onPrimary
-        ? Colors.white.withValues(alpha: 0.85)
-        : scheme.onSurfaceVariant;
+    // Chữ trích trong tin gửi trắng đặc: trắng .85 trên trắng .16 chỉ
+    // 3,0–3,5:1 (C2).
+    final bodyColor = onPrimary ? Colors.white : scheme.onSurfaceVariant;
     final author = message.replyToAuthorName ?? 'Tin nhắn trước đó';
     final text = message.replyToText?.trim();
     return Container(
@@ -881,7 +899,7 @@ class _QuotedMessage extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
       decoration: BoxDecoration(
         color: onPrimary
-            ? Colors.white.withValues(alpha: 0.16)
+            ? OmniColors.ink.withValues(alpha: 0.16)
             : scheme.onSurface.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(10),
         border: Border(
@@ -937,7 +955,7 @@ class _MetaLine extends StatelessWidget {
               Icon(
                 LucideIcons.circleAlert,
                 size: OmniIconSize.sm,
-                color: scheme.error,
+                color: OmniColors.dangerTextOf(context),
               ),
               const SizedBox(width: 5),
               Expanded(
@@ -946,7 +964,9 @@ class _MetaLine extends StatelessWidget {
                       (message.isChannelUnsupported
                           ? kChannelUnsupportedText
                           : 'Gửi lỗi'),
-                  style: OmniType.micro.copyWith(color: scheme.error),
+                  style: OmniType.micro.copyWith(
+                    color: OmniColors.dangerTextOf(context),
+                  ),
                 ),
               ),
             ],
@@ -961,7 +981,7 @@ class _MetaLine extends StatelessWidget {
                     TextButton(
                       onPressed: onRetry,
                       style: TextButton.styleFrom(
-                        minimumSize: const Size(48, 40),
+                        minimumSize: const Size(48, 44),
                         padding: const EdgeInsets.symmetric(horizontal: 8),
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
@@ -971,7 +991,7 @@ class _MetaLine extends StatelessWidget {
                     TextButton(
                       onPressed: onDiscard,
                       style: TextButton.styleFrom(
-                        minimumSize: const Size(48, 40),
+                        minimumSize: const Size(48, 44),
                         padding: const EdgeInsets.symmetric(horizontal: 8),
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         foregroundColor: scheme.onSurfaceVariant,
@@ -1008,7 +1028,7 @@ class _DeliveryReceipt extends StatelessWidget {
     final failed = status == DeliveryStatus.failed;
     // "Đã xem" xám như các dòng phụ khác — xanh chỉ cho hành động (duyệt
     // 26/11/2026).
-    final color = failed ? Theme.of(context).colorScheme.error : fallbackColor;
+    final color = failed ? OmniColors.dangerTextOf(context) : fallbackColor;
     final label = switch (status) {
       DeliveryStatus.queued => 'Đang gửi',
       DeliveryStatus.sent => 'Đã gửi',

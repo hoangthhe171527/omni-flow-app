@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../../core/nav/shell_bar_inset.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../application/finance_providers.dart';
@@ -103,6 +102,19 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Toast chuẩn của app (nền theo chế độ, nút "Hoàn tác" ở lại tới khi bấm
+    // hoặc có toast mới) thay băng tự dựng tự ẩn sau 4,5 giây.
+    ref.listen(financeLedgerProvider.select((s) => s.toast), (prev, next) {
+      if (next == null || next.id == prev?.id) return;
+      showOmniToast(
+        context,
+        next.text,
+        actionLabel: next.canUndo ? 'Hoàn tác' : null,
+        onAction: next.canUndo
+            ? ref.read(financeLedgerProvider.notifier).undo
+            : null,
+      );
+    });
     final state = ref.watch(financeLedgerProvider);
     final notifier = ref.read(financeLedgerProvider.notifier);
     final p = FinancePalette.of(context);
@@ -222,23 +234,6 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                 ),
               ),
             ),
-            // Floating Undo Toast
-            if (state.toast != null)
-              Positioned(
-                left: 16,
-                right: 16,
-                // Trên thanh tab kính + nút + (soát 12/11): ở 20 nó nằm dưới kính.
-                bottom: ShellBarInset.floatingBottom(
-                  context,
-                  gap: OmniFabLayer.gap + OmniLiquidFab.size + 12,
-                ),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 440),
-                    child: _buildToastBanner(state.toast!, notifier),
-                  ),
-                ),
-              ),
           ],
         ),
       ),
@@ -349,8 +344,11 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
           InkWell(
             onTap: notifier.refresh,
             borderRadius: BorderRadius.circular(6),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            // Vùng chạm 44 dù chữ nhỏ.
+            child: Container(
+              constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 6),
               child: Text(
                 'Thử lại',
                 style: OmniType.caption.copyWith(
@@ -408,7 +406,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
     );
   }
 
-  /// Biểu tượng phẳng trong viên kính tìm, vùng chạm 40×44.
+  /// Biểu tượng phẳng trong viên kính tìm, vùng chạm 44×44.
   Widget _buildBarIcon({
     required Key key,
     Key? anchorKey,
@@ -425,7 +423,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
         radius: 22,
         child: SizedBox(
           key: anchorKey,
-          width: 40,
+          width: 44,
           height: 44,
           child: Icon(icon, size: OmniIconSize.md, color: color),
         ),
@@ -486,18 +484,22 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                       key: const ValueKey('finance-grp-toggle'),
                       onTap: notifier.toggleGroupBreakdown,
                       borderRadius: BorderRadius.circular(99),
-                      child: Container(
-                        width: 28,
-                        height: 28,
-                        decoration: BoxDecoration(
-                          color: grpBtnActive ? p.primarySoft : p.control,
-                          shape: BoxShape.circle,
-                        ),
-                        alignment: Alignment.center,
-                        child: Icon(
-                          LucideIcons.chartPie,
-                          size: 15,
-                          color: grpBtnActive ? p.primaryInk : p.ink2,
+                      // Hình 28, vùng chạm 44.
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: grpBtnActive ? p.primarySoft : p.control,
+                            shape: BoxShape.circle,
+                          ),
+                          alignment: Alignment.center,
+                          child: Icon(
+                            LucideIcons.chartPie,
+                            size: 15,
+                            color: grpBtnActive ? p.primaryInk : p.ink2,
+                          ),
                         ),
                       ),
                     ),
@@ -571,7 +573,6 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(
                     'Ngoài chi phí: ${FinanceMonthUtils.formatVndSpace(summary.excluded.total)} (${summary.excluded.count} khoản không tính CP)',
-                    maxLines: 1,
                     style: OmniType.micro.copyWith(
                       color: p.muted,
                       fontFeatures: const [FontFeature.tabularFigures()],
@@ -793,20 +794,24 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                       ? () => notifier.commitRecurring(all: true)
                       : notifier.toggleRecurringExpanded,
                   borderRadius: BorderRadius.circular(99),
-                  child: Container(
-                    height: 32,
-                    padding: const EdgeInsets.symmetric(horizontal: 11),
-                    alignment: Alignment.center,
-                    // Nút phụ (spec §3.2): nền xanh nhạt, chữ xanh.
-                    decoration: BoxDecoration(
-                      color: p.primary.withValues(alpha: .10),
-                      borderRadius: BorderRadius.circular(99),
-                    ),
-                    child: Text(
-                      allSum > 0 ? 'Ghi tất cả' : 'Mở nhập',
-                      style: OmniType.caption.copyWith(
-                        color: p.primary,
-                        fontWeight: FontWeight.w600,
+                  // Viên 32, vùng chạm 44.
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Container(
+                      height: 32,
+                      padding: const EdgeInsets.symmetric(horizontal: 11),
+                      alignment: Alignment.center,
+                      // Nút phụ (spec §3.2): nền xanh nhạt, chữ xanh.
+                      decoration: BoxDecoration(
+                        color: p.primary.withValues(alpha: .10),
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                      child: Text(
+                        allSum > 0 ? 'Ghi tất cả' : 'Mở nhập',
+                        style: OmniType.caption.copyWith(
+                          color: p.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
@@ -831,10 +836,8 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
             children: [
               for (var i = 0; i < suggestions.length; i++)
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 9,
-                  ),
+                  // Dọc 2: ô chọn + ô số tiền đã có vùng chạm 44 riêng.
+                  padding: const EdgeInsets.fromLTRB(2, 2, 14, 2),
                   decoration: BoxDecoration(
                     border: i == suggestions.length - 1
                         ? null
@@ -847,29 +850,33 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                       InkWell(
                         onTap: () => notifier.toggleRecurringItem(i),
                         borderRadius: BorderRadius.circular(99),
-                        child: Container(
-                          width: 20,
-                          height: 20,
-                          decoration: BoxDecoration(
-                            color: state.recurSel[i]
-                                ? p.primary
-                                : Colors.transparent,
-                            shape: BoxShape.circle,
-                            border: Border.all(
+                        // Ô chọn 20, vùng chạm 44.
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Container(
+                            width: 20,
+                            height: 20,
+                            decoration: BoxDecoration(
                               color: state.recurSel[i]
                                   ? p.primary
-                                  : p.muted.withValues(alpha: 0.5),
-                              width: 1.5,
+                                  : Colors.transparent,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: state.recurSel[i]
+                                    ? p.primary
+                                    : p.muted.withValues(alpha: 0.5),
+                                width: 1.5,
+                              ),
                             ),
+                            alignment: Alignment.center,
+                            child: state.recurSel[i]
+                                ? const Icon(
+                                    LucideIcons.check,
+                                    size: 13,
+                                    color: Colors.white,
+                                  )
+                                : null,
                           ),
-                          alignment: Alignment.center,
-                          child: state.recurSel[i]
-                              ? const Icon(
-                                  LucideIcons.check,
-                                  size: 13,
-                                  color: Colors.white,
-                                )
-                              : null,
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -894,40 +901,44 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                           state.recurAmt[i],
                         ),
                         borderRadius: BorderRadius.circular(10),
-                        child: Container(
-                          height: 29,
-                          padding: const EdgeInsets.symmetric(horizontal: 9),
-                          decoration: BoxDecoration(
-                            color: p.control,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                state.recurAmt[i] > 0
-                                    ? FinanceMonthUtils.formatVndSpace(
-                                        state.recurAmt[i],
-                                      )
-                                    : 'Nhập số tiền',
-                                maxLines: 1,
-                                style: OmniType.caption.copyWith(
-                                  color: state.recurAmt[i] > 0
-                                      ? p.ink
-                                      : p.primary,
-                                  fontWeight: FontWeight.w600,
-                                  fontFeatures: const [
-                                    FontFeature.tabularFigures(),
-                                  ],
+                        // Ô 29, vùng chạm 44.
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 7.5),
+                          child: Container(
+                            height: 29,
+                            padding: const EdgeInsets.symmetric(horizontal: 9),
+                            decoration: BoxDecoration(
+                              color: p.control,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  state.recurAmt[i] > 0
+                                      ? FinanceMonthUtils.formatVndSpace(
+                                          state.recurAmt[i],
+                                        )
+                                      : 'Nhập số tiền',
+                                  maxLines: 1,
+                                  style: OmniType.caption.copyWith(
+                                    color: state.recurAmt[i] > 0
+                                        ? p.ink
+                                        : p.primary,
+                                    fontWeight: FontWeight.w600,
+                                    fontFeatures: const [
+                                      FontFeature.tabularFigures(),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 4),
-                              Icon(
-                                LucideIcons.pencil,
-                                size: 12,
-                                color: p.muted,
-                              ),
-                            ],
+                                const SizedBox(width: 4),
+                                Icon(
+                                  LucideIcons.pencil,
+                                  size: 12,
+                                  color: p.muted,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -996,8 +1007,11 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
             key: const ValueKey('finance-clear-filter'),
             onTap: notifier.clearFilters,
             borderRadius: BorderRadius.circular(6),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            // Vùng chạm 44 dù chữ nhỏ.
+            child: Container(
+              constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
               child: Text(
                 '× Bỏ lọc',
                 style: OmniType.caption.copyWith(
@@ -1101,61 +1115,6 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
       ],
     ];
   }
-
-  Widget _buildToastBanner(
-    FinanceToastMessage toast,
-    FinanceLedgerNotifier notifier,
-  ) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-      decoration: BoxDecoration(
-        color: OmniColors.ink.withValues(alpha: 0.94),
-        // Lớp nổi trên nội dung: giữ bóng, bo 16 (spec §3.5).
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: OmniColors.ink.withValues(alpha: 0.24),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Text(
-              toast.text,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: OmniType.bodySm.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-          if (toast.canUndo) ...[
-            const SizedBox(width: 12),
-            InkWell(
-              key: const ValueKey('finance-undo-btn'),
-              onTap: notifier.undo,
-              borderRadius: BorderRadius.circular(6),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                child: Text(
-                  'Hoàn tác',
-                  style: OmniType.bodySm.copyWith(
-                    color: OmniColors.orbit,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
 }
 
 /// Số phụ dưới khối tổng (cùng khuôn `OmniTotalCard`): số 15/700 trên, nhãn
@@ -1198,18 +1157,13 @@ class _TotalStat extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    value,
-                    maxLines: 1,
-                    softWrap: false,
-                    style: OmniType.bodyStrong.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: color,
-                      fontFeatures: OmniType.tabular,
-                    ),
+                // Số đủ, không thu nhỏ (không FittedBox): hẹp thì xuống dòng.
+                Text(
+                  value,
+                  style: OmniType.bodyStrong.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: color,
+                    fontFeatures: OmniType.tabular,
                   ),
                 ),
                 Text(

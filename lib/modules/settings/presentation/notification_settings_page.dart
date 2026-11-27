@@ -58,9 +58,7 @@ class _NotificationSettingsPageState
       // ở vị trí cũ mà không hiểu vì sao.
       if (!mounted) return;
       setState(() => _enabled = previous);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
+      showOmniToast(context, error.message);
     } finally {
       if (mounted) setState(() => _saving = false);
     }

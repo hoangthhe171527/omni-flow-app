@@ -73,11 +73,13 @@ class _ArchivedTasksPageState extends ConsumerState<ArchivedTasksPage> {
       if (targetPlanId != null && targetPlanId.isNotEmpty) {
         container.invalidate(planTasksProvider(targetPlanId));
       }
-      messenger.showSnackBar(
-        SnackBar(content: Text('Đã khôi phục “${task.title}”.')),
+      showOmniToast(
+        null,
+        'Đã khôi phục “${task.title}”.',
+        messenger: messenger,
       );
     } on AppException catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      showOmniToast(null, error.message, messenger: messenger);
     } finally {
       if (mounted) setState(() => _busy.remove(task.id));
     }

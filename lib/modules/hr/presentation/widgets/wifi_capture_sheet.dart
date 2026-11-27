@@ -76,9 +76,7 @@ class _WifiSheetState extends ConsumerState<_WifiSheet> {
       if (!mounted) return;
       final messenger = ScaffoldMessenger.maybeOf(context);
       Navigator.of(context).pop();
-      messenger?.showSnackBar(
-        const SnackBar(content: Text('Đã lưu WiFi xưởng')),
-      );
+      showOmniToast(null, 'Đã lưu WiFi xưởng', messenger: messenger);
     } on AppException catch (e) {
       if (mounted) {
         setState(() {
@@ -93,7 +91,6 @@ class _WifiSheetState extends ConsumerState<_WifiSheet> {
   Widget build(BuildContext context) {
     final r = _reading;
     final ssid = cleanSsid(r?.ssid);
-    final scheme = Theme.of(context).colorScheme;
     return OmniSheetBody(
       semanticsLabel: 'Thêm WiFi đang kết nối',
       header: const OmniSheetHeader(title: 'Thêm WiFi đang kết nối'),
@@ -136,7 +133,12 @@ class _WifiSheetState extends ConsumerState<_WifiSheet> {
           ],
         ),
         if (_error != null)
-          Text(_error!, style: OmniType.body.copyWith(color: scheme.error)),
+          Text(
+            _error!,
+            style: OmniType.body.copyWith(
+              color: OmniColors.dangerTextOf(context),
+            ),
+          ),
       ],
     );
   }

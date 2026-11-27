@@ -253,17 +253,20 @@ class LotRow extends StatelessWidget {
               l.status == LotStatus.inTransit
                   ? LucideIcons.truck
                   : LucideIcons.package,
+              // Ô icon không bấm được: không tô màu nhấn (Màu bốn nghĩa).
               color: switch (l.status) {
-                LotStatus.inTransit => scheme.primary,
+                LotStatus.inTransit => scheme.onSurface,
                 LotStatus.ordered => OmniColors.warningTextOf(context),
-                LotStatus.received => OmniColors.success,
+                LotStatus.received => OmniColors.successTextOf(context),
               },
               background: switch (l.status) {
-                LotStatus.inTransit => scheme.primary.withValues(alpha: .10),
+                LotStatus.inTransit => null,
                 LotStatus.ordered => OmniColors.warningTextOf(
                   context,
                 ).withValues(alpha: .10),
-                LotStatus.received => OmniColors.success.withValues(alpha: .10),
+                LotStatus.received => OmniColors.successTextOf(
+                  context,
+                ).withValues(alpha: .10),
               },
             ),
             const SizedBox(width: 12),
@@ -299,8 +302,8 @@ class LotRow extends StatelessWidget {
                                 widthFactor: ratio,
                                 child: ColoredBox(
                                   color: ratio >= 1.0
-                                      ? OmniColors.success
-                                      : scheme.primary,
+                                      ? OmniColors.successMarkOf(context)
+                                      : scheme.onSurface,
                                 ),
                               ),
                             ],

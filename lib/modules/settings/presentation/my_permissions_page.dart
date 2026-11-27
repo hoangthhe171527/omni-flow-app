@@ -23,7 +23,6 @@ class MyPermissionsPage extends ConsumerWidget {
     final session = ref.watch(sessionProvider);
     final held = session.policy.slugs;
     final scheme = Theme.of(context).colorScheme;
-    final dark = Theme.of(context).brightness == Brightness.dark;
 
     // Nền xám; thẻ đầu là nhóm tóm tắt (tên, vai trò, số quyền), rồi mỗi
     // module một nhóm lồng cách nhau 12px. Ô icon 28×28 một tông chuẩn 54px.
@@ -54,12 +53,11 @@ class MyPermissionsPage extends ConsumerWidget {
                         held.contains(slug)
                             ? LucideIcons.circleCheck
                             : LucideIcons.circleMinus,
+                        // Đang giữ = thành công (không bấm được → không
+                        // màu nhấn); hình ✓ / − mang nghĩa, màu chỉ phụ.
                         color: held.contains(slug)
-                            ? scheme.primary
+                            ? OmniColors.successTextOf(context)
                             : scheme.onSurfaceVariant,
-                        background: held.contains(slug)
-                            ? scheme.primary.withValues(alpha: dark ? .16 : .10)
-                            : null,
                       ),
                     ),
                 ],

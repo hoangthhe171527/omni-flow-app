@@ -34,6 +34,13 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
   final _password = TextEditingController();
   bool _obscure = true;
 
+  /// Đã gõ gì đó → rời màn phải hỏi (không mất 4 ô đang điền).
+  bool _leaving = false;
+  bool _wasDirty = false;
+  bool get _dirty =>
+      !_leaving &&
+      [_name, _email, _company, _password].any((c) => c.text.isNotEmpty);
+
   late final AnimationController _shake = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 400),
@@ -44,6 +51,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
     super.initState();
     // Thanh độ mạnh đi theo từng ký tự gõ.
     _password.addListener(_refresh);
+    for (final c in [_name, _email, _company]) {
+      c.addListener(_dirtyChanged);
+    }
     // loginControllerProvider dùng chung với màn đăng nhập: lỗi Google còn sót
     // ở đó không được chào đón người dùng ở màn đăng ký.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -63,6 +73,11 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
   }
 
   void _refresh() => setState(() {});
+
+  /// Chỉ dựng lại khi trạng thái "đã gõ" đổi (để `PopScope.canPop` đúng).
+  void _dirtyChanged() {
+    if (_dirty != _wasDirty) setState(() {});
+  }
 
   void _shakeIfAllowed() {
     HapticFeedback.heavyImpact();
@@ -100,7 +115,20 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
     await ref.read(loginControllerProvider.notifier).submitWithGoogle();
   }
 
-  void _back() {
+  Future<void> _back() async {
+    if (_dirty) {
+      final leave = await showOmniConfirm(
+        context: context,
+        title: 'Bỏ thông tin đã nhập?',
+        message: 'Họ tên, email, công ty và mật khẩu đã gõ sẽ mất.',
+        confirmLabel: 'Bỏ',
+        cancelLabel: 'Tiếp tục',
+        destructive: true,
+      );
+      if (!leave || !mounted) return;
+      setState(() => _leaving = true);
+    }
+    if (!mounted) return;
     if (context.canPop()) {
       context.pop();
     } else {
@@ -124,7 +152,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
         ? (state.error ?? google.error)
         : null;
 
-    return AuthScaffold(
+    _wasDirty = _dirty;
+    final page = AuthScaffold(
       top: 4,
       backdrop: const _CornerOrbit(),
       child: AutofillGroup(
@@ -252,6 +281,13 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
         ),
       ),
     );
+    return PopScope(
+      canPop: !_wasDirty,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _back();
+      },
+      child: page,
+    );
   }
 }
 
@@ -280,7 +316,8 @@ class _CornerOrbit extends StatelessWidget {
 }
 
 /// Bốn vạch độ mạnh: số vạch sáng = số điều kiện đạt, cùng một màu theo mức
-/// — đỏ, cam, vàng, xanh lá. Không chữ trên màn; trình đọc màn hình đọc
+/// — đỏ, cam, xanh lá, xanh lá (mọi màu là token DẤU ≥ 3:1; số vạch phân
+/// biệt Khá / Mạnh). Không chữ trên màn; trình đọc màn hình đọc
 /// "Độ mạnh mật khẩu: Yếu/Tạm/Khá/Mạnh".
 class _StrengthMeter extends StatelessWidget {
   const _StrengthMeter({required this.score});
@@ -292,14 +329,9 @@ class _StrengthMeter extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final duration = OmniMotion.of(context).base;
     final color = switch (score) {
-      <= 1 => OmniColors.attentionOf(context),
-      2 => OmniColors.warning,
-      3 => OmniColors.sun,
-      _ => OmniColors.byBrightness(
-        context,
-        OmniColors.switchOn,
-        OmniColors.darkSwitchOn,
-      ),
+      <= 1 => OmniColors.dangerTextOf(context),
+      2 => OmniColors.warningMarkOf(context),
+      _ => OmniColors.successMarkOf(context),
     };
 
     return Semantics(

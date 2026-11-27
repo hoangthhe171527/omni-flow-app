@@ -113,7 +113,7 @@ class OmniAvatar extends StatelessWidget {
                 width: size * 0.26,
                 height: size * 0.26,
                 decoration: BoxDecoration(
-                  color: OmniColors.success,
+                  color: OmniColors.successMarkOf(context),
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: Theme.of(context).colorScheme.surface,

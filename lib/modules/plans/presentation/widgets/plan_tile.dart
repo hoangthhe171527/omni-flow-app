@@ -47,7 +47,7 @@ class PlanTile extends StatelessWidget {
     final tones = OmniTaskTones.of(context);
     final open = (plan.taskCount - plan.doneCount).clamp(0, 1 << 30);
     final fav = favorite ?? plan.isFavorite;
-    // Đã đóng / lưu trữ: mờ đi và mang nhãn trạng thái thay cho số trễ.
+    // Đã đóng / lưu trữ: mang nhãn trạng thái thay cho số trễ.
     final closedLabel = switch (plan.planStatus) {
       PlanStatus.active => null,
       PlanStatus.done => 'Đã đóng',
@@ -188,12 +188,8 @@ class PlanTile extends StatelessWidget {
       ),
     );
 
-    if (closedLabel == null) return tile;
-
-    return Opacity(
-      key: const Key('plan-tile-closed'),
-      opacity: 0.6,
-      child: tile,
-    );
+    // Đã đóng: KHÔNG làm mờ (Opacity .6 kéo chữ phụ xuống ≈ 2,5:1) — nhãn
+    // "Đã đóng" / "Lưu trữ" đã nói trạng thái.
+    return tile;
   }
 }

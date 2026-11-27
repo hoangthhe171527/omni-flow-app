@@ -27,12 +27,12 @@ class BackgroundPage extends ConsumerWidget {
       try {
         await ref.read(backgroundProvider.notifier).set(name);
       } on AppException catch (e) {
-        messenger.showSnackBar(SnackBar(content: Text(e.message)));
+        showOmniToast(null, e.message, messenger: messenger);
       } on Object {
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Text('Chưa lưu được nền. Thử lại khi có mạng.'),
-          ),
+        showOmniToast(
+          null,
+          'Chưa lưu được nền. Thử lại khi có mạng.',
+          messenger: messenger,
         );
       }
     }
@@ -121,10 +121,10 @@ class _Tile extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: radius,
                   border: Border.all(
-                    color: selected ? scheme.primary : scheme.outlineVariant,
+                    color: selected ? scheme.onSurface : scheme.outlineVariant,
                     width: selected ? 2 : 1,
                   ),
-                  // Chọn: chỉ viền xanh 2 + ✓, không quầng bóng quanh thẻ.
+                  // Chọn: viền mực 2 (D12) + ✓ trên nền đặc, không quầng bóng.
                 ),
                 child: Stack(
                   fit: StackFit.expand,
@@ -139,12 +139,12 @@ class _Tile extends StatelessWidget {
                           height: 24,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: scheme.primary,
+                            color: OmniColors.primaryFillOf(context),
                           ),
-                          child: Icon(
+                          child: const Icon(
                             LucideIcons.check,
                             size: 15,
-                            color: scheme.onPrimary,
+                            color: OmniColors.primaryForeground,
                           ),
                         ),
                       ),

@@ -62,7 +62,7 @@ class VoiceRecordBar extends StatelessWidget {
             size: OmniIconSize.xl,
             color: onCancel == null
                 ? Theme.of(context).disabledColor
-                : scheme.error,
+                : OmniColors.dangerTextOf(context),
           ),
         ),
         Expanded(

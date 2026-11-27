@@ -285,6 +285,31 @@ void main() {
       await t.tap(find.text('Hoàn tác'));
       expect(undone, isTrue);
     });
+
+    testWidgets('showOmniToast: có nút thì ở lại; nhận messenger đã giữ', (
+      t,
+    ) async {
+      await pump(
+        t,
+        Builder(
+          builder: (context) => TextButton(
+            onPressed: () => showOmniToast(
+              null,
+              'Đã lưu trữ',
+              actionLabel: omniUndoLabel,
+              messenger: ScaffoldMessenger.of(context),
+            ),
+            child: const Text('lưu'),
+          ),
+        ),
+      );
+      await t.tap(find.text('lưu'));
+      await t.pumpAndSettle();
+      await t.pump(const Duration(seconds: 10));
+      await t.pumpAndSettle();
+      expect(find.text('Đã lưu trữ'), findsOneWidget);
+      expect(find.text('Hoàn tác'), findsOneWidget);
+    });
   });
 
   testWidgets('OmniTotalCard: số chính không thu nhỏ ở chữ 2×, vẫn đủ số', (

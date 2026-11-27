@@ -299,9 +299,7 @@ Widget _buildReceiptVisualFallback(
               Row(
                 children: [
                   Icon(
-                    att.isPdf
-                        ? LucideIcons.fileText
-                        : LucideIcons.receiptText,
+                    att.isPdf ? LucideIcons.fileText : LucideIcons.receiptText,
                     size: 11,
                     color: p.primary,
                   ),
@@ -446,28 +444,42 @@ class FinanceAttachmentInlineThumb extends StatelessWidget {
                 compact: true,
               ),
               if (onRemove != null)
+                // Có nhãn trợ năng; vùng chạm 36 ở góc (ảnh 68×46 không đủ
+                // chỗ cho 44 mà không che lối mở ảnh).
                 Positioned(
-                  top: 3,
-                  right: 3,
-                  child: GestureDetector(
-                    key: ValueKey('finance-att-remove-${attachment.id}'),
-                    onTap: onRemove,
-                    child: Container(
-                      width: 20,
-                      height: 20,
-                      decoration: BoxDecoration(
-                        color: OmniColors.ink.withValues(alpha: 0.72),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.35),
-                          width: 0.8,
+                  top: 0,
+                  right: 0,
+                  child: Semantics(
+                    button: true,
+                    label: 'Gỡ chứng từ',
+                    excludeSemantics: true,
+                    child: GestureDetector(
+                      key: ValueKey('finance-att-remove-${attachment.id}'),
+                      behavior: HitTestBehavior.opaque,
+                      onTap: onRemove,
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        alignment: Alignment.topRight,
+                        padding: const EdgeInsets.all(3),
+                        child: Container(
+                          width: 20,
+                          height: 20,
+                          decoration: BoxDecoration(
+                            color: OmniColors.ink.withValues(alpha: 0.72),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.35),
+                              width: 0.8,
+                            ),
+                          ),
+                          alignment: Alignment.center,
+                          child: const Icon(
+                            LucideIcons.x,
+                            size: 12,
+                            color: Colors.white,
+                          ),
                         ),
-                      ),
-                      alignment: Alignment.center,
-                      child: const Icon(
-                        LucideIcons.x,
-                        size: 12,
-                        color: Colors.white,
                       ),
                     ),
                   ),

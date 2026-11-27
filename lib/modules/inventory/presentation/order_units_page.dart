@@ -153,9 +153,18 @@ class _ProgressBlock extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final parts = <(int, Color)>[
       (data.count(OrderUnitBucket.delivered), scheme.onSurfaceVariant),
-      (data.count(OrderUnitBucket.ready), OmniColors.success),
+      (data.count(OrderUnitBucket.ready), OmniColors.successMarkOf(context)),
       (data.count(OrderUnitBucket.issue), OmniColors.dangerTextOf(context)),
-      (data.count(OrderUnitBucket.inShop), scheme.primary),
+      // "Ở xưởng" = tông thông tin, không phải màu nhấn (vạch không bấm được).
+      (
+        data.count(OrderUnitBucket.inShop),
+        OmniTone.info
+            .resolve(
+              scheme,
+              dark: Theme.of(context).brightness == Brightness.dark,
+            )
+            .$1,
+      ),
       (data.count(OrderUnitBucket.notInShop), scheme.outlineVariant),
     ];
     final barLabel = [

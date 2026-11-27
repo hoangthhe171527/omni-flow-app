@@ -4,6 +4,7 @@ import '../../core/nav/shell_bar_inset.dart';
 import '../tokens/tokens.dart';
 import 'omni_glass.dart';
 import 'omni_liquid_fab.dart';
+import 'omni_tinted_buttons.dart';
 
 /// Thân màn + nút + kính nổi ở góc phải dưới (rà soát 12/11/2026, artifact
 /// `ra-soat-app-mobile`). Nút luôn nằm TRÊN thanh tab kính và vùng an toàn —
@@ -169,7 +170,7 @@ class OmniBottomDock extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (final e in extra) ...[e, const SizedBox(height: 8)],
-          main,
+          OmniTintedButtons.dock(context, main),
         ],
       ),
     );

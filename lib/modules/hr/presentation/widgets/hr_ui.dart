@@ -312,21 +312,18 @@ class HrLocationRow extends StatelessWidget {
       // Trạng thái vị trí có sắc = nhãn bo 6 (spec §3.4); trung tính = chữ.
       trailing: tone == OmniTone.neutral
           ? HrValue(line.value)
+          // Không thu nhỏ chữ (không FittedBox): nhãn dài tự xuống dòng.
           : ConstrainedBox(
               constraints: BoxConstraints(
                 maxWidth: MediaQuery.sizeOf(context).width * .5,
               ),
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerRight,
-                child: OmniStatusLabel(label: line.value, tone: tone),
-              ),
+              child: OmniStatusLabel(label: line.value, tone: tone),
             ),
     );
   }
 }
 
-/// Nút chấm lớn (cao 52, rộng cả thẻ) hoặc gọn (trên thẻ Tổng quan).
+/// Nút chấm lớn (cao 56, rộng cả thẻ) hoặc gọn 48 (trên thẻ Tổng quan).
 class HrClockButton extends StatelessWidget {
   const HrClockButton({
     super.key,
@@ -364,7 +361,8 @@ class HrClockButton extends StatelessWidget {
               Flexible(child: Text(label, maxLines: 1)),
             ],
           );
-    final size = Size(compact ? 0 : double.infinity, compact ? 46 : 52);
+    // erp-b2b §3 Chấm công: nút chính ≥ 56; bản gọn 48.
+    final size = Size(compact ? 0 : double.infinity, compact ? 48 : 56);
     final button = off
         ? OutlinedButton(
             key: const ValueKey('hr-clock-button'),
@@ -393,9 +391,7 @@ class HrClockButton extends StatelessWidget {
 /// Toast nổi của Nhân sự (SnackBar theo theme).
 void hrToast(BuildContext context, String message) {
   if (message.isEmpty) return;
-  ScaffoldMessenger.maybeOf(context)
-    ?..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(content: Text(message)));
+  showOmniToast(context, message);
 }
 
 /// Chữ ký tắt tên: `Vũ Văn Hoàng` → `H`.
@@ -418,14 +414,15 @@ class HrInitialTile extends StatelessWidget {
       width: 28,
       height: 28,
       alignment: Alignment.center,
+      // Ô chữ cái không bấm được: tông trung tính, không màu nhấn.
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: scheme.primary.withValues(alpha: .10),
+        color: scheme.surfaceContainerHighest,
       ),
       child: Text(
         hrInitial(name),
         style: OmniType.caption.copyWith(
-          color: scheme.primary,
+          color: scheme.onSurface,
           fontWeight: FontWeight.w600,
         ),
       ),

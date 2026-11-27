@@ -341,7 +341,7 @@ void main() {
     final deco = t.widget<Container>(box).decoration! as BoxDecoration;
     expect(deco.borderRadius, BorderRadius.circular(6));
     expect((deco.border! as Border).top.width, 1.5);
-    expect((deco.border! as Border).top.color, const Color(0xFF9AA5B8));
+    expect((deco.border! as Border).top.color, const Color(0xFF7A8699));
 
     final node = t.getSemantics(find.bySemanticsLabel('Đánh dấu xong'));
     expect(node.flagsCollection.isToggled, isNot(Tristate.isTrue));

@@ -39,6 +39,43 @@ class _RequestFormPageState extends ConsumerState<RequestFormPage> {
   bool _saving = false;
   String? _error;
 
+  /// Đã gửi / đã đồng ý bỏ: rời màn không hỏi.
+  bool _leaving = false;
+
+  bool get _dirty =>
+      !_leaving &&
+      (_reason.text.trim().isNotEmpty ||
+          _amount.text.trim().isNotEmpty ||
+          _inTime != null ||
+          _outTime != null);
+
+  /// Đóng khi đã gõ: hỏi trước (không mất đơn đang viết).
+  Future<void> _confirmLeave() async {
+    final leave = await showOmniConfirm(
+      context: context,
+      title: 'Bỏ đơn này?',
+      message: 'Lý do và nội dung đã nhập sẽ mất.',
+      confirmLabel: 'Bỏ đơn',
+      cancelLabel: 'Tiếp tục',
+      destructive: true,
+    );
+    if (!leave || !mounted) return;
+    setState(() => _leaving = true);
+    Navigator.of(context).maybePop();
+  }
+
+  /// Vì sao "Gửi đơn" còn khoá — nói ngay dưới form.
+  String? get _missing {
+    if (_reason.text.trim().isEmpty) return 'Nhập lý do để gửi đơn';
+    return switch (_type) {
+      HrRequestType.tamung when _amountValue < 10000 => 'Tối thiểu 10.000đ',
+      HrRequestType.giaitrinh when _inTime == null => 'Chọn giờ vào',
+      HrRequestType.phep when _to != null && _to!.isBefore(_date) =>
+        'Đến ngày phải sau Từ ngày',
+      _ => null,
+    };
+  }
+
   @override
   void initState() {
     super.initState();
@@ -79,105 +116,124 @@ class _RequestFormPageState extends ConsumerState<RequestFormPage> {
               : (_to!.difference(_date).inDays + 1).toDouble())
         : 0.0;
 
-    return Scaffold(
-      appBar: const OmniAppBar(title: 'Đơn mới', close: true),
-      body: ListView(
-        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-        padding: const EdgeInsets.fromLTRB(16, OmniSpacing.md, 16, 24),
-        children: [
-          OmniSegmented(
-            compact: true,
-            labels: [for (final t in HrRequestType.values) t.label],
-            index: HrRequestType.values.indexOf(_type),
-            onChanged: (i) => setState(() {
-              _type = HrRequestType.values[i];
-              _error = null;
-            }),
-          ),
-          const SizedBox(height: OmniGroupSection.gap),
-          if (_type == HrRequestType.tamung) ...[
+    return PopScope(
+      canPop: !_dirty,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _confirmLeave();
+      },
+      child: Scaffold(
+        appBar: const OmniAppBar(title: 'Đơn mới', close: true),
+        body: ListView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          padding: const EdgeInsets.fromLTRB(16, OmniSpacing.md, 16, 24),
+          children: [
+            OmniSegmented(
+              compact: true,
+              labels: [for (final t in HrRequestType.values) t.label],
+              index: HrRequestType.values.indexOf(_type),
+              onChanged: (i) => setState(() {
+                _type = HrRequestType.values[i];
+                _error = null;
+              }),
+            ),
+            const SizedBox(height: OmniGroupSection.gap),
+            if (_type == HrRequestType.tamung) ...[
+              _field(
+                label: 'Số tiền',
+                required: true,
+                child: TextField(
+                  key: const ValueKey('hr-amount'),
+                  controller: _amount,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [_ThousandsFormatter()],
+                  style: OmniType.listTitle.copyWith(
+                    fontFeatures: OmniType.tabular,
+                  ),
+                  decoration: _bare('1.000.000', suffix: 'đ'),
+                  onChanged: (_) => setState(() {}),
+                ),
+              ),
+              const SizedBox(height: OmniGroupSection.gap),
+            ],
+            OmniGroupSection(
+              dividerIndent: 14,
+              children: [..._typeRows(singleDay)],
+            ),
+            const SizedBox(height: OmniGroupSection.gap),
             _field(
-              label: 'Số tiền',
+              label: 'Lý do',
               required: true,
               child: TextField(
-                key: const ValueKey('hr-amount'),
-                controller: _amount,
-                keyboardType: TextInputType.number,
-                inputFormatters: [_ThousandsFormatter()],
-                style: OmniType.listTitle.copyWith(
-                  fontFeatures: OmniType.tabular,
-                ),
-                decoration: _bare('1.000.000', suffix: 'đ'),
+                key: const ValueKey('hr-reason'),
+                controller: _reason,
+                minLines: 1,
+                maxLines: 4,
+                maxLength: 500,
+                style: OmniType.body,
+                decoration: _bare(
+                  _type == HrRequestType.giaitrinh
+                      ? 'Ví dụ: điện thoại hết pin'
+                      : 'Ghi ngắn gọn',
+                ).copyWith(counterText: ''),
                 onChanged: (_) => setState(() {}),
               ),
             ),
-            const SizedBox(height: OmniGroupSection.gap),
-          ],
-          OmniGroupSection(
-            dividerIndent: 14,
-            children: [..._typeRows(singleDay)],
-          ),
-          const SizedBox(height: OmniGroupSection.gap),
-          _field(
-            label: 'Lý do',
-            required: true,
-            child: TextField(
-              key: const ValueKey('hr-reason'),
-              controller: _reason,
-              minLines: 1,
-              maxLines: 4,
-              maxLength: 500,
-              style: OmniType.body,
-              decoration: _bare(
-                _type == HrRequestType.giaitrinh
-                    ? 'Ví dụ: điện thoại hết pin'
-                    : 'Ghi ngắn gọn',
-              ).copyWith(counterText: ''),
-              onChanged: (_) => setState(() {}),
-            ),
-          ),
-          if (_type == HrRequestType.phep &&
-              _leaveKind == 'phep_nam' &&
-              leave != null) ...[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-              child: Text(
-                'Còn ${HrFormat.decimal(leave.remaining)} ngày phép · sau đơn này còn ${HrFormat.decimal(leave.remaining - leaveDays)}',
-                style: OmniType.caption.copyWith(
-                  color: scheme.onSurfaceVariant,
+            if (_type == HrRequestType.phep &&
+                _leaveKind == 'phep_nam' &&
+                leave != null) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+                child: Text(
+                  'Còn ${HrFormat.decimal(leave.remaining)} ngày phép · sau đơn này còn ${HrFormat.decimal(leave.remaining - leaveDays)}',
+                  style: OmniType.caption.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ),
-            ),
-          ],
-          if (_error != null) ...[
-            const SizedBox(height: OmniGroupSection.gap),
-            Text(
-              _error!,
-              style: OmniType.body.copyWith(
-                color: OmniColors.dangerTextOf(context),
+            ],
+            if (_missing case final hint? when !_saving) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+                child: Text(
+                  hint,
+                  style: OmniType.caption.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
               ),
+            ],
+            if (_error != null) ...[
+              const SizedBox(height: OmniGroupSection.gap),
+              Text(
+                _error!,
+                style: OmniType.body.copyWith(
+                  color: OmniColors.dangerTextOf(context),
+                ),
+              ),
+            ],
+          ],
+        ),
+        bottomNavigationBar: OmniActionBar(
+          children: [
+            OutlinedButton(
+              onPressed: _saving
+                  ? null
+                  : () => Navigator.of(context).maybePop(),
+              child: const Text('Huỷ'),
+            ),
+            FilledButton(
+              key: const ValueKey('hr-request-send'),
+              onPressed: _valid && !_saving ? _send : null,
+              child: _saving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+                    )
+                  : const Text('Gửi đơn'),
             ),
           ],
-        ],
-      ),
-      bottomNavigationBar: OmniActionBar(
-        children: [
-          OutlinedButton(
-            onPressed: _saving ? null : () => Navigator.of(context).maybePop(),
-            child: const Text('Huỷ'),
-          ),
-          FilledButton(
-            key: const ValueKey('hr-request-send'),
-            onPressed: _valid && !_saving ? _send : null,
-            child: _saving
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator.adaptive(strokeWidth: 2),
-                  )
-                : const Text('Gửi đơn'),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -301,7 +357,9 @@ class _RequestFormPageState extends ConsumerState<RequestFormPage> {
                     if (required)
                       TextSpan(
                         text: ' *',
-                        style: TextStyle(color: scheme.error),
+                        style: TextStyle(
+                          color: OmniColors.dangerTextOf(context),
+                        ),
                       ),
                   ],
                 ),
@@ -418,8 +476,9 @@ class _RequestFormPageState extends ConsumerState<RequestFormPage> {
       if (!mounted) return;
       final messenger = ScaffoldMessenger.maybeOf(context);
       final label = _type.label.toLowerCase();
+      setState(() => _leaving = true);
       Navigator.of(context).pop(true);
-      messenger?.showSnackBar(SnackBar(content: Text('Đã gửi đơn $label')));
+      showOmniToast(null, 'Đã gửi đơn $label', messenger: messenger);
     } on AppException catch (e) {
       if (!mounted) return;
       setState(() {

@@ -8,7 +8,6 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../core/nav/search_mode.dart';
-import '../../../core/nav/shell_bar_inset.dart';
 import '../../../core/utils/text_search.dart';
 import '../../../design/components/components.dart';
 import '../../../design/platform/omni_motion_scope.dart';
@@ -104,12 +103,10 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
       if (mounted) setState(() => _favorite[plan.id] = server);
     } on AppException catch (error) {
       if (mounted) setState(() => _favorite[plan.id] = before);
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            failureText(error, 'Chưa lưu được yêu thích. Thử lại khi có mạng.'),
-          ),
-        ),
+      showOmniToast(
+        null,
+        failureText(error, 'Chưa lưu được yêu thích. Thử lại khi có mạng.'),
+        messenger: messenger,
       );
     } finally {
       if (mounted) setState(() => _favoriteInFlight.remove(plan.id));
@@ -136,23 +133,20 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
       CreateChoice.plan => showQuickCreatePlan(context),
     };
     if (created == null) return;
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          created.isTeam
-              ? 'Đã tạo team «${created.name}»'
-              : 'Đã tạo kế hoạch «${created.name}»',
-        ),
-        action: created.isTeam || router == null
-            ? null
-            : SnackBarAction(
-                label: 'Mở bảng',
-                onPressed: () => router.pushNamed(
-                  PlansModule.board,
-                  pathParameters: {'id': created.id},
-                ),
-              ),
-      ),
+    final canOpen = !created.isTeam && router != null;
+    showOmniToast(
+      null,
+      created.isTeam
+          ? 'Đã tạo team «${created.name}»'
+          : 'Đã tạo kế hoạch «${created.name}»',
+      messenger: messenger,
+      actionLabel: canOpen ? 'Mở bảng' : null,
+      onAction: canOpen
+          ? () => router.pushNamed(
+              PlansModule.board,
+              pathParameters: {'id': created.id},
+            )
+          : null,
     );
   }
 
@@ -191,49 +185,38 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
           showAdd: false,
         ),
       ),
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: OmniTopBarOverlap.wrap(
-              child: Builder(
-                builder: (context) {
-                  final topInset = OmniTopBarOverlap.of(context);
-                  return RefreshIndicator.adaptive(
-                    edgeOffset: topInset,
-                    onRefresh: () async =>
-                        ref.invalidate(teamsWithPlansProvider),
-                    child: OmniAsyncView(
-                      value: groups,
-                      onRetry: () => ref.invalidate(teamsWithPlansProvider),
-                      data: (list) => _list(
-                        list,
-                        topInset: topInset,
-                        isAssigner: isAssigner,
-                        currentUserId: currentUserId,
-                        canUpdateTeam: canUpdateTeam,
-                        canDeleteTeam: canDeleteTeam,
-                        canMovePlan: (plan) =>
-                            taskAccess.canUpdate &&
-                            (taskAccess.isAssigner ||
-                                (currentUserId != null &&
-                                    plan.roleOf(currentUserId).canManagePlan)),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
+      // Nút + qua OmniFabLayer (cùng chỗ, cùng khe với mọi màn có nút +).
+      body: OmniFabLayer(
+        body: OmniTopBarOverlap.wrap(
+          child: Builder(
+            builder: (context) {
+              final topInset = OmniTopBarOverlap.of(context);
+              return RefreshIndicator.adaptive(
+                edgeOffset: topInset,
+                onRefresh: () async => ref.invalidate(teamsWithPlansProvider),
+                child: OmniAsyncView(
+                  value: groups,
+                  onRetry: () => ref.invalidate(teamsWithPlansProvider),
+                  data: (list) => _list(
+                    list,
+                    topInset: topInset,
+                    isAssigner: isAssigner,
+                    currentUserId: currentUserId,
+                    canUpdateTeam: canUpdateTeam,
+                    canDeleteTeam: canDeleteTeam,
+                    canMovePlan: (plan) =>
+                        taskAccess.canUpdate &&
+                        (taskAccess.isAssigner ||
+                            (currentUserId != null &&
+                                plan.roleOf(currentUserId).canManagePlan)),
+                  ),
+                ),
+              );
+            },
           ),
-          if (isAssigner)
-            Positioned(
-              right: 20,
-              // Trên thanh tab kính, vừa tầm ngón cái. Khe chung OmniFabLayer.gap
-              // (32: dải mờ của thanh + bóng nút không chạm nhau).
-              bottom: ShellBarInset.floatingBottom(
-                context,
-                gap: OmniFabLayer.gap,
-              ),
-              child: _HideWhileSearching(
+        ),
+        fab: isAssigner
+            ? _HideWhileSearching(
                 child: OmniLiquidFab(
                   key: const Key('work-create-fab'),
                   tooltip: 'Tạo mới',
@@ -241,9 +224,8 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
                   onPressed: (anchor) =>
                       _create(anchor, canCreateTeam: canCreateTeam),
                 ),
-              ),
-            ),
-        ],
+              )
+            : null,
       ),
     );
   }
@@ -444,7 +426,11 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      padding: EdgeInsets.only(top: topInset + 4, bottom: 110),
+      // Dòng cuối cuộn lên khỏi nút + (110 cũ bị nút che).
+      padding: EdgeInsets.only(
+        top: topInset + 4,
+        bottom: OmniFabLayer.listBottom(context, hasFab: isAssigner),
+      ),
       itemCount: children.length,
       // Nhóm lồng (viomni-apple-uiux.html "Việc" `.group`): mỗi team (và
       // Yêu thích) là một thẻ bo 16 cách mép 16 trên nền xám, cách nhau 12.
@@ -490,22 +476,20 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
                 : PlanPatch(teamId: targetId),
           );
       container.read(planRealtimeSignalProvider.notifier).bump();
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            targetId.isEmpty
-                ? 'Đã đưa “${plan.name}” ra khỏi team.'
-                : 'Đã chuyển “${plan.name}” sang ${target.team.name}.',
-          ),
-        ),
+      showOmniToast(
+        null,
+        targetId.isEmpty
+            ? 'Đã đưa “${plan.name}” ra khỏi team.'
+            : 'Đã chuyển “${plan.name}” sang ${target.team.name}.',
+        messenger: messenger,
       );
     } on AppException catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      showOmniToast(null, error.message, messenger: messenger);
     } on Object {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Chưa chuyển được dự án. Vui lòng thử lại.'),
-        ),
+      showOmniToast(
+        null,
+        'Chưa chuyển được dự án. Vui lòng thử lại.',
+        messenger: messenger,
       );
     }
   }
@@ -553,9 +537,9 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
           .read(plansApiProvider)
           .updateTeam(group.team.id, name: name);
       container.invalidate(teamsWithPlansProvider);
-      messenger.showSnackBar(const SnackBar(content: Text('Đã đổi tên team.')));
+      showOmniToast(null, 'Đã đổi tên team.', messenger: messenger);
     } on AppException catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      showOmniToast(null, error.message, messenger: messenger);
     }
   }
 
@@ -633,9 +617,9 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
       await container.read(plansApiProvider).deletePlan(plan.id);
       container.invalidate(planProvider(plan.id));
       container.invalidate(teamsWithPlansProvider);
-      messenger.showSnackBar(const SnackBar(content: Text('Đã xoá kế hoạch.')));
+      showOmniToast(null, 'Đã xoá kế hoạch.', messenger: messenger);
     } on AppException catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      showOmniToast(null, error.message, messenger: messenger);
     }
   }
 
@@ -650,13 +634,11 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
       final closed = group.closedPlans.isEmpty
           ? ''
           : ' (${group.closedPlans.length} đã đóng)';
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            'Team còn $total kế hoạch$closed. Hãy chuyển các kế hoạch sang '
-            'team khác trước.',
-          ),
-        ),
+      showOmniToast(
+        null,
+        'Team còn $total kế hoạch$closed. Hãy chuyển các kế hoạch sang '
+        'team khác trước.',
+        messenger: messenger,
       );
       return;
     }
@@ -674,9 +656,9 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
     try {
       await container.read(plansApiProvider).deleteTeam(group.team.id);
       container.invalidate(teamsWithPlansProvider);
-      messenger.showSnackBar(const SnackBar(content: Text('Đã xoá team.')));
+      showOmniToast(null, 'Đã xoá team.', messenger: messenger);
     } on AppException catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      showOmniToast(null, error.message, messenger: messenger);
     }
   }
 }
@@ -759,6 +741,12 @@ class _FavoritesSection extends StatelessWidget {
                           (canLongPressPlan?.call(f.plan) ?? true)
                       ? () => onLongPressPlan!(f.plan)
                       : null,
+                  // Lối hiện "…" cho sửa / xoá, không chỉ nhấn giữ.
+                  onActions:
+                      onLongPressPlan != null &&
+                          (canLongPressPlan?.call(f.plan) ?? true)
+                      ? () => onLongPressPlan!(f.plan)
+                      : null,
                 ),
             ],
           )
@@ -786,11 +774,8 @@ class _FavoritesSection extends StatelessWidget {
                     padding: const EdgeInsets.fromLTRB(14, 0, 10, 0),
                     child: Row(
                       children: [
-                        OmniIconTile(
-                          LucideIcons.star,
-                          color: scheme.primary,
-                          background: scheme.primary.withValues(alpha: .10),
-                        ),
+                        // Đầu nhóm không bấm riêng: ô icon trung tính.
+                        OmniIconTile(LucideIcons.star),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(

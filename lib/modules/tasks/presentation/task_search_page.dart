@@ -70,9 +70,8 @@ class _TaskSearchPageState extends ConsumerState<TaskSearchPage> {
           ? const OmniEmptyState(
               icon: LucideIcons.search,
               title: 'Tìm một cây đàn',
-              message:
-                  'Gõ số máy, tên cây đàn hoặc tên khách. Tìm trong cả việc '
-                  'đã xong — một cây đã bàn giao vẫn phải tra lại được.',
+              // Một câu gợi ý, không câu giải thích (05-noi-dung · Trống).
+              message: 'Gõ số máy, tên cây đàn hoặc tên khách.',
             )
           : OmniAsyncView(
               value: results,
@@ -81,9 +80,7 @@ class _TaskSearchPageState extends ConsumerState<TaskSearchPage> {
               empty: OmniEmptyState(
                 icon: LucideIcons.searchX,
                 title: 'Không có kết quả cho "$query"',
-                message:
-                    'Thử một phần của số máy thay vì cả chuỗi — tìm theo đoạn '
-                    'khớp, nên "4713" cũng ra.',
+                message: 'Thử một phần số máy, vd "4713".',
               ),
               data: (list) {
                 final groups = _groupByPlan(list);

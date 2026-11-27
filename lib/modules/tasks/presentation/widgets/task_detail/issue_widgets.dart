@@ -85,9 +85,7 @@ class _ReportIssueSheetState extends State<_ReportIssueSheet> {
       setState(() => _photos.addAll(picked.take(remaining)));
     } on Object catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.maybeOf(
-        context,
-      )?.showSnackBar(SnackBar(content: Text('$e')));
+      showOmniToast(context, '$e');
     }
   }
 
@@ -110,7 +108,7 @@ class _ReportIssueSheetState extends State<_ReportIssueSheet> {
             : () => Navigator.of(
                 context,
               ).pop((note: note, photos: List.of(_photos))),
-        style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+        style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(50)),
         child: const Text('Gửi'),
       ),
       children: [

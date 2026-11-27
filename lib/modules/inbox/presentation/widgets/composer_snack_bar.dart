@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../../../../design/components/components.dart';
+
 /// Trang hội thoại đánh dấu thanh dưới đáy (composer, hoặc dòng "chỉ xem")
-/// bằng [barKey], để snackbar nổi PHÍA TRÊN nó thay vì che nút Gửi.
+/// bằng [barKey], để toast nổi PHÍA TRÊN nó thay vì che nút Gửi.
 ///
-/// Snackbar nổi của Scaffold đặt từ mép dưới thân trang; composer nằm trong
-/// thân trang nên trước đây snackbar đè đúng lên ô nhập ~4 giây.
+/// Toast nổi của Scaffold đặt từ mép dưới thân trang; composer nằm trong
+/// thân trang nên trước đây toast đè đúng lên ô nhập ~4 giây.
 class ComposerSnackBarScope extends InheritedWidget {
   const ComposerSnackBarScope({
     super.key,
@@ -22,27 +24,42 @@ class ComposerSnackBarScope extends InheritedWidget {
       barKey != oldWidget.barKey;
 }
 
-/// Snackbar nổi, cách mép trên của thanh [barKey] 8px. Không đo được thanh
-/// (chưa dựng, hoặc ngoài trang hội thoại) thì dùng lề mặc định của theme.
-SnackBar snackAboveBar(
-  Widget content, {
-  GlobalKey? barKey,
-  SnackBarAction? action,
-  Duration duration = const Duration(milliseconds: 4000),
-}) {
+/// Lề để toast nổi cách mép trên của thanh [barKey] 8px. Không đo được thanh
+/// (chưa dựng, hoặc ngoài trang hội thoại) thì `null` — dùng lề của theme.
+EdgeInsets? marginAboveBar(GlobalKey? barKey) {
   final box = barKey?.currentContext?.findRenderObject();
   final height = box is RenderBox && box.attached && box.hasSize
       ? box.size.height
       : 0.0;
-  return SnackBar(
-    content: content,
-    action: action,
-    duration: duration,
-    behavior: SnackBarBehavior.floating,
-    margin: height > 0 ? EdgeInsets.fromLTRB(16, 5, 16, height + 8) : null,
+  return height > 0 ? EdgeInsets.fromLTRB(16, 5, 16, height + 8) : null;
+}
+
+/// [showOmniToast] nổi phía trên thanh [barKey].
+void showToastAboveBar(
+  BuildContext? context,
+  String message, {
+  GlobalKey? barKey,
+  ScaffoldMessengerState? messenger,
+}) {
+  showOmniToast(
+    context,
+    message,
+    messenger: messenger,
+    margin: marginAboveBar(barKey),
   );
 }
 
-/// [snackAboveBar] với khoá lấy từ [ComposerSnackBarScope] quanh [context].
-SnackBar composerSnackBar(BuildContext context, String text) =>
-    snackAboveBar(Text(text), barKey: ComposerSnackBarScope.keyOf(context));
+/// [showToastAboveBar] với khoá lấy từ [ComposerSnackBarScope] quanh
+/// [context]; [messenger] đã giữ trước `await` thì truyền vào.
+void showComposerToast(
+  BuildContext context,
+  String text, {
+  ScaffoldMessengerState? messenger,
+}) {
+  showToastAboveBar(
+    context,
+    text,
+    barKey: ComposerSnackBarScope.keyOf(context),
+    messenger: messenger,
+  );
+}

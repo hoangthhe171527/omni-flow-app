@@ -285,8 +285,10 @@ class SubtasksCard extends ConsumerWidget {
         final userId = draft.assigneeId;
         if (userId == null) return;
 
-        void notAssigned() => messenger.showSnackBar(
-          const SnackBar(content: Text('Đã tạo nhưng chưa giao được.')),
+        void notAssigned() => showOmniToast(
+          null,
+          'Đã tạo nhưng chưa giao được.',
+          messenger: messenger,
         );
         // Id do server sinh: việc con mới là id chưa có trước lượt tạo, đọc
         // từ PHẢN HỒI của chính lượt POST — state có thể đã bị realtime thay.
@@ -325,8 +327,10 @@ class SubtasksCard extends ConsumerWidget {
         afterId: target == 0 ? null : order[target - 1].id,
       );
     } on AppException catch (e) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(failureText(e, 'Chưa đổi được thứ tự.'))),
+      showOmniToast(
+        null,
+        failureText(e, 'Chưa đổi được thứ tự.'),
+        messenger: messenger,
       );
     }
   }
@@ -345,15 +349,13 @@ class SubtasksCard extends ConsumerWidget {
     final due = choice.date;
     final start = s.startDate;
     if (due != null && start != null && start.isAfter(due)) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Hạn phải sau ngày bắt đầu.')),
-      );
+      showOmniToast(null, 'Hạn phải sau ngày bắt đầu.', messenger: messenger);
       return;
     }
     try {
       await controller.setSubtaskDueDate(s.id, due);
     } on AppException catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+      showOmniToast(null, e.message, messenger: messenger);
     }
   }
 
@@ -392,7 +394,7 @@ class SubtasksCard extends ConsumerWidget {
     try {
       await controller.assignSubtask(s.id, userId);
     } on AppException catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+      showOmniToast(null, e.message, messenger: messenger);
     }
   }
 
@@ -544,7 +546,7 @@ class SubtasksCard extends ConsumerWidget {
           await controller.setSubtaskStartDate(s.id, null);
       }
     } on AppException catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+      showOmniToast(null, e.message, messenger: messenger);
     }
   }
 }

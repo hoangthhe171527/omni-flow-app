@@ -122,9 +122,9 @@ class ChannelTile extends StatelessWidget {
                     icon: const Icon(LucideIcons.refreshCw, size: 16),
                     label: const Text('Kết nối lại'),
                     style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(0, 36),
+                      // Vùng chạm ≥ 44 (vùng ngón cái).
+                      minimumSize: const Size(0, 44),
                       padding: const EdgeInsets.symmetric(horizontal: 12),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                   ),
                 ],

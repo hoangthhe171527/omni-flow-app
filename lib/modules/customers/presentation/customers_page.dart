@@ -64,9 +64,7 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
     final saved = await showCustomerCreateDialog(context);
     if (saved == null || !mounted) return;
     ref.invalidate(customerListProvider);
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Đã thêm ${saved.name}.')));
+    showOmniToast(context, 'Đã thêm ${saved.name}.');
   }
 
   Future<void> _openFilters({

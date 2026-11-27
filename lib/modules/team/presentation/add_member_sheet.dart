@@ -170,7 +170,9 @@ class _AddMemberSheetState extends ConsumerState<AddMemberSheet> {
               if (required)
                 Text(
                   ' *',
-                  style: OmniType.caption.copyWith(color: scheme.error),
+                  style: OmniType.caption.copyWith(
+                    color: OmniColors.dangerTextOf(context),
+                  ),
                 ),
             ],
           ),
@@ -183,13 +185,15 @@ class _AddMemberSheetState extends ConsumerState<AddMemberSheet> {
                 Icon(
                   LucideIcons.circleAlert,
                   size: OmniIconSize.xs,
-                  color: scheme.error,
+                  color: OmniColors.dangerTextOf(context),
                 ),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
                     error,
-                    style: OmniType.micro.copyWith(color: scheme.error),
+                    style: OmniType.micro.copyWith(
+                      color: OmniColors.dangerTextOf(context),
+                    ),
                   ),
                 ),
               ],
@@ -352,7 +356,9 @@ class _AddMemberSheetState extends ConsumerState<AddMemberSheet> {
           padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Text(
             _formError!,
-            style: OmniType.caption.copyWith(color: scheme.error),
+            style: OmniType.caption.copyWith(
+              color: OmniColors.dangerTextOf(context),
+            ),
           ),
         ),
     ];
@@ -374,9 +380,7 @@ class _AddMemberSheetState extends ConsumerState<AddMemberSheet> {
               onPressed: () async {
                 await Clipboard.setData(ClipboardData(text: credentials));
                 if (!mounted) return;
-                ScaffoldMessenger.maybeOf(
-                  context,
-                )?.showSnackBar(const SnackBar(content: Text('Đã sao chép.')));
+                showOmniToast(context, 'Đã sao chép.');
               },
             ),
           ),
@@ -438,15 +442,16 @@ class _AddMemberSheetState extends ConsumerState<AddMemberSheet> {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: scheme.primary.withValues(alpha: .12),
-                    borderRadius: BorderRadius.circular(10),
+                    // Thành công, không bấm được: xanh lá chữ trên `fill`.
+                    color: OmniColors.trackOf(context),
+                    borderRadius: OmniRadius.mdAll,
                   ),
                   child: Icon(
                     done.invited
                         ? LucideIcons.mailCheck
                         : LucideIcons.circleCheck,
                     size: OmniIconSize.lg,
-                    color: scheme.primary,
+                    color: OmniColors.successTextOf(context),
                   ),
                 ),
                 const SizedBox(height: OmniSpacing.sm),

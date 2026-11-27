@@ -267,7 +267,11 @@ class _InboxPageState extends ConsumerState<InboxPage>
                             ScrollViewKeyboardDismissBehavior.onDrag,
                         padding: EdgeInsets.only(
                           top: topInset,
-                          bottom: OmniSpacing.bottomSafe,
+                          // Phần thanh tab che + 24 (G9), không hằng 112.
+                          bottom: OmniFabLayer.listBottom(
+                            context,
+                            hasFab: false,
+                          ),
                         ),
                         // Mục "Đã ghim" (nếu có) là dòng đầu của CÙNG danh
                         // sách: một ScrollController, `loadMore` vẫn theo

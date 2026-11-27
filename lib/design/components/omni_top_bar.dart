@@ -15,6 +15,7 @@ import 'brand_anchor.dart';
 import 'omni_app_bar.dart';
 import 'omni_brand.dart';
 import 'omni_inputs.dart';
+import 'omni_pills.dart';
 
 /// Chỗ cắm cho phần của [OmniTopBar] thuộc về `modules/`: số thông báo chưa đọc
 /// và nơi nút chuông dẫn tới. Cùng lý do với [OmniAccountSlot] — `design/` chỉ
@@ -829,17 +830,13 @@ class _BellButtonState extends State<_BellButton>
                     ),
                   ),
                   if (widget.unread > 0)
-                    Positioned(
-                      right: 10,
-                      top: 10,
-                      child: Container(
-                        key: const ValueKey('omni-top-bar-bell-dot'),
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: scheme.error,
-                          shape: BoxShape.circle,
-                        ),
+                    // Chấm chung của app (D4): 10, viền nền, `attentionOf`.
+                    const Positioned(
+                      right: 9,
+                      top: 9,
+                      child: KeyedSubtree(
+                        key: ValueKey('omni-top-bar-bell-dot'),
+                        child: OmniUnreadDot(excludeSemantics: true),
                       ),
                     ),
                 ],

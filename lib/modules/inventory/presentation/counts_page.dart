@@ -529,7 +529,14 @@ class CountUnitRow extends StatelessWidget {
       label: 'Thấy ${u.name} ${u.serial ?? ''}',
       excludeSemantics: true,
       child: ColoredBox(
-        color: seen ? OmniGlass.selectionOf(context) : Colors.transparent,
+        // Nền accent-tint đặc (token), không `selectionOf` (red flag Viomni).
+        color: seen
+            ? OmniColors.byBrightness(
+                context,
+                OmniColors.accent,
+                OmniColors.darkAccent,
+              )
+            : Colors.transparent,
         child: InkWell(
           onTap: onTap,
           child: ConstrainedBox(

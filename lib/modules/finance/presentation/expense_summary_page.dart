@@ -296,6 +296,7 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
           s.loadedMonths,
           s.isLoading,
           s.syncing,
+          s.errorMessage,
           s.itemsByMonth,
           s.summariesByMonth,
           s.clock,
@@ -358,6 +359,15 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
                     children: [
                       if ((state.isLoading || state.syncing) && !anyLoaded)
                         _buildLoadingCard(p)
+                      // Tải lỗi khi chưa có kỳ nào: báo lỗi + Thử lại, không
+                      // hiện "0 đ" như số thật.
+                      else if (state.errorMessage != null && !anyLoaded)
+                        OmniErrorView(
+                          error: state.errorMessage!,
+                          onRetry: () => unawaited(
+                            _ensureActiveScopeLoaded(forceRefresh: true),
+                          ),
+                        )
                       else ...[
                         // KHỐI 2: Thẻ Hero Tổng hợp Kỳ
                         _buildHeroSummaryCard(p, state, periodMonths),

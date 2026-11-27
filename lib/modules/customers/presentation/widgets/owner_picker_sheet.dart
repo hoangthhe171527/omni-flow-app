@@ -107,9 +107,12 @@ class _OwnerPickerSheetState extends ConsumerState<_OwnerPickerSheet> {
             padding: EdgeInsets.all(OmniSpacing.xxl),
             child: Center(child: CircularProgressIndicator.adaptive()),
           ),
-          // Thiếu `membership.members.read` cũng rơi vào đây: báo một
-          // câu, không có mục nào để chọn nhầm.
-          error: (e, _) => message('Không tải được danh sách thành viên'),
+          // Thiếu `membership.members.read` cũng rơi vào đây: báo đúng lý do
+          // (403 không có "Thử lại"), không có mục nào để chọn nhầm.
+          error: (e, _) => OmniErrorView(
+            error: e,
+            onRetry: () => ref.invalidate(teamDirectoryProvider),
+          ),
         ),
       ],
     );

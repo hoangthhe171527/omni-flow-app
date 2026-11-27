@@ -123,11 +123,11 @@ mixin _PlanBoardActions on ConsumerState<PlanBoardPage> {
       container.invalidate(planProvider(plan.id));
       container.invalidate(teamsWithPlansProvider);
       if (done != null) {
-        messenger.showSnackBar(SnackBar(content: Text(done)));
+        showOmniToast(null, done, messenger: messenger);
       }
       return true;
     } on AppException catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      showOmniToast(null, error.message, messenger: messenger);
       return false;
     }
   }
@@ -157,11 +157,13 @@ mixin _PlanBoardActions on ConsumerState<PlanBoardPage> {
           .transferOwner(plan.id, ownerId: picked.userId);
       container.invalidate(planProvider(plan.id));
       container.invalidate(teamsWithPlansProvider);
-      messenger.showSnackBar(
-        SnackBar(content: Text('Đã chuyển chủ cho ${picked.name}.')),
+      showOmniToast(
+        null,
+        'Đã chuyển chủ cho ${picked.name}.',
+        messenger: messenger,
       );
     } on AppException catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      showOmniToast(null, error.message, messenger: messenger);
     }
   }
 
@@ -203,8 +205,10 @@ mixin _PlanBoardActions on ConsumerState<PlanBoardPage> {
       if (!mounted) return;
       // Mẫu không mở được trong app (tab Việc không liệt kê mẫu): ở lại bảng.
       if (choice.asTemplate) {
-        messenger.showSnackBar(
-          const SnackBar(content: Text('Đã lưu làm mẫu. Dùng mẫu trên web.')),
+        showOmniToast(
+          null,
+          'Đã lưu làm mẫu. Dùng mẫu trên web.',
+          messenger: messenger,
         );
         return;
       }
@@ -213,7 +217,7 @@ mixin _PlanBoardActions on ConsumerState<PlanBoardPage> {
         pathParameters: {'id': copy.id},
       );
     } on AppException catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      showOmniToast(null, error.message, messenger: messenger);
     }
   }
 
@@ -357,7 +361,7 @@ mixin _PlanBoardActions on ConsumerState<PlanBoardPage> {
       ]);
       container.invalidate(planProvider(widget.planId));
     } on AppException catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      showOmniToast(null, error.message, messenger: messenger);
     }
   }
 
@@ -438,9 +442,9 @@ mixin _PlanBoardActions on ConsumerState<PlanBoardPage> {
       container.read(taskRealtimeSignalProvider.notifier).bump();
       if (!mounted) return;
       _back();
-      messenger.showSnackBar(const SnackBar(content: Text('Đã xoá kế hoạch.')));
+      showOmniToast(null, 'Đã xoá kế hoạch.', messenger: messenger);
     } on AppException catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      showOmniToast(null, error.message, messenger: messenger);
     }
   }
 }

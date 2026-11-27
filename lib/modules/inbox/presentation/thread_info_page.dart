@@ -83,8 +83,10 @@ class _InfoBody extends ConsumerWidget {
         opened = await launchUrl(Uri(scheme: 'tel', path: phone));
       } catch (_) {}
       if (!opened && messenger.mounted) {
-        messenger.showSnackBar(
-          const SnackBar(content: Text('Không mở được ứng dụng gọi điện.')),
+        showOmniToast(
+          null,
+          'Không mở được ứng dụng gọi điện.',
+          messenger: messenger,
         );
       }
     }
@@ -340,12 +342,9 @@ class _PinSwitch extends StatelessWidget {
         HapticFeedback.selectionClick();
         onChanged(v);
       },
+      // Bật = xanh lá `switch-on` của theme (công tắc là ngoại lệ màu duy
+      // nhất), không tô màu nhấn.
       activeThumbColor: scheme.surface,
-      activeTrackColor: OmniColors.byBrightness(
-        context,
-        OmniColors.primary,
-        OmniColors.darkPrimary,
-      ),
       inactiveThumbColor: scheme.surface,
       // #C9D2DE sáng / darkBorderInteractive tối.
       inactiveTrackColor: OmniColors.controlBorderOf(context),
@@ -465,7 +464,8 @@ class _QuickAction extends StatelessWidget {
                 child: Icon(
                   icon,
                   size: 18,
-                  color: active ? scheme.primary : scheme.onSurface,
+                  // Đang bật = mực (D12); nhãn "Đã tắt" nói trạng thái.
+                  color: scheme.onSurface,
                 ),
               ),
               const SizedBox(height: 5),

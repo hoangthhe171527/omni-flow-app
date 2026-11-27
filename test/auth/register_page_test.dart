@@ -271,6 +271,23 @@ void main() {
     expect(bar(0), isNot(weak));
   });
 
+  testWidgets('đã gõ rồi bấm ‹ → hỏi trước khi bỏ, "Tiếp tục" ở lại', (
+    tester,
+  ) async {
+    await open(tester);
+    await tester.enterText(find.byType(TextField).first, 'Nguyễn An');
+    await tester.pump();
+    await tester.tap(find.byTooltip('Quay lại'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(find.text('Bỏ thông tin đã nhập?'), findsOneWidget);
+    await tester.tap(find.text('Tiếp tục'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(find.text('Bỏ thông tin đã nhập?'), findsNothing);
+    expect(find.text('Nguyễn An'), findsOneWidget);
+  });
+
   test('điểm mật khẩu: 8 ký tự, hoa+thường, số, ký tự đặc biệt', () {
     expect(passwordScore(''), 0);
     expect(passwordScore('abc'), 0);

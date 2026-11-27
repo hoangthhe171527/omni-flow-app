@@ -74,13 +74,15 @@ class _SectionOrderPageState extends ConsumerState<SectionOrderPage> {
       if (!mounted) return;
       navigator.pop(true);
     } on AppException catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+      showOmniToast(null, e.message, messenger: messenger);
       if (mounted) setState(() => _saving = false);
     } catch (_) {
       // Lỗi không phải AppException cũng phải mở lại nút "Lưu", không để
       // vòng xoay quay mãi.
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Không lưu được thứ tự. Thử lại nhé.')),
+      showOmniToast(
+        null,
+        'Không lưu được thứ tự. Thử lại nhé.',
+        messenger: messenger,
       );
       if (mounted) setState(() => _saving = false);
     }
@@ -342,18 +344,8 @@ class _SectionRow extends StatelessWidget {
                     padding: EdgeInsets.only(left: 8, right: 4),
                     child: OmniStatusLabel(label: 'QC', tone: OmniTone.warning),
                   ),
-                arrow(
-                  'Lên trên',
-                  LucideIcons.chevronUp,
-                  !first,
-                  onUp,
-                ),
-                arrow(
-                  'Xuống dưới',
-                  LucideIcons.chevronDown,
-                  !last,
-                  onDown,
-                ),
+                arrow('Lên trên', LucideIcons.chevronUp, !first, onUp),
+                arrow('Xuống dưới', LucideIcons.chevronDown, !last, onDown),
               ],
             ),
           ),

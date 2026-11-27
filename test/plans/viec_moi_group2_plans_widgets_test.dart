@@ -153,12 +153,12 @@ void main() {
       // Sao bật màu `star` 19, sao tắt viền `faint`.
       final on = t.widget<Icon>(find.byIcon(Icons.star_rounded).last);
       expect(on.size, 19);
-      expect(on.color, const Color(0xFFE8890C));
+      expect(on.color, const Color(0xFFC46A00));
       // Sao tắt là Lucide viền (cùng glyph với sao đầu mục Yêu thích) → tìm
       // theo màu `faint` thay vì đòi đúng một icon.
       final off = t
           .widgetList<Icon>(find.byIcon(LucideIcons.star))
-          .where((i) => i.color == const Color(0xFF9AA5B8));
+          .where((i) => i.color == const Color(0xFF7A8699));
       expect(off, hasLength(1));
       // Vùng chạm 44.
       expect(

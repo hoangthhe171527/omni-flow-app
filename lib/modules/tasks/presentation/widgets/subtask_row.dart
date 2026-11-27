@@ -500,7 +500,8 @@ class _TickButtonState extends State<_TickButton>
         width: 22,
         height: 22,
         decoration: BoxDecoration(
-          color: filled ? scheme.primary : scheme.surface,
+          // Nền đặc theo chế độ (Tối #2F6FE0) + ✓ trắng (G7).
+          color: filled ? OmniColors.primaryFillOf(context) : scheme.surface,
           borderRadius: BorderRadius.circular(6),
           border: filled ? null : Border.all(color: border, width: 1.5),
         ),
@@ -508,9 +509,7 @@ class _TickButtonState extends State<_TickButton>
             ? Icon(
                 LucideIcons.check,
                 size: 14,
-                color: widget.failed
-                    ? OmniColors.destructive
-                    : scheme.onPrimary,
+                color: widget.failed ? OmniColors.destructive : Colors.white,
               )
             : null,
       );

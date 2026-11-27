@@ -421,7 +421,10 @@ class _SellSheetState extends ConsumerState<SellSheet> {
     final main = FilledButton(
       key: const ValueKey('inv-sell-save'),
       onPressed: ready ? () => _save(kind, open) : null,
-      child: Text(label),
+      // Nút mang số tiền ("<Việc> · <số tiền>"); để bán lẻ không có tiền.
+      child: Text(
+        !_retail && total > 0 ? '$label · ${InvUi.vnd(total)}' : label,
+      ),
     );
 
     return OmniSheetBody(

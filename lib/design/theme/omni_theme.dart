@@ -219,6 +219,13 @@ abstract final class OmniTheme {
         ),
         hintStyle: OmniType.body.copyWith(color: onSurfaceMuted),
         labelStyle: OmniType.caption.copyWith(color: onSurfaceMuted),
+        // Chữ lỗi dưới ô: `scheme.error` là NỀN đỏ (chữ trắng), làm chữ trên
+        // nền tối chỉ 3,2:1. Lấy bản CHỮ `dangerText` theo chế độ (≥ 4.5:1).
+        errorStyle: TextStyle(
+          color: brightness == Brightness.dark
+              ? OmniColors.dangerTextDark
+              : OmniColors.dangerText,
+        ),
         // Ô nhập (phương án B): nền mờ lõm nhẹ; đang gõ chỉ có viền màu chủ
         // đạo nhạt, không khung xanh đậm.
         // Mép xám mảnh vẫn đạt 3:1 (WCAG 1.4.11): ô nhập không có chữ tự

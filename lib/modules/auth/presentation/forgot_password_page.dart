@@ -8,6 +8,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/error/app_exception.dart';
+import '../../../design/components/omni_feedback.dart';
 import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
 import '../application/password_strength.dart';
@@ -145,9 +146,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage>
       opened = false;
     }
     if (!opened && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Không mở được ứng dụng email.')),
-      );
+      showOmniToast(context, 'Không mở được ứng dụng email.');
     }
   }
 

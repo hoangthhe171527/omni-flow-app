@@ -794,7 +794,7 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
                     Text(
                       hold,
                       style: OmniType.caption.copyWith(
-                        color: scheme.primary,
+                        color: scheme.onSurface,
                         fontWeight: FontWeight.w600,
                       ),
                     ),

@@ -322,6 +322,10 @@ void main() {
   });
 
   Future<void> subMenu(WidgetTester t, int row, String item) async {
+    // Hàng sao xuống dòng (Wrap, vùng chạm 44) làm thẻ cao hơn: cuộn ⋮ vào
+    // tầm nhìn để menu neo dưới dòng không rơi ra ngoài màn.
+    await t.ensureVisible(find.byTooltip('Tuỳ chọn việc con').at(row));
+    await t.pumpAndSettle();
     await t.tap(find.byTooltip('Tuỳ chọn việc con').at(row));
     await t.pumpAndSettle();
     await t.tap(find.text(item));

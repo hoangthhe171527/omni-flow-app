@@ -103,7 +103,7 @@ class _ReminderSheetState extends ConsumerState<ReminderSheet> {
       await write(api);
       container.invalidate(taskRemindersProvider(widget.taskId));
     } on AppException catch (e) {
-      widget.messenger.showSnackBar(SnackBar(content: Text(e.message)));
+      showOmniToast(null, e.message, messenger: widget.messenger);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -113,16 +113,20 @@ class _ReminderSheetState extends ConsumerState<ReminderSheet> {
     final at = await widget.pick(context);
     if (at == null || !mounted) return;
     if (!at.isAfter(DateTime.now())) {
-      widget.messenger.showSnackBar(
-        const SnackBar(content: Text('Chọn một thời điểm sau bây giờ.')),
+      showOmniToast(
+        null,
+        'Chọn một thời điểm sau bây giờ.',
+        messenger: widget.messenger,
       );
       return;
     }
     final everyone = widget.canEveryone && _everyone;
     await _run((api) async {
       await api.addReminder(widget.taskId, at, everyone: everyone);
-      widget.messenger.showSnackBar(
-        SnackBar(content: Text('Đã đặt nhắc lúc ${_stamp(at)}.')),
+      showOmniToast(
+        null,
+        'Đã đặt nhắc lúc ${_stamp(at)}.',
+        messenger: widget.messenger,
       );
     });
   }

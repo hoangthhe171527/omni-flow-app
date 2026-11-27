@@ -256,8 +256,9 @@ abstract final class FinanceMonthUtils {
     return rounded < 0 ? '-$clean' : clean;
   }
 
-  /// Định dạng tiền tệ kèm khoảng trắng `12.000.000 đ` (hoặc `-500.000 đ`).
-  static String formatVndSpace(num? value) => '${formatNumber(value)} đ';
+  /// Tiền đủ số liền `đ` như `Formatters.vnd`: `12.000.000đ` (hoặc
+  /// `-500.000đ`). Tên giữ lại cho các chỗ gọi cũ.
+  static String formatVndSpace(num? value) => '${formatNumber(value)}đ';
 
   static String formatByteSize(int? bytes) {
     if (bytes == null || bytes <= 0) return '';

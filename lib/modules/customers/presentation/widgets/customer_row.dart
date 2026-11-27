@@ -309,7 +309,7 @@ Future<void> launchWithToast(
     opened = false;
   }
   if (opened || !context.mounted) return;
-  messenger.showSnackBar(SnackBar(content: Text(failure)));
+  showOmniToast(null, failure, messenger: messenger);
 }
 
 /// Nút icon tròn trơn + nhãn nhỏ w600; `onTap` null = tắt (không số điện thoại).

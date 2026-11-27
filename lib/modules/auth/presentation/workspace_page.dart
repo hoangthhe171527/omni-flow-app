@@ -36,9 +36,7 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
     } on AppException catch (error) {
       if (!mounted) return;
       setState(() => _entering = null);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
+      showOmniToast(context, error.message);
     }
   }
 

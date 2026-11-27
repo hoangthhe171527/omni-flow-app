@@ -67,6 +67,8 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
     _expectedClose = opportunity.expectedCloseAt;
   }
 
+  String? get _customerName => _customer?.name ?? _original?.customerName;
+
   Future<void> _pickCustomer() async {
     final picked = await showOmniSheet<Customer>(
       context: context,
@@ -158,11 +160,14 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
         );
       }
     } on AppException catch (error) {
-      setState(() => _saving = false);
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
+      setState(() => _saving = false);
+      showOmniToast(context, error.message);
+    } catch (_) {
+      // Lỗi lạ không được kẹt nút ở trạng thái quay mãi.
+      if (!mounted) return;
+      setState(() => _saving = false);
+      showOmniToast(context, 'Không lưu được. Vui lòng thử lại.');
     }
   }
 
@@ -220,10 +225,11 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
                   ),
                 ),
                 OmniGroupRow(
-                  leading: _customer == null
+                  // Sửa: hiện khách đang gắn, không "Chọn khách hàng".
+                  leading: _customerName == null
                       ? OmniIconTile(LucideIcons.user)
-                      : OmniAvatar(name: _customer!.name, size: 28),
-                  title: _customer?.name ?? 'Chọn khách hàng',
+                      : OmniAvatar(name: _customerName!, size: 28),
+                  title: _customerName ?? 'Chọn khách hàng',
                   maxTitleLines: 1,
                   chevron: true,
                   onTap: _pickCustomer,

@@ -362,32 +362,29 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
         }
       }
 
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(switch (result.placeName) {
-            final place? => 'Đã tạo bản sao trong “$place”.',
-            null => 'Đã tạo bản sao.',
-          }),
-          action: copy.id.isEmpty
-              ? null
-              : SnackBarAction(label: 'Mở', onPressed: open),
-        ),
+      showOmniToast(
+        null,
+        switch (result.placeName) {
+          final place? => 'Đã tạo bản sao trong “$place”.',
+          null => 'Đã tạo bản sao.',
+        },
+        messenger: messenger,
+        actionLabel: copy.id.isEmpty ? null : 'Mở',
+        onAction: copy.id.isEmpty ? null : open,
       );
     } on ValidationException catch (e) {
       // Nhóm việc không thuộc kế hoạch đích (người khác vừa xoá nhóm): câu
       // của server cho khoá `section_id`.
       final section = e.firstFor('section_id');
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            section == null
-                ? e.message
-                : '$section Mở lại "Sao chép" để chọn nhóm khác.',
-          ),
-        ),
+      showOmniToast(
+        null,
+        section == null
+            ? e.message
+            : '$section Mở lại "Sao chép" để chọn nhóm khác.',
+        messenger: messenger,
       );
     } on AppException catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+      showOmniToast(null, e.message, messenger: messenger);
     }
   }
 
@@ -404,9 +401,9 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     try {
       await write();
       if (bumpBoard) container.read(taskRealtimeSignalProvider.notifier).bump();
-      messenger.showSnackBar(SnackBar(content: Text(done)));
+      showOmniToast(null, done, messenger: messenger);
     } on AppException catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+      showOmniToast(null, e.message, messenger: messenger);
     }
   }
 
@@ -436,11 +433,45 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
         sectionId: target.sectionId,
       );
       container.read(taskRealtimeSignalProvider.notifier).bump();
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Đã chuyển công việc.')),
+      final fromProject = task.projectId;
+      // Hoàn tác: về kế hoạch / nhóm cũ (nang-suat luồng C).
+      showOmniToast(
+        null,
+        'Đã chuyển công việc.',
+        messenger: messenger,
+        actionLabel: fromProject == null ? null : omniUndoLabel,
+        onAction: fromProject == null
+            ? null
+            : () => _undo(
+                container,
+                messenger,
+                task.id,
+                (api) => api.moveTask(
+                  task.id,
+                  projectId: fromProject,
+                  sectionId: task.sectionId,
+                ),
+              ),
       );
     } on AppException catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+      showOmniToast(null, e.message, messenger: messenger);
+    }
+  }
+
+  /// Gọi lại API để đảo thao tác vừa làm; màn có thể đã đóng nên chỉ dùng
+  /// container + messenger đã lấy trước.
+  Future<void> _undo(
+    ProviderContainer container,
+    ScaffoldMessengerState messenger,
+    String taskId,
+    Future<Task> Function(TasksApi api) call,
+  ) async {
+    try {
+      await call(container.read(tasksApiProvider));
+      container.invalidate(taskDetailProvider(taskId));
+      container.read(taskRealtimeSignalProvider.notifier).bump();
+    } on AppException catch (e) {
+      showOmniToast(null, e.message, messenger: messenger);
     }
   }
 
@@ -457,11 +488,21 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
       await controller.setArchived(archived);
       container.read(taskRealtimeSignalProvider.notifier).bump();
       if (archived) unawaited(navigator.maybePop());
-      messenger.showSnackBar(
-        SnackBar(content: Text(archived ? 'Đã lưu trữ.' : 'Đã bỏ lưu trữ.')),
+      final taskId = controller.arg;
+      showOmniToast(
+        null,
+        archived ? 'Đã lưu trữ.' : 'Đã bỏ lưu trữ.',
+        messenger: messenger,
+        actionLabel: omniUndoLabel,
+        onAction: () => _undo(
+          container,
+          messenger,
+          taskId,
+          (api) => api.setArchived(taskId, !archived),
+        ),
       );
     } on AppException catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+      showOmniToast(null, e.message, messenger: messenger);
     }
   }
 
@@ -487,11 +528,9 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
       container.invalidate(taskDetailProvider(task.id));
       container.read(taskRealtimeSignalProvider.notifier).bump();
       navigator.pop();
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Đã xoá công việc.')),
-      );
+      showOmniToast(null, 'Đã xoá công việc.', messenger: messenger);
     } on AppException catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      showOmniToast(null, error.message, messenger: messenger);
     }
   }
 }
@@ -885,9 +924,7 @@ class _Loaded extends ConsumerWidget {
         } else if (number) {
           final parsed = num.tryParse(typed.replaceAll(',', '.'));
           if (parsed == null) {
-            messenger.showSnackBar(
-              const SnackBar(content: Text('Nhập một số.')),
-            );
+            showOmniToast(null, 'Nhập một số.', messenger: messenger);
             return;
           }
           value = parsed;
@@ -923,7 +960,8 @@ class _Loaded extends ConsumerWidget {
           selected: def.options.indexOf(current),
           items: [
             for (final o in def.options)
-              OptionItem(label: o, color: scheme.primary, round: true),
+              // Chấm chỉ là nhãn, không bấm riêng: trung tính.
+              OptionItem(label: o, color: scheme.onSurfaceVariant, round: true),
             if (canClear)
               OptionItem(
                 label: 'Xoá giá trị',
@@ -950,9 +988,7 @@ class _Loaded extends ConsumerWidget {
       unawaited(HapticFeedback.selectionClick());
       await controller.toggleLike(myUserId);
     } on Object {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Không thích được.')),
-      );
+      showOmniToast(null, 'Không thích được.', messenger: messenger);
     }
   }
 
@@ -970,10 +1006,12 @@ class _Loaded extends ConsumerWidget {
     try {
       await controller.setRating(next);
     } on AppException catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+      showOmniToast(null, e.message, messenger: messenger);
     } on Object {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Chưa lưu được. Thử lại khi có mạng.')),
+      showOmniToast(
+        null,
+        'Chưa lưu được. Thử lại khi có mạng.',
+        messenger: messenger,
       );
     }
   }
@@ -985,12 +1023,10 @@ class _Loaded extends ConsumerWidget {
     try {
       await Clipboard.setData(ClipboardData(text: text));
     } on Object {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Không chép được mô tả.')),
-      );
+      showOmniToast(null, 'Không chép được mô tả.', messenger: messenger);
       return;
     }
-    messenger.showSnackBar(const SnackBar(content: Text('Đã chép mô tả.')));
+    showOmniToast(null, 'Đã chép mô tả.', messenger: messenger);
   }
 
   /// Chạm tên kế hoạch: mở bảng. Màn ngay dưới đã CHÍNH là bảng đó (mở việc
@@ -1197,7 +1233,7 @@ Future<void> _guard(
   try {
     await run();
   } on AppException catch (e) {
-    messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    showOmniToast(null, e.message, messenger: messenger);
   }
 }
 
@@ -1230,8 +1266,10 @@ Future<void> _openLabels(
             .setLabels(next)
             .then<void>(
               (_) {},
-              onError: (Object _) => messenger.showSnackBar(
-                const SnackBar(content: Text('Không lưu được nhãn.')),
+              onError: (Object _) => showOmniToast(
+                null,
+                'Không lưu được nhãn.',
+                messenger: messenger,
               ),
             ),
       );
@@ -1281,8 +1319,8 @@ Future<void> _reportIssue(
   try {
     await controller.reportIssue(draft.note, photos: draft.photos);
     container.read(taskRealtimeSignalProvider.notifier).bump();
-    messenger.showSnackBar(const SnackBar(content: Text('Đã báo vấn đề.')));
+    showOmniToast(null, 'Đã báo vấn đề.', messenger: messenger);
   } on AppException catch (e) {
-    messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    showOmniToast(null, e.message, messenger: messenger);
   }
 }

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -158,6 +159,8 @@ class BoardColumn extends StatefulWidget {
     this.onDragUpdate,
     this.onDragEnd,
     this.liftable,
+    this.moveTargets = const [],
+    this.onMoveTo,
   });
 
   static bool _never(Task _) => false;
@@ -201,6 +204,11 @@ class BoardColumn extends StatefulWidget {
   /// cho. Nghe riêng ở lớp `LongPressDraggable` của từng thẻ, nên bật/tắt
   /// không dựng lại thẻ.
   final ValueListenable<bool>? liftable;
+
+  /// Cột khác thả được: (tên, vị trí). Mỗi cột thành một hành động trợ năng
+  /// "Chuyển sang `<cột>`" trên thẻ — lối thay cho kéo thả (WCAG 2.5.7).
+  final List<({String label, int index})> moveTargets;
+  final void Function(Task task, int toColumn)? onMoveTo;
 
   @override
   State<BoardColumn> createState() => _BoardColumnState();
@@ -387,6 +395,20 @@ class _BoardColumnState extends State<BoardColumn> {
   /// Thẻ [task] ở vị trí [index], lấy từ cache khi được.
   Widget _cardFor(Task task, int index) {
     final canDrag = widget.drag != null && widget.canDrag(task);
+    final card = _cachedCard(task, index, canDrag);
+    final onMoveTo = widget.onMoveTo;
+    if (!canDrag || onMoveTo == null || widget.moveTargets.isEmpty) return card;
+    return Semantics(
+      customSemanticsActions: {
+        for (final t in widget.moveTargets)
+          CustomSemanticsAction(label: 'Chuyển sang ${t.label}'): () =>
+              onMoveTo(task, t.index),
+      },
+      child: card,
+    );
+  }
+
+  Widget _cachedCard(Task task, int index, bool canDrag) {
     final rise = widget.firstShow(task.id);
     final cached = _cards[task.id];
     if (cached != null &&

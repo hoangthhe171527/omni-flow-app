@@ -138,14 +138,14 @@ void main() {
         // 2.450.000 + 6.000.000 + 1.650.000 = 10.100.000
         expect(find.text('10.100.000'), findsOneWidget);
         expect(find.text('Đã trả'), findsOneWidget);
-        expect(find.text('5.450.000 đ'), findsOneWidget);
+        expect(find.text('5.450.000đ'), findsOneWidget);
         expect(find.text('Phải trả'), findsOneWidget);
-        expect(find.text('4.650.000 đ'), findsOneWidget);
+        expect(find.text('4.650.000đ'), findsOneWidget);
         expect(find.textContaining('vs T10'), findsOneWidget);
 
         // Thẻ 4 khoản cố định tự nội suy từ tháng trước trên API (12tr + 1.85tr + 4.5tr + 3tr = 21.35tr, không có Lương nhân sự)
         expect(find.text('Khoản cố định'), findsOneWidget);
-        expect(find.text('4 khoản · 21.350.000 đ'), findsOneWidget);
+        expect(find.text('4 khoản · 21.350.000đ'), findsOneWidget);
         expect(find.text('Ghi tất cả'), findsOneWidget);
 
         await tester.tap(find.byKey(const ValueKey('finance-recur-head')));
@@ -174,7 +174,7 @@ void main() {
         );
         // Không còn số liệu giả cũ 26.650.000 hay 41.350.000
         expect(find.text('26.650.000'), findsNothing);
-        expect(find.text('5 khoản · 41.350.000 đ'), findsNothing);
+        expect(find.text('5 khoản · 41.350.000đ'), findsNothing);
         expect(
           find.text('4 khoản gợi ý · Chạm để nhập số tiền'),
           findsOneWidget,
@@ -283,14 +283,14 @@ void main() {
 
         for (final textValue in [
           '10.100.000',
-          '5.450.000 đ',
-          '4.650.000 đ',
+          '5.450.000đ',
+          '4.650.000đ',
           'Khoản cố định',
-          '4 khoản · 21.350.000 đ',
-          '2.450.000 đ',
-          '6.000.000 đ',
-          'còn 3.000.000 đ',
-          '1.650.000 đ',
+          '4 khoản · 21.350.000đ',
+          '2.450.000đ',
+          '6.000.000đ',
+          'còn 3.000.000đ',
+          '1.650.000đ',
         ]) {
           final finder = find.text(textValue);
           if (finder.evaluate().isEmpty) {
@@ -344,10 +344,12 @@ void main() {
         expect(find.text('Khoản cố định'), findsNothing);
         // 10.100.000 + 21.350.000 = 31.450.000
         expect(find.text('31.450.000'), findsOneWidget);
+        // Toast chuẩn (showOmniToast): "Hoàn tác" ở lại tới khi bấm.
+        await tester.pump(const Duration(milliseconds: 400));
         expect(find.text('Hoàn tác'), findsOneWidget);
 
         // Bấm Hoàn tác -> gọi DELETE xoá 4 bản ghi trên server
-        await tester.tap(find.byKey(const ValueKey('finance-undo-btn')));
+        await tester.tap(find.text('Hoàn tác'));
         await tester.pump(const Duration(seconds: 5));
 
         expect(
@@ -435,10 +437,10 @@ void main() {
         // Tổng chi tháng 11 = 10.100.000 - 500.000 = 9.600.000 (KHÔNG cộng 20tr Chia lợi nhuận)
         expect(find.text('9.600.000'), findsOneWidget);
         expect(
-          find.textContaining('Ngoài chi phí: 20.000.000 đ'),
+          find.textContaining('Ngoài chi phí: 20.000.000đ'),
           findsOneWidget,
         );
-        expect(find.text('-500.000 đ'), findsOneWidget);
+        expect(find.text('-500.000đ'), findsOneWidget);
         expect(find.text('Hoàn/giảm'), findsOneWidget);
 
         // Mở bảng tỷ trọng theo nhóm -> nhóm Chia lợi nhuận hiện "Không tính CP" thay vì %
@@ -521,9 +523,9 @@ void main() {
         await tester.tap(partialFinder);
         await tester.pumpAndSettle();
 
-        expect(find.text('Đã trả 3.000.000 đ'), findsOneWidget);
-        expect(find.text('Còn 3.000.000 đ'), findsOneWidget);
-        expect(find.text('Trả · 3.000.000 đ'), findsOneWidget);
+        expect(find.text('Đã trả 3.000.000đ'), findsOneWidget);
+        expect(find.text('Còn 3.000.000đ'), findsOneWidget);
+        expect(find.text('Trả · 3.000.000đ'), findsOneWidget);
       },
     );
 

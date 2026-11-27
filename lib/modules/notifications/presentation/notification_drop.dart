@@ -230,10 +230,20 @@ class _NotificationDropState extends ConsumerState<_NotificationDrop> {
       ),
       error: (_, _) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-        child: Text(
-          'Chưa tải được thông báo',
-          textAlign: TextAlign.center,
-          style: OmniType.body.copyWith(color: muted),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Chưa tải được thông báo',
+              textAlign: TextAlign.center,
+              style: OmniType.body.copyWith(color: muted),
+            ),
+            TextButton(
+              onPressed: () => ref.invalidate(notificationsProvider),
+              style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+              child: const Text('Thử lại'),
+            ),
+          ],
         ),
       ),
       data: (state) {
@@ -303,7 +313,7 @@ class _NotificationDropState extends ConsumerState<_NotificationDrop> {
       key: const ValueKey('notification-drop'),
       decoration: BoxDecoration(
         color: card,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: OmniRadius.xxlAll,
         border: Border.all(color: line, width: 0.5),
         boxShadow: [
           BoxShadow(
@@ -314,7 +324,7 @@ class _NotificationDropState extends ConsumerState<_NotificationDrop> {
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: OmniRadius.xxlAll,
         child: Material(
           type: MaterialType.transparency,
           child: SingleChildScrollView(
@@ -339,33 +349,13 @@ class _NotificationDropState extends ConsumerState<_NotificationDrop> {
                           ),
                         ),
                       ),
+                      // Số chưa đọc nằm ở phân đoạn "Chưa đọc n" bên dưới:
+                      // viên đỏ chữ trắng cũ chỉ 3,55:1.
                       if (unreadCount > 0) ...[
-                        // Viên đỏ "N mới" — đỏ = cần chú ý.
-                        Container(
-                          key: const ValueKey('notification-drop-new'),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 1.5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: OmniColors.attentionOf(context),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            '$unreadCount mới',
-                            style: OmniType.micro.copyWith(
-                              height: 1.3,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                              fontFeatures: OmniType.tabular,
-                            ),
-                          ),
-                        ),
                         TextButton(
                           key: const ValueKey('notification-drop-read-all'),
                           style: TextButton.styleFrom(
-                            minimumSize: const Size(0, 36),
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            minimumSize: const Size(44, 44),
                             padding: const EdgeInsets.symmetric(horizontal: 10),
                           ),
                           onPressed: () {
@@ -392,6 +382,7 @@ class _NotificationDropState extends ConsumerState<_NotificationDrop> {
                     key: const ValueKey('notification-drop-filter'),
                     compact: true,
                     labels: const ['Tất cả', 'Chưa đọc'],
+                    counts: [null, unreadCount > 0 ? unreadCount : null],
                     index: _unreadOnly ? 1 : 0,
                     onChanged: (i) => setState(() => _unreadOnly = i == 1),
                   ),
@@ -412,7 +403,7 @@ class _NotificationDropState extends ConsumerState<_NotificationDrop> {
                           widget.onSeeAll();
                         },
                         child: SizedBox(
-                          height: 36,
+                          height: 44,
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             child: Row(

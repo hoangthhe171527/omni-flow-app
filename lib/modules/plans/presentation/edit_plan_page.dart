@@ -60,7 +60,7 @@ Future<bool> savePlanPatch(
     if (navigator.canPop()) navigator.pop(true);
     return true;
   } on AppException catch (error) {
-    messenger.showSnackBar(SnackBar(content: Text(error.message)));
+    showOmniToast(null, error.message, messenger: messenger);
     return false;
   }
 }
@@ -107,6 +107,18 @@ class _EditPlanPageState extends ConsumerState<EditPlanPage> {
     return patch.isEmpty ? null : patch;
   }
 
+  Future<void> _confirmLeave() async {
+    final leave = await showOmniConfirm(
+      context: context,
+      title: 'Bỏ thay đổi?',
+      message: 'Những gì đã sửa sẽ mất.',
+      confirmLabel: 'Bỏ',
+      cancelLabel: 'Tiếp tục sửa',
+      destructive: true,
+    );
+    if (leave && mounted) Navigator.of(context).pop();
+  }
+
   bool get _coverChanged {
     final plan = _plan;
     if (plan == null) return false;
@@ -145,7 +157,7 @@ class _EditPlanPageState extends ConsumerState<EditPlanPage> {
         _saving = false;
         _error = error.message;
       });
-      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      showOmniToast(null, error.message, messenger: messenger);
     } on Object {
       if (!mounted) return;
       const message = 'Chưa lưu được ảnh nền. Vui lòng thử lại.';
@@ -153,7 +165,7 @@ class _EditPlanPageState extends ConsumerState<EditPlanPage> {
         _saving = false;
         _error = message;
       });
-      messenger.showSnackBar(const SnackBar(content: Text(message)));
+      showOmniToast(null, message, messenger: messenger);
     }
   }
 
@@ -170,142 +182,155 @@ class _EditPlanPageState extends ConsumerState<EditPlanPage> {
     final patch = _patch();
     final canSave = !_saving && (patch != null || _coverChanged);
 
-    return Scaffold(
-      appBar: OmniAppBar(
-        title: 'Sửa kế hoạch',
-        fallbackBack: () => context.go('/plans/${widget.planId}'),
-        actions: [
-          PlanSaveAction(saving: _saving, onPressed: canSave ? _save : null),
-        ],
-      ),
-      body: _plan == null
-          ? OmniAsyncView(
-              value: async,
-              onRetry: () => ref.invalidate(planProvider(widget.planId)),
-              data: (_) => const SizedBox.shrink(),
-            )
-          : ListView(
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: const EdgeInsets.fromLTRB(
-                16,
-                OmniGroupSection.gap,
-                16,
-                OmniSpacing.bottomSafe,
-              ),
-              children: [
-                // Ảnh nền là khung xem trước, tên kế hoạch đè lên bằng viên
-                // kính — đổi tên là thấy ngay.
-                CoverPicker(
-                  localPath: _coverPath,
-                  remoteUrl: _removeCover
-                      ? null
-                      : resolveProjectCoverUrl(_plan?.cover),
-                  title: _name.text.trim(),
-                  busy: _saving && _coverChanged,
-                  onPicked: (path) => setState(() {
-                    _coverPath = path;
-                    _removeCover = false;
-                    _error = null;
-                  }),
-                  onRemove: _coverPath != null
-                      ? () => setState(() => _coverPath = null)
-                      : resolveProjectCoverUrl(_plan?.cover) != null &&
-                            !_removeCover
-                      ? () => setState(() => _removeCover = true)
-                      : null,
-                  onError: (message) => setState(() => _error = message),
+    // Rời màn khi đã sửa: hỏi trước (khuôn 4), lưu xong thì pop thẳng.
+    final dirty =
+        _plan != null &&
+        (patch != null || _coverChanged || _name.text.trim().isEmpty);
+    return PopScope(
+      canPop: !dirty || _saving,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _confirmLeave();
+      },
+      child: Scaffold(
+        appBar: OmniAppBar(
+          title: 'Sửa kế hoạch',
+          fallbackBack: () => context.go('/plans/${widget.planId}'),
+          actions: [
+            PlanSaveAction(saving: _saving, onPressed: canSave ? _save : null),
+          ],
+        ),
+        body: _plan == null
+            ? OmniAsyncView(
+                value: async,
+                onRetry: () => ref.invalidate(planProvider(widget.planId)),
+                data: (_) => const SizedBox.shrink(),
+              )
+            : ListView(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                padding: const EdgeInsets.fromLTRB(
+                  16,
+                  OmniGroupSection.gap,
+                  16,
+                  OmniSpacing.bottomSafe,
                 ),
-                const SizedBox(height: OmniGroupSection.gap),
-                OmniGroupSection(
-                  dividerIndent: 14,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Tên kế hoạch',
-                            style: OmniType.caption.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: scheme.onSurfaceVariant,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          TextField(
-                            controller: _name,
-                            maxLength: 255,
-                            textCapitalization: TextCapitalization.sentences,
-                            decoration: InputDecoration(
-                              hintText: 'Nhập tên kế hoạch…',
-                              isDense: true,
-                              filled: false,
-                              contentPadding: const EdgeInsets.symmetric(
-                                vertical: 4,
+                children: [
+                  // Ảnh nền là khung xem trước, tên kế hoạch đè lên bằng viên
+                  // kính — đổi tên là thấy ngay.
+                  CoverPicker(
+                    localPath: _coverPath,
+                    remoteUrl: _removeCover
+                        ? null
+                        : resolveProjectCoverUrl(_plan?.cover),
+                    title: _name.text.trim(),
+                    busy: _saving && _coverChanged,
+                    onPicked: (path) => setState(() {
+                      _coverPath = path;
+                      _removeCover = false;
+                      _error = null;
+                    }),
+                    onRemove: _coverPath != null
+                        ? () => setState(() => _coverPath = null)
+                        : resolveProjectCoverUrl(_plan?.cover) != null &&
+                              !_removeCover
+                        ? () => setState(() => _removeCover = true)
+                        : null,
+                    onError: (message) => setState(() => _error = message),
+                  ),
+                  const SizedBox(height: OmniGroupSection.gap),
+                  OmniGroupSection(
+                    dividerIndent: 14,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Tên kế hoạch',
+                              style: OmniType.caption.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: scheme.onSurfaceVariant,
                               ),
-                              border: InputBorder.none,
-                              enabledBorder: InputBorder.none,
-                              focusedBorder: InputBorder.none,
-                              counterText: _name.text.length > 204 ? null : '',
                             ),
-                            onChanged: (_) => setState(() {}),
-                          ),
-                        ],
+                            const SizedBox(height: 4),
+                            TextField(
+                              controller: _name,
+                              maxLength: 255,
+                              textCapitalization: TextCapitalization.sentences,
+                              decoration: InputDecoration(
+                                hintText: 'Nhập tên kế hoạch…',
+                                isDense: true,
+                                filled: false,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  vertical: 4,
+                                ),
+                                border: InputBorder.none,
+                                enabledBorder: InputBorder.none,
+                                focusedBorder: InputBorder.none,
+                                counterText: _name.text.length > 204
+                                    ? null
+                                    : '',
+                              ),
+                              onChanged: (_) => setState(() {}),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Mô tả',
-                            style: OmniType.caption.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: scheme.onSurfaceVariant,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          TextField(
-                            controller: _description,
-                            minLines: 3,
-                            maxLines: 6,
-                            maxLength: 2000,
-                            textCapitalization: TextCapitalization.sentences,
-                            decoration: InputDecoration(
-                              hintText: 'Kế hoạch này dùng để làm gì',
-                              isDense: true,
-                              filled: false,
-                              contentPadding: const EdgeInsets.symmetric(
-                                vertical: 4,
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Mô tả',
+                              style: OmniType.caption.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: scheme.onSurfaceVariant,
                               ),
-                              border: InputBorder.none,
-                              enabledBorder: InputBorder.none,
-                              focusedBorder: InputBorder.none,
-                              counterText: _description.text.length > 1600
-                                  ? null
-                                  : '',
                             ),
-                            onChanged: (_) => setState(() {}),
-                          ),
-                        ],
+                            const SizedBox(height: 4),
+                            TextField(
+                              controller: _description,
+                              minLines: 3,
+                              maxLines: 6,
+                              maxLength: 2000,
+                              textCapitalization: TextCapitalization.sentences,
+                              decoration: InputDecoration(
+                                hintText: 'Kế hoạch này dùng để làm gì',
+                                isDense: true,
+                                filled: false,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  vertical: 4,
+                                ),
+                                border: InputBorder.none,
+                                enabledBorder: InputBorder.none,
+                                focusedBorder: InputBorder.none,
+                                counterText: _description.text.length > 1600
+                                    ? null
+                                    : '',
+                              ),
+                              onChanged: (_) => setState(() {}),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (_error != null) ...[
+                    const SizedBox(height: OmniSpacing.sm),
+                    Text(
+                      _error!,
+                      style: OmniType.caption.copyWith(
+                        color: OmniColors.dangerTextOf(context),
                       ),
                     ),
                   ],
-                ),
-                if (_error != null) ...[
-                  const SizedBox(height: OmniSpacing.sm),
-                  Text(
-                    _error!,
-                    style: OmniType.caption.copyWith(
-                      color: OmniColors.dangerTextOf(context),
-                    ),
-                  ),
                 ],
-              ],
-            ),
+              ),
+      ),
     );
   }
 }

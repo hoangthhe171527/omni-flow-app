@@ -73,7 +73,7 @@ class _LabelsSheetState extends ConsumerState<LabelsSheet> {
       container.invalidate(taskLabelsProvider);
       if (mounted) _back();
     } on AppException catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      showOmniToast(null, error.message, messenger: messenger);
     }
   }
 
@@ -339,7 +339,7 @@ class _EditLabelPaneState extends State<_EditLabelPane> {
         ),
         footer: FilledButton(
           onPressed: name.isEmpty || _busy ? null : () => _submit(name),
-          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(50)),
           child: const Text('Lưu'),
         ),
         children: [

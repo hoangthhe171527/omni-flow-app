@@ -175,7 +175,8 @@ class OmniSourcePill extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
         style: OmniType.micro.copyWith(
           color: meta.textColorOf(Theme.of(context).brightness),
-          fontSize: 9.5,
+          // Sàn chữ 11 (chữ HOA nhỏ, cũ 9,5 dưới ngưỡng đọc).
+          fontSize: 11,
           letterSpacing: 0.4,
         ),
       ),

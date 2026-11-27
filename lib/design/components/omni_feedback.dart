@@ -128,23 +128,46 @@ class OmniBanner extends StatelessWidget {
 /// Kiểu nằm ở `snackBarTheme` (nền mực, chữ sáng, nút gạch chân); hàm này chỉ
 /// gom thời lượng (4 giây, lâu hơn khi có trình đọc màn hình) và thay toast cũ
 /// đang hiện để không bao giờ chồng hai cái.
+///
+/// Toast có nút ([actionLabel]) Ở LẠI tới khi người dùng bấm nút hoặc toast
+/// khác thay chỗ ([persist] mặc định `true` khi có nút) — "Hoàn tác" không được
+/// biến mất trước khi kịp bấm. Nhãn viết thường đầu câu: [omniUndoLabel].
+///
+/// Đã giữ [messenger] trước `await` / `Navigator.pop` thì truyền nó vào (khi
+/// đó [context] có thể là `null`) thay vì tự dựng `SnackBar`.
+///
+/// [margin] đặt lề riêng cho toast nổi (vd nổi phía trên ô soạn tin của Hội
+/// thoại); `null` thì dùng lề của `snackBarTheme`.
 ScaffoldFeatureController<SnackBar, SnackBarClosedReason>? showOmniToast(
-  BuildContext context,
+  BuildContext? context,
   String message, {
   String? actionLabel,
   VoidCallback? onAction,
+  bool? persist,
+  ScaffoldMessengerState? messenger,
+  EdgeInsetsGeometry? margin,
 }) {
-  final messenger = ScaffoldMessenger.maybeOf(context);
-  if (messenger == null) return null;
-  final reader = MediaQuery.accessibleNavigationOf(context);
-  messenger.hideCurrentSnackBar();
-  return messenger.showSnackBar(
+  final target =
+      messenger ??
+      (context == null ? null : ScaffoldMessenger.maybeOf(context));
+  if (target == null || !target.mounted) return null;
+  final reader =
+      MediaQuery.maybeAccessibleNavigationOf(context ?? target.context) ??
+      false;
+  target.hideCurrentSnackBar();
+  return target.showSnackBar(
     SnackBar(
       content: Text(message),
       duration: Duration(seconds: reader ? 8 : (actionLabel == null ? 4 : 5)),
+      persist: persist ?? actionLabel != null,
+      behavior: margin == null ? null : SnackBarBehavior.floating,
+      margin: margin,
       action: actionLabel == null
           ? null
           : SnackBarAction(label: actionLabel, onPressed: onAction ?? () {}),
     ),
   );
 }
+
+/// Nhãn nút hoàn tác của mọi toast — chữ thường đầu câu, không "HOÀN TÁC".
+const omniUndoLabel = 'Hoàn tác';

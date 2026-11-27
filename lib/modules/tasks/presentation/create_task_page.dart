@@ -95,6 +95,25 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
 
   bool get _canSave => _title.text.trim().isNotEmpty && !_saving;
 
+  /// Đã gõ / chọn gì chưa: có thì rời màn phải hỏi trước (khuôn 4).
+  bool get _dirty =>
+      _title.text.trim() != (widget.initialTitle ?? '').trim() ||
+      _assigneeIds.isNotEmpty ||
+      _dueDate != null ||
+      _sectionId != widget.sectionId;
+
+  Future<void> _confirmLeave() async {
+    final leave = await showOmniConfirm(
+      context: context,
+      title: 'Bỏ việc đang tạo?',
+      message: 'Những gì đã nhập sẽ mất.',
+      confirmLabel: 'Bỏ',
+      cancelLabel: 'Tiếp tục sửa',
+      destructive: true,
+    );
+    if (leave && mounted) Navigator.of(context).pop();
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -103,6 +122,21 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
 
     // Nền xám, ô tên lớn, một nhóm ba dòng "nhãn — giá trị" và nút "Tạo việc"
     // ghim ở đáy (liquid, đợt 2 duyệt 08/11/2026).
+    return PopScope(
+      canPop: !_dirty,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _confirmLeave();
+      },
+      child: _scaffold(context, scheme, text, names),
+    );
+  }
+
+  Widget _scaffold(
+    BuildContext context,
+    ColorScheme scheme,
+    TextTheme text,
+    Map<String, TeamMember> names,
+  ) {
     return Scaffold(
       appBar: OmniAppBar(
         title: 'Việc mới',
@@ -134,7 +168,9 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                         ),
                         Text(
                           ' *',
-                          style: OmniType.caption.copyWith(color: scheme.error),
+                          style: OmniType.caption.copyWith(
+                            color: OmniColors.dangerTextOf(context),
+                          ),
                         ),
                       ],
                     ),
@@ -215,21 +251,9 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
           ],
         ],
       ),
+      // Một lối huỷ: ✕ trên thanh (khuôn 4) — không thêm "Huỷ" ở đáy.
       bottomNavigationBar: OmniActionBar(
         children: [
-          OutlinedButton(
-            onPressed: _saving
-                ? null
-                : () {
-                    final nav = Navigator.of(context);
-                    if (nav.canPop()) {
-                      nav.maybePop();
-                    } else {
-                      context.go('/tasks');
-                    }
-                  },
-            child: const Text('Huỷ'),
-          ),
           FilledButton(
             onPressed: _canSave ? _save : null,
             child: _saving

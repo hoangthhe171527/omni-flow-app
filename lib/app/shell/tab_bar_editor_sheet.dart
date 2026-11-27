@@ -195,8 +195,8 @@ class TabBarEditor extends ConsumerWidget {
   }
 }
 
-/// Nút nhẹ 'Xong' (nền xám đặc) ở đầu sheet — đổi đã tự lưu nên không phải
-/// nút chính.
+/// Nút chữ 'Xong' ở đầu sheet (kiểu nút chữ iOS, không viên kính) — đổi đã
+/// tự lưu nên không phải nút chính.
 class _DonePill extends StatelessWidget {
   const _DonePill({required this.label, required this.onPressed});
 
@@ -216,17 +216,11 @@ class _DonePill extends StatelessWidget {
       child: ConstrainedBox(
         constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
         child: Center(
-          child: DecoratedBox(
-            decoration: OmniGlass.buttonDecoration(context),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-              child: Text(
-                label,
-                style: OmniType.caption.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: primary,
-                ),
-              ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+            child: Text(
+              label,
+              style: OmniType.bodyStrong.copyWith(color: primary),
             ),
           ),
         ),
@@ -251,8 +245,9 @@ class _BarPreview extends StatelessWidget {
       bool active = false,
       bool fixed = false,
     }) {
+      // Như thanh thật (D5): đang chọn = mực đậm, không viên nền.
       final fg = active
-          ? scheme.primary
+          ? scheme.onSurface
           : fixed
           ? scheme.onSurfaceVariant
           : scheme.onSurface;
@@ -263,12 +258,6 @@ class _BarPreview extends StatelessWidget {
             key: ValueKey(label),
             margin: const EdgeInsets.symmetric(horizontal: 2),
             padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
-            decoration: active
-                ? BoxDecoration(
-                    color: OmniGlass.selectionOf(context),
-                    borderRadius: OmniRadius.pillAll,
-                  )
-                : null,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [

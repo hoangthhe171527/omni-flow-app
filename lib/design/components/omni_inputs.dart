@@ -495,6 +495,7 @@ class _OmniSearchFrameState extends State<OmniSearchFrame>
                     painter: _RainbowRingPainter(
                       radius: widget.radius,
                       turns: _spin,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
                 ),
@@ -519,20 +520,14 @@ class _OmniSearchScope extends InheritedWidget {
 
 /// Viền 2dp tô SweepGradient cầu vồng, xoay theo [turns] (0..1 = một vòng).
 class _RainbowRingPainter extends CustomPainter {
-  _RainbowRingPainter({required this.radius, this.turns})
+  _RainbowRingPainter({required this.radius, required this.color, this.turns})
     : super(repaint: turns);
 
   final double radius;
   final Animation<double>? turns;
 
-  static const _colors = [
-    Color(0xFF2F6FE0),
-    Color(0xFF8B5CF6),
-    Color(0xFFFF453A),
-    Color(0xFFFFD60A),
-    Color(0xFF30D158),
-    Color(0xFF2F6FE0),
-  ];
+  /// Một màu nhấn (đuôi mờ dần) — không còn vòng 5 màu ngoài token.
+  final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -542,7 +537,7 @@ class _RainbowRingPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2
       ..shader = SweepGradient(
-        colors: _colors,
+        colors: [color.withValues(alpha: 0), color, color.withValues(alpha: 0)],
         transform: GradientRotation((turns?.value ?? 0) * 2 * math.pi),
       ).createShader(rect);
     canvas.drawRRect(
@@ -556,7 +551,7 @@ class _RainbowRingPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_RainbowRingPainter old) =>
-      old.radius != radius || old.turns != turns;
+      old.radius != radius || old.turns != turns || old.color != color;
 }
 
 /// Nút lọc trong ô tìm (duyệt 26/11/2026, rà soát mục 6): chưa lọc = icon
@@ -786,7 +781,12 @@ class OmniField extends StatelessWidget {
               ),
             ),
             if (required)
-              Text(' *', style: OmniType.caption.copyWith(color: scheme.error)),
+              Text(
+                ' *',
+                style: OmniType.caption.copyWith(
+                  color: OmniColors.dangerTextOf(context),
+                ),
+              ),
           ],
         ),
         const SizedBox(height: OmniSpacing.sm),
@@ -798,13 +798,15 @@ class OmniField extends StatelessWidget {
               Icon(
                 LucideIcons.circleAlert,
                 size: OmniIconSize.xs,
-                color: scheme.error,
+                color: OmniColors.dangerTextOf(context),
               ),
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
                   error!,
-                  style: OmniType.micro.copyWith(color: scheme.error),
+                  style: OmniType.micro.copyWith(
+                    color: OmniColors.dangerTextOf(context),
+                  ),
                 ),
               ),
             ],
@@ -823,11 +825,11 @@ class OmniField extends StatelessWidget {
 
 /// Thanh hành động đáy của form và màn chi tiết — khay nổi nền đặc + bóng
 /// (bớt kính mờ 26/11/2026; trước là viên kính `.actbar.glass`): cách mép 12,
-/// bo 30, đệm 7.
+/// bo 32, đệm 7.
 ///
 /// Nút trong thanh là nút VIỀN (gu người dùng: không nút tô đặc): nút chính
 /// (FilledButton) viền + chữ màu chủ đạo, nút phụ (OutlinedButton) viền nhạt
-/// chữ phụ; cao 46, dạng viên thuốc. Nút phụ ôm chữ của nó, nút chính cuối
+/// chữ phụ; cao 50, dạng viên thuốc. Nút phụ ôm chữ của nó, nút chính cuối
 /// hàng chiếm phần còn lại — chia đều làm chữ nút phụ gãy dòng ở màn 390dp.
 class OmniActionBar extends StatelessWidget {
   const OmniActionBar({super.key, required this.children});
@@ -837,7 +839,16 @@ class OmniActionBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    const height = 46.0;
+    // Nút đáy 50 (lõi 50–56); khay = 50 + 2×7 → bo 32 theo thang.
+    const height = 50.0;
+    // Nền đặc: Tối dùng `accent-fill` + chữ trắng, không `scheme.primary`
+    // (xanh chữ, chữ đen trên nó).
+    final fill = OmniColors.byBrightness(
+      context,
+      scheme.primary,
+      OmniColors.primaryFillOf(context),
+    );
+    const onFill = OmniColors.primaryForeground;
     final label = OmniType.body.copyWith(fontWeight: FontWeight.w600);
 
     Color tone(Set<WidgetState> s, Color on) => s.contains(WidgetState.disabled)
@@ -855,14 +866,10 @@ class OmniActionBar extends StatelessWidget {
       backgroundColor: WidgetStateProperty.resolveWith(
         (s) => s.contains(WidgetState.disabled)
             ? scheme.onSurface.withValues(alpha: .10)
-            : scheme.primary,
+            : fill,
       ),
-      foregroundColor: WidgetStateProperty.resolveWith(
-        (s) => tone(s, scheme.onPrimary),
-      ),
-      overlayColor: WidgetStatePropertyAll(
-        scheme.onPrimary.withValues(alpha: .12),
-      ),
+      foregroundColor: WidgetStateProperty.resolveWith((s) => tone(s, onFill)),
+      overlayColor: WidgetStatePropertyAll(onFill.withValues(alpha: .12)),
     );
     final secondary = ButtonStyle(
       minimumSize: const WidgetStatePropertyAll(Size(0, height)),
@@ -893,7 +900,7 @@ class OmniActionBar extends StatelessWidget {
       ),
       child: OmniGlass(
         opaque: true,
-        radius: 30,
+        radius: OmniRadius.xxl,
         padding: const EdgeInsets.all(7),
         child: FilledButtonTheme(
           data: FilledButtonThemeData(style: primary),
@@ -1204,7 +1211,7 @@ class OmniGroupField extends StatelessWidget {
                 if (required)
                   TextSpan(
                     text: ' *',
-                    style: TextStyle(color: scheme.error),
+                    style: TextStyle(color: OmniColors.dangerTextOf(context)),
                   ),
               ],
             ),
@@ -1221,7 +1228,9 @@ class OmniGroupField extends StatelessWidget {
               child: Text(
                 note,
                 style: OmniType.caption.copyWith(
-                  color: error != null ? scheme.error : scheme.onSurfaceVariant,
+                  color: error != null
+                      ? OmniColors.dangerTextOf(context)
+                      : scheme.onSurfaceVariant,
                 ),
               ),
             ),

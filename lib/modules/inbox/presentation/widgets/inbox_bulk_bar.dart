@@ -153,7 +153,7 @@ class InboxBulkBar extends ConsumerWidget {
     } on AppException {
       // Làm mới hỏng không đổi kết quả gán; câu báo bên dưới vẫn đúng.
     }
-    messenger.showSnackBar(SnackBar(content: Text(outcome.message)));
+    showOmniToast(null, outcome.message, messenger: messenger);
   }
 
   Future<void> _label(BuildContext context, WidgetRef ref) async {
@@ -167,11 +167,13 @@ class InboxBulkBar extends ConsumerWidget {
       ]);
       onDone();
       await ref.read(inboxListProvider.notifier).refresh();
-      messenger.showSnackBar(
-        SnackBar(content: Text('Đã gắn nhãn cho $updated hội thoại.')),
+      showOmniToast(
+        null,
+        'Đã gắn nhãn cho $updated hội thoại.',
+        messenger: messenger,
       );
     } on AppException catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      showOmniToast(null, error.message, messenger: messenger);
     }
   }
 }

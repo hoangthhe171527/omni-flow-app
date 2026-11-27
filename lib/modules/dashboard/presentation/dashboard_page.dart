@@ -10,8 +10,8 @@ import 'widgets/awaiting_reply_card.dart';
 import 'widgets/my_tasks_card.dart';
 import 'widgets/revenue_card.dart';
 
-/// Màn Tổng quan (MainV2): header chỉ logo + chuông + tài khoản (không tiêu
-/// đề, ngày, chi nhánh, ô tìm), rồi thẻ doanh thu, Việc của tôi, Chờ phản hồi.
+/// Màn Tổng quan (MainV2): header tên màn lớn + chuông + tài khoản (không
+/// ngày, chi nhánh, ô tìm), rồi thẻ doanh thu, Việc của tôi, Chờ phản hồi.
 /// Mỗi thẻ tự ẩn khi thiếu quyền. Không có hàng "Cần chú ý".
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
@@ -61,10 +61,8 @@ class DashboardPage extends ConsumerWidget {
               onRefresh: () => _refresh(ref),
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.only(
+                padding: OmniSpacing.screen.copyWith(
                   top: topInset,
-                  left: 16,
-                  right: 16,
                   bottom: OmniSpacing.bottomSafe,
                 ),
                 children: none

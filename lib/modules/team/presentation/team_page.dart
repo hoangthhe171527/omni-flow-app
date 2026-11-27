@@ -207,19 +207,19 @@ class _MemberTile extends StatelessWidget {
                       runSpacing: 2,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        // Nhãn vai / trạng thái (spec phong cách iOS §3.4).
-                        OmniStatusLabel(
-                          label: member.isPending
-                              ? 'Đang chờ'
-                              : member.isActive
-                              ? member.roleLabel
-                              : 'Ngừng hoạt động',
-                          tone: member.isPending
-                              ? OmniTone.warning
-                              : member.isActive
-                              ? OmniTone.info
-                              : OmniTone.neutral,
-                        ),
+                        // Vai trò = chữ trơn xám (không cần hành động); chỉ
+                        // "Đang chờ" / "Ngừng hoạt động" giữ nhãn trạng thái.
+                        if (member.isActive && !member.isPending)
+                          Text(member.roleLabel, style: muted)
+                        else
+                          OmniStatusLabel(
+                            label: member.isPending
+                                ? 'Đang chờ'
+                                : 'Ngừng hoạt động',
+                            tone: member.isPending
+                                ? OmniTone.warning
+                                : OmniTone.neutral,
+                          ),
                         // Nói ra ai đã liên kết Zalo: không có chữ này thì
                         // quản đốc phải mở từng người ra mới biết còn thiếu ai,
                         // và bot thì im lặng từ chối những người chưa liên kết.
@@ -292,7 +292,7 @@ Future<void> _linkZalo(
     await ref.read(teamApiProvider).setZaloUserId(member.membershipId, saved);
     ref.invalidate(teamDirectoryProvider);
   } on AppException catch (e) {
-    messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    showOmniToast(null, e.message, messenger: messenger);
   }
 }
 

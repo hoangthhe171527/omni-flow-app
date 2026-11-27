@@ -65,7 +65,7 @@ class _FollowersSheetState extends ConsumerState<FollowersSheet> {
     try {
       await write();
     } on AppException catch (e) {
-      widget.messenger.showSnackBar(SnackBar(content: Text(e.message)));
+      showOmniToast(null, e.message, messenger: widget.messenger);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -99,9 +99,7 @@ class _FollowersSheetState extends ConsumerState<FollowersSheet> {
     final actions = [
       if (me != null)
         OmniGroupRow(
-          icon: following
-              ? LucideIcons.eyeOff
-              : LucideIcons.eye,
+          icon: following ? LucideIcons.eyeOff : LucideIcons.eye,
           title: following ? 'Bỏ theo dõi' : 'Theo dõi việc này',
           chevron: false,
           onTap: _busy

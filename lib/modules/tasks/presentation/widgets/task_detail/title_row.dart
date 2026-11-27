@@ -110,14 +110,12 @@ class _TaskTitleRowState extends ConsumerState<TaskTitleRow>
         });
       }
       // Báo SAU khi server đã nhận.
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            next
-                ? 'Đã báo hoàn thành. Quản lý sẽ nhận thông báo.'
-                : 'Đã mở lại công việc.',
-          ),
-        ),
+      showOmniToast(
+        null,
+        next
+            ? 'Đã báo hoàn thành. Quản lý sẽ nhận thông báo.'
+            : 'Đã mở lại công việc.',
+        messenger: messenger,
       );
     } on AppException catch (error) {
       _fail(
@@ -136,9 +134,7 @@ class _TaskTitleRowState extends ConsumerState<TaskTitleRow>
         _saving = false;
       });
     }
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    showOmniToast(null, message, messenger: messenger);
   }
 
   @override
@@ -156,10 +152,11 @@ class _TaskTitleRowState extends ConsumerState<TaskTitleRow>
         width: 26,
         height: 26,
         decoration: BoxDecoration(
-          color: done ? scheme.primary : scheme.surface,
+          // Nền đặc theo chế độ (Tối #2F6FE0) + ✓ trắng (G7).
+          color: done ? OmniColors.primaryFillOf(context) : scheme.surface,
           borderRadius: BorderRadius.circular(6),
           border: Border.all(
-            color: done ? scheme.primary : faint,
+            color: done ? OmniColors.primaryFillOf(context) : faint,
             width: done ? 0 : 2,
             style: done ? BorderStyle.none : BorderStyle.solid,
           ),
@@ -168,7 +165,7 @@ class _TaskTitleRowState extends ConsumerState<TaskTitleRow>
             ? Icon(
                 LucideIcons.check,
                 size: OmniIconSize.sm,
-                color: scheme.onPrimary,
+                color: Colors.white,
               )
             : null,
       ),

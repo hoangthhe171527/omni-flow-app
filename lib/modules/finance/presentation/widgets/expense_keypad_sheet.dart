@@ -260,11 +260,7 @@ class _ExpenseKeypadSheetState extends State<_ExpenseKeypadSheet> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        LucideIcons.wallet,
-                        size: 15,
-                        color: p.primary,
-                      ),
+                      Icon(LucideIcons.wallet, size: 15, color: p.primary),
                       const SizedBox(width: 6),
                       Text(
                         _accountName ?? 'Chọn nguồn',
@@ -274,11 +270,7 @@ class _ExpenseKeypadSheetState extends State<_ExpenseKeypadSheet> {
                         ),
                       ),
                       const SizedBox(width: 3),
-                      Icon(
-                        LucideIcons.chevronDown,
-                        size: 16,
-                        color: p.muted,
-                      ),
+                      Icon(LucideIcons.chevronDown, size: 16, color: p.muted),
                     ],
                   ),
                 ),
@@ -523,13 +515,13 @@ class _ExpenseKeypadSheetState extends State<_ExpenseKeypadSheet> {
       _KeyTone.operatorKey => p.control,
       _KeyTone.subKey => p.control,
       // "Xong" = nút chính của sheet: xanh đặc (spec §3.2).
-      _KeyTone.okKey => Theme.of(context).colorScheme.primary,
+      _KeyTone.okKey => OmniColors.primaryFillOf(context),
     };
     final textColor = switch (tone) {
       _KeyTone.normal => p.ink,
       _KeyTone.operatorKey => p.ink,
       _KeyTone.subKey => p.ink2,
-      _KeyTone.okKey => Theme.of(context).colorScheme.onPrimary,
+      _KeyTone.okKey => Colors.white,
     };
     final textStyle = switch (tone) {
       _KeyTone.normal => OmniType.title.copyWith(
@@ -551,18 +543,32 @@ class _ExpenseKeypadSheetState extends State<_ExpenseKeypadSheet> {
       ),
     };
 
+    // Ký hiệu đọc thành lời cho trình đọc màn hình (⌫ − + C).
+    final spoken = switch (keyVal) {
+      'bs' => 'Xoá lùi',
+      '-' => 'Trừ',
+      '+' => 'Cộng',
+      'c' => 'Xoá hết',
+      _ => null,
+    };
+
     // Phím bo 10, cao 52 (spec §3.5); "Xong" nền xanh đặc chữ trắng.
     return Expanded(
-      child: Material(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(10),
-        child: InkWell(
-          onTap: () => _onKey(keyVal),
+      child: Semantics(
+        button: true,
+        label: spoken,
+        excludeSemantics: spoken != null,
+        child: Material(
+          color: bgColor,
           borderRadius: BorderRadius.circular(10),
-          child: Container(
-            height: 52,
-            alignment: Alignment.center,
-            child: Text(label, style: textStyle),
+          child: InkWell(
+            onTap: () => _onKey(keyVal),
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              height: 52,
+              alignment: Alignment.center,
+              child: Text(label, style: textStyle),
+            ),
           ),
         ),
       ),

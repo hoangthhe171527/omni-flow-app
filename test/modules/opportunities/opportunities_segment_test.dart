@@ -11,6 +11,7 @@ import 'package:omni_app/core/network/api_client.dart';
 import 'package:omni_app/core/network/api_envelope.dart';
 import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
+import 'package:omni_app/design/tokens/omni_colors.dart';
 import 'package:omni_app/modules/opportunities/application/opportunities_providers.dart';
 import 'package:omni_app/modules/opportunities/data/opportunities_api.dart';
 import 'package:omni_app/modules/opportunities/domain/opportunity.dart';
@@ -221,9 +222,12 @@ void main() {
   testWidgets('dòng phụ: khách · Hạn dd/MM, quá hạn tô màu lỗi', (t) async {
     await t.pumpWidget(host());
     await t.pumpAndSettle();
-    final scheme = Theme.of(t.element(find.byType(Scaffold))).colorScheme;
     final overdue = t.widget<Text>(find.text('An Nguyễn · Hạn 05/01'));
-    expect(overdue.style?.color, scheme.error);
+    // Chữ lỗi dùng token chữ đỏ đạt tương phản (không còn scheme.error).
+    expect(
+      overdue.style?.color,
+      OmniColors.dangerTextOf(t.element(find.byType(Scaffold))),
+    );
     expect(find.text('Chưa gắn khách hàng'), findsNWidgets(2));
   });
 

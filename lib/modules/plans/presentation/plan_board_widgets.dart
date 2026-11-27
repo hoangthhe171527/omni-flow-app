@@ -408,7 +408,9 @@ class _NameSheetState extends State<_NameSheet> {
                       ),
                       Text(
                         ' *',
-                        style: OmniType.caption.copyWith(color: scheme.error),
+                        style: OmniType.caption.copyWith(
+                          color: OmniColors.dangerTextOf(context),
+                        ),
                       ),
                     ],
                   ),

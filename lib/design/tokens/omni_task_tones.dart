@@ -61,14 +61,14 @@ class OmniTaskTones {
   /// Mũi tên chỉ dẫn ở cuối dòng (Điều phối, Tài khoản).
   final Color chevron;
 
-  /// Mũi tên mờ nhất của tab Việc (`Main.dc.html` `#9AA5B8`): › cuối dòng
-  /// kế hoạch khi ô sao chưa có.
+  /// Mũi tên mờ nhất của tab Việc (≥ 3:1, thay `#9AA5B8` của `Main.dc.html`):
+  /// › cuối dòng kế hoạch khi ô sao chưa có.
   final Color faint;
 
-  /// Sao đánh giá đang bật (`TaskDetail.dc.html` `#E8890C`).
+  /// Sao đánh giá đang bật (≥ 3:1, thay `#E8890C` của `TaskDetail.dc.html`).
   final Color star;
 
-  /// Sao đánh giá chưa bật (`#D5DBE5`).
+  /// Sao đánh giá chưa bật (viền ≥ 3:1, thay `#D5DBE5`).
   final Color starIdle;
 
   /// Biểu tượng kiểu trường (lựa chọn / chữ / số / ngày) ở thẻ Trường tuỳ
@@ -115,9 +115,11 @@ class OmniTaskTones {
     priorityLow: Color(0xFF8A95A8),
     dueSoonBar: _dueSoonBar,
     chevron: Color(0xFFC9D2DE),
-    faint: Color(0xFF9AA5B8),
-    star: Color(0xFFE8890C),
-    starIdle: Color(0xFFD5DBE5),
+    // Dấu không chữ ≥ 3:1 trên thẻ (cũ #9AA5B8 2,49 · #E8890C 2,62 ·
+    // #D5DBE5 1,39).
+    faint: Color(0xFF7A8699),
+    star: Color(0xFFC46A00),
+    starIdle: Color(0xFF8390A5),
     fieldIcon: Color(0xFFB7791F),
     sectionColors: [
       Color(0xFF8A95A8),
@@ -153,7 +155,7 @@ class OmniTaskTones {
       chevron: const Color(0xFF5B6678),
       faint: const Color(0xFF6B7A92),
       star: const Color(0xFFF0A23C),
-      starIdle: const Color(0xFF3A4A63),
+      starIdle: const Color(0xFF6B7A92),
       fieldIcon: const Color(0xFFF0A23C),
       sectionColors: const [
         Color(0xFF9AA8BD),

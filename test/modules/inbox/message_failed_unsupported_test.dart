@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
+import 'package:omni_app/design/tokens/omni_colors.dart';
 import 'package:omni_app/modules/inbox/domain/message.dart';
 import 'package:omni_app/modules/inbox/presentation/widgets/message_bubble.dart';
 
@@ -64,13 +65,15 @@ void main() {
     expect(find.text('Gửi lại'), findsOneWidget);
   });
 
-  testWidgets('giao diện tối: chữ lỗi dùng scheme.error', (tester) async {
+  testWidgets('giao diện tối: chữ lỗi dùng OmniColors.dangerTextDark', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       host(failed(error: 'Lỗi', code: 'channel_send_unsupported'), dark: true),
     );
     await tester.pumpAndSettle();
     final text = tester.widget<Text>(find.text('Lỗi'));
-    final scheme = OmniTheme.dark(TargetPlatform.android).colorScheme;
-    expect(text.style?.color, scheme.error);
+    // Chữ lỗi dùng token chữ đỏ đạt tương phản (không còn scheme.error).
+    expect(text.style?.color, OmniColors.dangerTextDark);
   });
 }

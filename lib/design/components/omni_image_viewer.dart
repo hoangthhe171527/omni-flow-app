@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/utils/save_image_to_gallery.dart';
 import '../tokens/tokens.dart';
+import 'omni_feedback.dart';
 import 'omni_glass.dart';
 import 'omni_top_bar.dart';
 
@@ -84,11 +85,9 @@ class _OmniImageViewerState extends State<OmniImageViewer> {
     final messenger = ScaffoldMessenger.of(context);
     try {
       await saveNetworkImageToGallery(image.url, name: image.name);
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Đã lưu ảnh vào thư viện')),
-      );
+      showOmniToast(null, 'Đã lưu ảnh vào thư viện', messenger: messenger);
     } on SaveImageException catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+      showOmniToast(null, e.message, messenger: messenger);
     } finally {
       if (mounted) setState(() => _saving = false);
     }

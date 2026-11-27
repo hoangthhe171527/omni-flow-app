@@ -272,7 +272,7 @@ class _MessageComposerState extends State<MessageComposer> {
     if (!mounted || messenger == null) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      messenger.showSnackBar(composerSnackBar(context, text));
+      showComposerToast(context, text, messenger: messenger);
     });
     WidgetsBinding.instance.ensureVisualUpdate();
   }
