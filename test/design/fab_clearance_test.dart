@@ -76,4 +76,63 @@ void main() {
       expect(844 - 34 - fab.bottom, OmniFabLayer.gap);
     },
   );
+
+  testWidgets(
+    'trong AppShell thật (extendBody + bottomNavigationBar + Scaffold lồng)',
+    (t) async {
+      t.view.physicalSize = const Size(390, 844);
+      t.view.devicePixelRatio = 1;
+      t.view.viewPadding = const FakeViewPadding(bottom: 34);
+      t.view.padding = const FakeViewPadding(bottom: 34);
+      addTearDown(t.view.reset);
+
+      await t.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) {
+              final safe = MediaQuery.viewPaddingOf(context).bottom;
+              return ShellBarInset(
+                height: ShellBarInset.pillHeight + (safe > 12 ? safe : 12),
+                child: Scaffold(
+                  extendBody: true,
+                  body: Scaffold(
+                    extendBodyBehindAppBar: true,
+                    body: OmniFabLayer(
+                      body: const SizedBox.expand(),
+                      fab: OmniLiquidFab(
+                        key: const Key('fab'),
+                        tooltip: 'Thêm',
+                        onPressed: (_) {},
+                      ),
+                    ),
+                  ),
+                  bottomNavigationBar: Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      16,
+                      0,
+                      16,
+                      safe > 12 ? safe : 12,
+                    ),
+                    child: OmniGlass(
+                      key: const Key('pill'),
+                      radius: ShellBarInset.pillHeight / 2,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: const SizedBox(height: ShellBarInset.pillHeight),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+      await t.pumpAndSettle();
+
+      final pill = t.getRect(find.byKey(const Key('pill')));
+      final fab = t.getRect(find.byKey(const Key('fab')));
+      final clearance = pill.top - fab.bottom;
+      expect(clearance, greaterThanOrEqualTo(20));
+      expect(clearance, lessThanOrEqualTo(28));
+    },
+  );
 }
