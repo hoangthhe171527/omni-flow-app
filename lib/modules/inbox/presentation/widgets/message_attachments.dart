@@ -55,7 +55,8 @@ class MessageFileAttachments extends StatelessWidget {
     final tileBg = onPrimary
         ? Colors.white.withValues(alpha: 0.16)
         : scheme.onSurface.withValues(alpha: 0.06);
-    final iconColor = onPrimary ? Colors.white : OmniColors.chatPrimary;
+    // Icon tệp không bấm riêng (cả ô mới bấm): chữ phụ, không màu nhấn (C4).
+    final iconColor = onPrimary ? Colors.white : scheme.onSurfaceVariant;
     final textColor = onPrimary ? Colors.white : scheme.onSurface;
     final trailingColor = onPrimary
         ? Colors.white.withValues(alpha: 0.85)
@@ -304,10 +305,7 @@ class _InlineVideoState extends State<_InlineVideo>
                     child: IconButton(
                       tooltip: 'Phát video',
                       onPressed: _activate,
-                      icon: Icon(
-                        LucideIcons.play,
-                        color: scheme.onSurface,
-                      ),
+                      icon: Icon(LucideIcons.play, color: scheme.onSurface),
                     ),
                   ),
                   Positioned(

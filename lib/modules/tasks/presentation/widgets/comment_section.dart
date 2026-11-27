@@ -167,9 +167,9 @@ class CommentSection extends ConsumerWidget {
           .read(taskDetailProvider(taskId).notifier)
           .deleteCommentAttachment(comment.id, file.id);
       container.invalidate(taskCommentsProvider(taskId));
-      messenger.showSnackBar(const SnackBar(content: Text('Đã gỡ tệp.')));
+      showOmniToast(null, 'Đã gỡ tệp.', messenger: messenger);
     } on AppException catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+      showOmniToast(null, e.message, messenger: messenger);
     }
   }
 
@@ -178,12 +178,12 @@ class CommentSection extends ConsumerWidget {
     try {
       await ref.read(taskCommentsProvider(taskId).notifier).loadOlder();
     } on AppException catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+      showOmniToast(null, e.message, messenger: messenger);
     } on Object {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Chưa tải được bình luận cũ. Thử lại khi có mạng.'),
-        ),
+      showOmniToast(
+        null,
+        'Chưa tải được bình luận cũ. Thử lại khi có mạng.',
+        messenger: messenger,
       );
     }
   }
@@ -225,11 +225,9 @@ class CommentSection extends ConsumerWidget {
           .deleteComment(comment.id);
       // Trang cũ đã xin giữ trong provider riêng: gieo lại từ bản mới.
       container.invalidate(taskCommentsProvider(taskId));
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Đã xoá bình luận.')),
-      );
+      showOmniToast(null, 'Đã xoá bình luận.', messenger: messenger);
     } on AppException catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+      showOmniToast(null, e.message, messenger: messenger);
     }
   }
 }

@@ -244,9 +244,7 @@ class _CustomerFormEditorState extends ConsumerState<CustomerFormEditor> {
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    showOmniToast(context, message);
   }
 
   @override

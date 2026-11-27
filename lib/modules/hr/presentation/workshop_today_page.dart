@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../design/components/components.dart';
+import '../../../design/tokens/tokens.dart';
 import '../application/hr_providers.dart';
 import '../data/hr_api.dart';
 import '../domain/hr_format.dart';
@@ -135,7 +136,7 @@ class _WorkshopTodayPageState extends ConsumerState<WorkshopTodayPage> {
                             onPressed: () =>
                                 launchUrl(Uri(scheme: 'tel', path: r.phone)),
                             style: OutlinedButton.styleFrom(
-                              minimumSize: const Size(0, 36),
+                              minimumSize: const Size(44, 44),
                             ),
                             child: const Text('Gọi'),
                           ),
@@ -224,14 +225,14 @@ class _WorkshopTodayPageState extends ConsumerState<WorkshopTodayPage> {
                     OutlinedButton(
                       onPressed: busy ? null : () => _decideOt(r, w, false),
                       style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(0, 36),
+                        minimumSize: const Size(44, 44),
                       ),
                       child: const Text('Bỏ qua'),
                     ),
                     FilledButton(
                       onPressed: busy ? null : () => _decideOt(r, w, true),
                       style: FilledButton.styleFrom(
-                        minimumSize: const Size(0, 36),
+                        minimumSize: const Size(44, 44),
                       ),
                       child: Text('Duyệt $hours giờ'),
                     ),
@@ -297,9 +298,9 @@ class _RowTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(
     text,
-    style: Theme.of(
-      context,
-    ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
+    style: OmniType.listTitle.copyWith(
+      color: Theme.of(context).colorScheme.onSurface,
+    ),
   );
 }
 
@@ -311,7 +312,7 @@ class _RowSubtitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(
     text,
-    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+    style: OmniType.caption.copyWith(
       color: Theme.of(context).colorScheme.onSurfaceVariant,
     ),
   );

@@ -152,6 +152,16 @@ class _RequestsPageState extends ConsumerState<RequestsPage> {
       ),
     );
     if (cancel != true || !mounted) return;
+    // API không khôi phục được đơn đã huỷ → hỏi một lần, nêu đơn.
+    final sure = await showOmniConfirm(
+      context: context,
+      title: 'Huỷ đơn ${r.typeLabel.toLowerCase()}?',
+      message: r.detail,
+      confirmLabel: 'Huỷ đơn',
+      cancelLabel: 'Giữ đơn',
+      destructive: true,
+    );
+    if (!sure || !mounted) return;
     try {
       await ref.read(hrApiProvider).cancelRequest(r.id);
       ref.invalidate(hrMyRequestsProvider);

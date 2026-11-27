@@ -135,14 +135,18 @@ class TaskCard extends StatelessWidget {
                   const SizedBox(height: OmniSpacing.xs),
                   // Mũi tên là ICON chứ không phải ký tự "→": icon cùng nét
                   // với các icon khác trên thẻ, và không phụ thuộc font.
-                  // Mũi tên teal là chỗ duy nhất mang màu chính; chữ là chữ
-                  // mực — màu nhấn không dùng cho nội dung.
+                  // Mũi tên không bấm riêng → chữ phụ, không màu nhấn (G8).
+                  // Tên công đoạn xuống tối đa 2 dòng, không cắt sớm.
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
-                        LucideIcons.arrowRight,
-                        size: 14,
-                        color: scheme.primary,
+                      Padding(
+                        padding: const EdgeInsets.only(top: 3),
+                        child: Icon(
+                          LucideIcons.arrowRight,
+                          size: 14,
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
                       const SizedBox(width: OmniSpacing.xs),
                       Expanded(
@@ -153,7 +157,7 @@ class TaskCard extends StatelessWidget {
                           style: OmniType.body.copyWith(
                             color: scheme.onSurface,
                           ),
-                          maxLines: 1,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),

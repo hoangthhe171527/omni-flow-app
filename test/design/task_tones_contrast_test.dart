@@ -42,6 +42,10 @@ void main() {
         tones.priorityHigh,
         tones.priorityNormal,
         tones.dueSoonBar,
+        // Dấu không chữ: ô tick chưa xong, sao bật / tắt.
+        tones.faint,
+        tones.star,
+        tones.starIdle,
       ]) {
         expect(
           contrastRatio(c, theme.colorScheme.surface),

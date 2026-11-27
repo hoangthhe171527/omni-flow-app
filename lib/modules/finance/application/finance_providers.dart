@@ -1746,7 +1746,8 @@ class FinanceLedgerNotifier extends Notifier<FinanceLedgerState> {
     state = state.copyWith(toast: () => null);
   }
 
-  /// Hiển thị toast ở đáy màn hình trong 4.5 giây.
+  /// Hiển thị toast ở đáy màn hình. Toast có Hoàn tác ở lại tới khi bấm hoặc
+  /// có toast mới (giữ `onUndo` cho [undo]); toast thường xoá sau 4,5 giây.
   void showToast(String text, {Future<void> Function()? onUndo}) {
     _toastTimer?.cancel();
     final msg = FinanceToastMessage(
@@ -1755,6 +1756,7 @@ class FinanceLedgerNotifier extends Notifier<FinanceLedgerState> {
       onUndo: onUndo,
     );
     state = state.copyWith(toast: () => msg);
+    if (onUndo != null) return;
     _toastTimer = Timer(const Duration(milliseconds: 4500), () {
       if (!_disposed && state.toast?.id == msg.id) {
         state = state.copyWith(toast: () => null);

@@ -200,6 +200,19 @@ abstract final class OmniColors {
   static Color successTextOf(BuildContext context) =>
       _byBrightness(context, successText, successTextDark);
 
+  /// DẤU cảnh báo (vạch, icon, thanh độ mạnh) — token `warning-mark`.
+  /// [warning] #F59E0B chỉ 2,15:1 trên trắng; bản này ≥ 3:1 trên thẻ và nền.
+  static const warningMark = Color(0xFFC27803);
+  static const darkWarningMark = Color(0xFFF5B544);
+  static Color warningMarkOf(BuildContext context) =>
+      _byBrightness(context, warningMark, darkWarningMark);
+
+  /// DẤU thành công (chấm online, vạch, icon) — token `success-mark`.
+  /// [success] #10B981 chỉ 2,54:1 trên trắng; Tối giữ [success] (6,7:1).
+  static const successMark = Color(0xFF059669);
+  static Color successMarkOf(BuildContext context) =>
+      _byBrightness(context, successMark, success);
+
   static Color _byBrightness(BuildContext context, Color light, Color dark) =>
       Theme.of(context).brightness == Brightness.dark ? dark : light;
 

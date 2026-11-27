@@ -99,7 +99,7 @@ void main() {
     expect(api.ticks, isEmpty, reason: 'chưa qua ngưỡng thì không được tick');
   });
 
-  testWidgets('có HOÀN TÁC, và hoàn tác bỏ tick đúng công đoạn đó', (
+  testWidgets('có Hoàn tác, và hoàn tác bỏ tick đúng công đoạn đó', (
     tester,
   ) async {
     // Vuốt nhầm là chuyện của một buổi sáng. Không có đường lui thì người ta
@@ -111,7 +111,7 @@ void main() {
     await swipe(tester);
     expect(find.text('2/3 việc con'), findsOneWidget);
 
-    await tester.tap(find.text('HOÀN TÁC'));
+    await tester.tap(find.text('Hoàn tác'));
     await tester.pumpAndSettle();
 
     expect(api.ticks.last, ('t1', 's2', false));

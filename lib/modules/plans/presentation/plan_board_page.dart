@@ -602,6 +602,23 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
                               !t.isLocked &&
                               !t.isDeliveredRefurbish,
                           liftable: _liftable,
+                          moveTargets: [
+                            if (canDragTasks && real && !board.truncated)
+                              for (var j = 0; j < columns.length; j++)
+                                if (j != index &&
+                                    columns[j].id.isNotEmpty &&
+                                    !columns[j].isDelivered)
+                                  (label: columns[j].name, index: j),
+                          ],
+                          onMoveTo: (task, to) => unawaited(
+                            _drop(
+                              board,
+                              task,
+                              to,
+                              board.buckets[to].length,
+                              columns[to].id,
+                            ),
+                          ),
                           onDragUpdate: _onDragUpdate,
                           onDragEnd: _endDrag,
                           onOpenTask: (task) => context.pushNamed(
@@ -868,13 +885,10 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
     // Một số việc legacy không có `order`. Không gửi một request không thể
     // thay đổi thứ tự trong cùng nhóm; tải lại sẽ lập tức bật thẻ về chỗ cũ.
     if (from == toColumn && order == null) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(
-            content: Text('Chưa sắp xếp được việc cũ này. Vui lòng thử lại.'),
-          ),
-        );
+      showOmniToast(
+        context,
+        'Chưa sắp xếp được việc cũ này. Vui lòng thử lại.',
+      );
       return;
     }
     final container = ProviderScope.containerOf(context);
@@ -910,18 +924,54 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
         );
       }
       container.read(taskRealtimeSignalProvider.notifier).bump();
+      // Sang cột khác: toast "Hoàn tác" đưa thẻ về nhóm và thứ tự cũ.
+      final back = board.columns[from];
+      if (from != toColumn && back.id.isNotEmpty && !back.isDelivered) {
+        showOmniToast(
+          null,
+          'Đã chuyển sang ${board.columns[toColumn].name}.',
+          messenger: messenger,
+          actionLabel: omniUndoLabel,
+          onAction: () => _undoMove(task, back.id, container, messenger),
+        );
+      }
     } on AppException catch (error) {
       if (mounted) setState(() => _pending = null);
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(error.message)));
+      showOmniToast(null, error.message, messenger: messenger);
     } on Object {
       if (mounted) setState(() => _pending = null);
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(content: Text('Chưa chuyển được. Vui lòng thử lại.')),
-        );
+      showOmniToast(
+        null,
+        'Chưa chuyển được. Vui lòng thử lại.',
+        messenger: messenger,
+      );
+    }
+  }
+
+  /// Đưa [task] về nhóm [sectionId] với thứ tự cũ (Hoàn tác của lượt thả).
+  Future<void> _undoMove(
+    Task task,
+    String sectionId,
+    ProviderContainer container,
+    ScaffoldMessengerState messenger,
+  ) async {
+    try {
+      await container
+          .read(tasksApiProvider)
+          .moveOnBoard(
+            task.id,
+            sectionId: sectionId,
+            order: task.hasOrder ? task.order : null,
+          );
+      container.read(taskRealtimeSignalProvider.notifier).bump();
+    } on AppException catch (error) {
+      showOmniToast(null, error.message, messenger: messenger);
+    } on Object {
+      showOmniToast(
+        null,
+        'Chưa hoàn tác được. Vui lòng thử lại.',
+        messenger: messenger,
+      );
     }
   }
 
@@ -987,9 +1037,7 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
     final choice = await showAddTaskSheet(context, sectionName: sectionName);
     if (choice == null || !mounted) return;
     final messenger = ScaffoldMessenger.of(context);
-    void say(String text) => messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(text)));
+    void say(String text) => showOmniToast(null, text, messenger: messenger);
     try {
       switch (choice) {
         case OpenFullCreate():

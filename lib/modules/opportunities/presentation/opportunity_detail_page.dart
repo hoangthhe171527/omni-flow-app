@@ -285,9 +285,7 @@ class OpportunityDetailPage extends ConsumerWidget {
       await moveOpportunityStage(ref, current, stage.code);
     } on AppException catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
+      showOmniToast(context, error.message);
     }
   }
 
@@ -320,22 +318,17 @@ class OpportunityDetailPage extends ConsumerWidget {
           .markWon(opportunityId);
       if (!context.mounted) return;
       // App chưa có màn đơn hàng nên không điều hướng — chỉ báo có đơn.
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            result.orderCreated
-                ? 'Đã đánh dấu thắng và tạo đơn hàng.'
-                : result.orderId != null
-                ? 'Đã đánh dấu thắng. Cơ hội đã có đơn hàng.'
-                : 'Đã đánh dấu thắng.',
-          ),
-        ),
+      showOmniToast(
+        context,
+        result.orderCreated
+            ? 'Đã đánh dấu thắng và tạo đơn hàng.'
+            : result.orderId != null
+            ? 'Đã đánh dấu thắng. Cơ hội đã có đơn hàng.'
+            : 'Đã đánh dấu thắng.',
       );
     } on AppException catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
+      showOmniToast(context, error.message);
     }
   }
 }
@@ -401,9 +394,11 @@ class _StageStepper extends StatelessWidget {
                   child: AnimatedContainer(
                     duration: motion.fast,
                     height: 3,
+                    // Tiến độ không bấm được: mực, không màu nhấn; đoạn chưa
+                    // tới viền tương tác ≥ 3:1.
                     color: i <= currentIndex
-                        ? scheme.primary
-                        : scheme.outlineVariant,
+                        ? scheme.onSurface
+                        : scheme.outline,
                   ),
                 ),
               ),
@@ -423,9 +418,7 @@ class _StageStepper extends StatelessWidget {
                           : i < currentIndex
                           ? FontWeight.w500
                           : FontWeight.w400,
-                      color: i == currentIndex
-                          ? scheme.primary
-                          : i < currentIndex
+                      color: i <= currentIndex
                           ? scheme.onSurface
                           : scheme.onSurfaceVariant,
                     ),
@@ -457,22 +450,24 @@ class _Dot extends StatelessWidget {
       height: 24,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: state < 0 ? scheme.primary : scheme.surface,
+        // StepTracker: đã qua / hiện tại = mực, quầng hiện tại = `fill`,
+        // chưa tới viền `outline` (≥ 3:1).
+        color: state < 0 ? scheme.onSurface : scheme.surface,
         border: state < 0
             ? null
             : Border.all(
-                color: state == 0 ? scheme.primary : scheme.outlineVariant,
+                color: state == 0 ? scheme.onSurface : scheme.outline,
                 width: state == 0 ? 3 : 2,
               ),
         boxShadow: state == 0
-            ? [BoxShadow(color: scheme.primaryContainer, spreadRadius: 4)]
+            ? [BoxShadow(color: OmniColors.trackOf(context), spreadRadius: 4)]
             : null,
       ),
       child: state < 0
           ? Icon(
               LucideIcons.check,
               size: OmniIconSize.sm,
-              color: scheme.onPrimary,
+              color: scheme.surface,
             )
           : null,
     );

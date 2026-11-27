@@ -253,7 +253,8 @@ class _PairPageState extends ConsumerState<PairPage>
                   Icon(
                     LucideIcons.circleCheck,
                     size: OmniIconSize.hero,
-                    color: scheme.primary,
+                    // Thành công, không bấm được: xanh lá chữ, không màu nhấn.
+                    color: OmniColors.successTextOf(context),
                   ),
                   const SizedBox(height: OmniSpacing.md),
                   Text(
@@ -335,22 +336,16 @@ class _PairPageState extends ConsumerState<PairPage>
     try {
       await saveQrToGallery(dataUrl);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Đã lưu vào thư viện. Quét ngay — mã đổi sau khoảng 100 giây.',
-          ),
-          duration: Duration(seconds: 6),
-        ),
+      showOmniToast(
+        context,
+        'Đã lưu vào thư viện. Quét ngay — mã đổi sau khoảng 100 giây.',
+        persist: true,
       );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            error is QrSaveException ? error.message : humanError(error),
-          ),
-        ),
+      showOmniToast(
+        context,
+        error is QrSaveException ? error.message : humanError(error),
       );
     }
   }
@@ -375,14 +370,15 @@ class _PairStepRow extends StatelessWidget {
             height: 28,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: scheme.primary.withValues(alpha: .12),
-              borderRadius: const BorderRadius.all(Radius.circular(8)),
+              // Ô số bước không bấm được: nền `fill` + chữ mực, bo 10.
+              color: OmniColors.trackOf(context),
+              borderRadius: OmniRadius.mdAll,
             ),
             child: Text(
               '$step',
               style: OmniType.caption.copyWith(
                 fontWeight: FontWeight.w600,
-                color: scheme.primary,
+                color: scheme.onSurface,
                 fontFeatures: OmniType.tabular,
               ),
             ),

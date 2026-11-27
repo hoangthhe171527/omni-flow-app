@@ -124,9 +124,7 @@ class _SubtaskCreateSheetState extends ConsumerState<SubtaskCreateSheet> {
     final start = _start;
     final due = _due;
     if (start != null && due != null && start.isAfter(due)) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Ngày bắt đầu phải trước hạn.')),
-      );
+      showOmniToast(null, 'Ngày bắt đầu phải trước hạn.', messenger: messenger);
       return;
     }
     setState(() => _busy = true);
@@ -140,7 +138,7 @@ class _SubtaskCreateSheetState extends ConsumerState<SubtaskCreateSheet> {
       ));
       navigator.pop();
     } on AppException catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+      showOmniToast(null, e.message, messenger: messenger);
       if (mounted) setState(() => _busy = false);
     }
   }
@@ -211,7 +209,7 @@ class _SubtaskCreateSheetState extends ConsumerState<SubtaskCreateSheet> {
           builder: (context, _, _) => FilledButton(
             onPressed: _canCreate ? _create : null,
             style: FilledButton.styleFrom(
-              minimumSize: const Size.fromHeight(48),
+              minimumSize: const Size.fromHeight(50),
             ),
             child: _busy
                 ? const SizedBox.square(

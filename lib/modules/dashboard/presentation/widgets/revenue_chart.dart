@@ -155,11 +155,8 @@ class _RevenueChartState extends State<RevenueChart>
                           scrubIndex: i,
                           lineColor: scheme.primary,
                           prevColor: OmniColors.mutedBarOf(context),
-                          targetColor: OmniColors.byBrightness(
-                            context,
-                            OmniColors.warning,
-                            OmniColors.warningTextDark,
-                          ),
+                          // Dấu cảnh báo ≥ 3:1 (token `warning-mark`).
+                          targetColor: OmniColors.warningMarkOf(context),
                           guideColor: scheme.onSurface.withValues(alpha: .25),
                           surfaceColor: widget.ringColor ?? scheme.surface,
                         ),

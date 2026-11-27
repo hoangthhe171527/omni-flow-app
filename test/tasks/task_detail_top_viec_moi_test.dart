@@ -224,7 +224,7 @@ void main() {
       final deco = t.widget<Container>(box).decoration! as BoxDecoration;
       expect(deco.borderRadius, BorderRadius.circular(6));
       expect(deco.border!.top.width, 2);
-      expect(deco.border!.top.color, const Color(0xFF9AA5B8));
+      expect(deco.border!.top.color, const Color(0xFF7A8699));
 
       final target = find.bySemanticsLabel('Đánh dấu xong');
       expect(t.getSize(target), const Size(44, 44));
@@ -459,15 +459,15 @@ void main() {
       expect(find.text('0/5 · 0 lượt'), findsOneWidget);
     });
 
-    tw('năm sao 22: bật #E8890C, tắt #D5DBE5', (t) async {
+    tw('năm sao 22: bật #C46A00, tắt #8390A5', (t) async {
       await pump(t, host(data: json(rating: 2), perms: worker));
       final stars = t
           .widgetList<Icon>(find.byKey(const ValueKey('rating-star')))
           .toList();
       expect(stars, hasLength(5));
       expect(stars.every((s) => s.size == 22), isTrue);
-      expect(stars[1].color, const Color(0xFFE8890C));
-      expect(stars[2].color, const Color(0xFFD5DBE5));
+      expect(stars[1].color, const Color(0xFFC46A00));
+      expect(stars[2].color, const Color(0xFF8390A5));
     });
 
     tw('người giao chấm 4 sao → setRating(4)', (t) async {

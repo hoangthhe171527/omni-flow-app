@@ -567,9 +567,8 @@ class _StockPageState extends ConsumerState<StockPage> {
         ? TextButton(
             key: const ValueKey('inv-stock-multi'),
             style: TextButton.styleFrom(
-              minimumSize: const Size(44, 32),
+              minimumSize: const Size(44, 44),
               padding: const EdgeInsets.symmetric(horizontal: 8),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
             onPressed: () => setState(() {
               _multi = !_multi;
@@ -633,6 +632,22 @@ class _StockPageState extends ConsumerState<StockPage> {
           ),
         ],
         _ when state == null => [() => const InvSkeleton(count: 6, height: 64)],
+        // Trống vì bộ lọc: có nút "Bỏ lọc" (giữ từ khoá trong ô tìm).
+        _ when items.isEmpty && _activeFilters(f) > 0 => [
+          () => OmniEmptyState.filtered(
+            title: 'Không có cây khớp',
+            onAction: () => _filter.update(
+              (f) => f.copyWith(
+                category: () => null,
+                lotId: () => null,
+                lotCode: () => null,
+                age: () => null,
+                locationId: () => null,
+                locationName: () => null,
+              ),
+            ),
+          ),
+        ],
         _ when items.isEmpty => [
           () => OmniGroupSection(
             trailingTitle: _multi ? pickToggle : null,
@@ -914,7 +929,14 @@ class StockUnitRow extends StatelessWidget {
       button: true,
       selected: selected,
       child: ColoredBox(
-        color: selected ? OmniGlass.selectionOf(context) : Colors.transparent,
+        // Nền accent-tint đặc (token), không `selectionOf` (red flag Viomni).
+        color: selected
+            ? OmniColors.byBrightness(
+                context,
+                OmniColors.accent,
+                OmniColors.darkAccent,
+              )
+            : Colors.transparent,
         child: InkWell(
           onTap: onTap,
           child: ConstrainedBox(

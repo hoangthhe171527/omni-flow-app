@@ -124,7 +124,9 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
                         OmniSpacing.lg,
                         OmniSpacing.lg + OmniTopBarOverlap.of(context),
                         OmniSpacing.lg,
-                        state.hasMore ? 0 : OmniSpacing.bottomSafe,
+                        state.hasMore
+                            ? 0
+                            : OmniFabLayer.listBottom(context, hasFab: false),
                       ),
                       sliver: SliverMainAxisGroup(
                         slivers: [
@@ -144,11 +146,14 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
                       ),
                     ),
                     if (state.hasMore)
-                      const SliverPadding(
+                      SliverPadding(
                         padding: EdgeInsets.only(
-                          bottom: OmniSpacing.bottomSafe,
+                          bottom: OmniFabLayer.listBottom(
+                            context,
+                            hasFab: false,
+                          ),
                         ),
-                        sliver: SliverToBoxAdapter(
+                        sliver: const SliverToBoxAdapter(
                           child: Padding(
                             padding: EdgeInsets.all(OmniSpacing.lg),
                             child: Center(
@@ -245,29 +250,27 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
       // Vuốt nhầm là chuyện của một buổi sáng. Không có đường lui thì người
       // ta không dám vuốt nữa, và tính năng chết dù vẫn chạy.
       if (done) {
-        messenger.hideCurrentSnackBar();
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text('Đã xong: ${next.title}'),
-            duration: const Duration(seconds: 5),
-            action: SnackBarAction(
-              label: 'HOÀN TÁC',
-              onPressed: () => _tick(updated, next, done: false),
-            ),
-          ),
+        // Toast chung (G5): "Hoàn tác" chữ thường, thời lượng theo hệ thống.
+        showOmniToast(
+          context,
+          'Đã xong: ${next.title}',
+          actionLabel: omniUndoLabel,
+          onAction: () => _tick(updated, next, done: false),
         );
       }
     } on AppException catch (error) {
       if (!mounted) return;
       list.patch(task);
-      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      showOmniToast(null, error.message, messenger: messenger);
     } on Object catch (error, stackTrace) {
       // Lỗi lạ là một bug, nhưng thẻ vẫn phải về như cũ và người thợ vẫn
       // phải được báo. Một thẻ lặng lẽ nhảy về 1/3 đọc như "đã lưu rồi mà".
       if (!mounted) return;
       list.patch(task);
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Không lưu được. Vui lòng thử lại.')),
+      showOmniToast(
+        null,
+        'Không lưu được. Vui lòng thử lại.',
+        messenger: messenger,
       );
       CrashReporting.recordHandled(
         error,
@@ -344,7 +347,6 @@ class _TickOnSwipe extends StatelessWidget {
     // đàn hồi, để người dùng không tưởng mình vuốt hụt.
     if (next == null) return child;
 
-    final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
 
     return Dismissible(
@@ -360,7 +362,8 @@ class _TickOnSwipe extends StatelessWidget {
       movementDuration: OmniMotion.of(context).base,
       background: Container(
         decoration: BoxDecoration(
-          color: scheme.primary,
+          // Nền đặc theo chế độ + chữ trắng (G7).
+          color: OmniColors.primaryFillOf(context),
           borderRadius: BorderRadius.circular(OmniRadius.xl),
         ),
         alignment: Alignment.centerLeft,
@@ -368,12 +371,12 @@ class _TickOnSwipe extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(LucideIcons.circleCheck, color: scheme.onPrimary),
+            const Icon(LucideIcons.circleCheck, color: Colors.white),
             const SizedBox(width: OmniSpacing.sm),
             Flexible(
               child: Text(
                 'Xong: ${next.title}',
-                style: text.labelLarge?.copyWith(color: scheme.onPrimary),
+                style: text.labelLarge?.copyWith(color: Colors.white),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),

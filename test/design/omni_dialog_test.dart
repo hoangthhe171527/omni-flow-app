@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:omni_app/design/platform/omni_dialogs.dart';
+import 'package:omni_app/design/tokens/omni_colors.dart';
 
 void main() {
   Future<void> open(
@@ -55,13 +56,15 @@ void main() {
     });
   }
 
-  testWidgets('phá huỷ: nút xác nhận màu lỗi', (tester) async {
+  testWidgets('phá huỷ: nút xác nhận màu CHỮ lỗi (dangerText)', (tester) async {
     await open(tester, TargetPlatform.android, destructive: true);
     final button = tester.widget<TextButton>(
       find.widgetWithText(TextButton, 'Hoàn thành'),
     );
-    final theme = Theme.of(tester.element(find.text('Hoàn thành')));
-    expect(button.style!.foregroundColor!.resolve({}), theme.colorScheme.error);
+    expect(
+      button.style!.foregroundColor!.resolve({}),
+      OmniColors.dangerTextOf(tester.element(find.text('Hoàn thành'))),
+    );
   });
 
   testWidgets('gạt bỏ hộp thoại là KHÔNG đồng ý', (tester) async {

@@ -512,15 +512,12 @@ class _AppsGreeting extends ConsumerWidget {
       children: [
         Semantics(
           header: true,
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              greeting,
-              maxLines: 1,
-              softWrap: false,
-              style: OmniOrbitType.greeting.copyWith(color: scheme.onSurface),
-            ),
+          // Không FittedBox: chữ to (1,3× / 200%) phải giữ cỡ, xuống dòng.
+          child: Text(
+            greeting,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: OmniOrbitType.greeting.copyWith(color: scheme.onSurface),
           ),
         ),
         const SizedBox(height: 2),

@@ -68,7 +68,7 @@ void main() {
     expect(result, (id: null, name: null));
   });
 
-  testWidgets('danh bạ lỗi → báo một câu, không mục nào, đóng trả null', (
+  testWidgets('danh bạ lỗi → báo lỗi + Thử lại, không mục nào, đóng trả null', (
     tester,
   ) async {
     ({String? id, String? name})? result = (id: 'x', name: 'x');
@@ -77,7 +77,8 @@ void main() {
       (c) async => result = await showOwnerPicker(c),
       failMembers: true,
     );
-    expect(find.text('Không tải được danh sách thành viên'), findsOneWidget);
+    expect(find.text('Đã có lỗi'), findsOneWidget);
+    expect(find.text('Thử lại'), findsOneWidget);
     expect(find.text('Lan'), findsNothing);
     await tester.tapAt(const Offset(10, 10));
     await tester.pumpAndSettle();

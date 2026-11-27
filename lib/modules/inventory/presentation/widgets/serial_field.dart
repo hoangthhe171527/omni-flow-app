@@ -91,7 +91,7 @@ class _SerialFieldState extends State<SerialField> {
     if (_editing) {
       return SizedBox(
         width: 150,
-        height: 34,
+        height: 44,
         child: TextField(
           key: const ValueKey('inv-serial-input'),
           controller: _ctrl,
@@ -105,7 +105,7 @@ class _SerialFieldState extends State<SerialField> {
           decoration: const InputDecoration(
             isDense: true,
             hintText: 'Serial',
-            contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
           ),
           onSubmitted: (_) => _commit(),
           onTapOutside: (_) => _focus.unfocus(),
@@ -125,18 +125,23 @@ class _SerialFieldState extends State<SerialField> {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: _start,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Text(
-            has ? widget.serial! : '+ Thêm serial',
-            // Không gạch chấm (spec phong cách iOS §3.3 Tồn kho): chạm serial
-            // để sửa là gợi ý ngầm, như chạm tiền để sửa.
-            style: has
-                ? style
-                : style.copyWith(
-                    color: scheme.primary,
-                    fontWeight: FontWeight.w600,
-                  ),
+        // Vùng chạm 44 (lõi) dù chữ chỉ cao một dòng.
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Align(
+            widthFactor: 1,
+            alignment: AlignmentDirectional.centerStart,
+            child: Text(
+              has ? widget.serial! : '+ Thêm serial',
+              // Không gạch chấm (spec phong cách iOS §3.3 Tồn kho): chạm serial
+              // để sửa là gợi ý ngầm, như chạm tiền để sửa.
+              style: has
+                  ? style
+                  : style.copyWith(
+                      color: scheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+            ),
           ),
         ),
       ),

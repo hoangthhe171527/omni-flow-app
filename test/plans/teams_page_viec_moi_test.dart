@@ -833,7 +833,7 @@ void main() {
       ),
     ];
 
-    testWidgets('"Đã đóng (N)" gập mặc định, mở ra kế hoạch mờ có nhãn', (
+    testWidgets('"Đã đóng (N)" gập mặc định, mở ra kế hoạch có nhãn', (
       t,
     ) async {
       phone(t);
@@ -859,9 +859,14 @@ void main() {
         find.descendant(of: done, matching: find.text('Đã đóng')),
         findsOneWidget,
       );
+      // Không làm mờ chữ dưới ngưỡng tương phản: nhãn "Đã đóng" đã đủ nói.
       expect(
-        find.descendant(of: done, matching: find.byType(Opacity)),
-        findsWidgets,
+        t
+            .widgetList<Opacity>(
+              find.descendant(of: done, matching: find.byType(Opacity)),
+            )
+            .where((o) => o.opacity < 1),
+        isEmpty,
       );
       final archived = find.ancestor(
         of: find.text('Kho cũ'),

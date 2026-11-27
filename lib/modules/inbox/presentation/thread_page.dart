@@ -689,11 +689,11 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
       );
     } on Object {
       if (!mounted) return;
-      messenger?.showSnackBar(
-        snackAboveBar(
-          const Text('Không thả được cảm xúc. Vui lòng thử lại.'),
-          barKey: _bottomBarKey,
-        ),
+      showToastAboveBar(
+        null,
+        'Không thả được cảm xúc. Vui lòng thử lại.',
+        barKey: _bottomBarKey,
+        messenger: messenger,
       );
     }
   }
@@ -811,9 +811,7 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
 
   void _toast(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(snackAboveBar(Text(message), barKey: _bottomBarKey));
+    showToastAboveBar(context, message, barKey: _bottomBarKey);
   }
 }
 
@@ -991,11 +989,8 @@ class _DaySeparator extends StatelessWidget {
     // Mốc giờ trần, giữa: "09:40, Hôm nay". Cỡ 12 w500, chữ thường: mốc là
     // phụ, không to bằng tin. Lề trên 24 tách hẳn khỏi cụm trước; tin đầu cụm
     // sau đã tự cách 16.
-    final color = OmniColors.byBrightness(
-      context,
-      OmniLabelColors.fallback,
-      scheme.onSurfaceVariant,
-    );
+    // Chữ phụ `muted` cả hai chế độ: #8A95A8 cũ chỉ 3,0:1 trên trắng (C1).
+    final color = scheme.onSurfaceVariant;
     return Padding(
       padding: const EdgeInsets.only(top: 24),
       child: Center(

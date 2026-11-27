@@ -9,6 +9,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/error/app_exception.dart';
 import '../../../../design/components/omni_avatar.dart';
 import '../../../../design/components/omni_dashed_circle.dart';
+import '../../../../design/components/omni_feedback.dart';
 import '../../../../design/components/omni_motion_widgets.dart';
 import '../../../../design/components/omni_status_chip.dart';
 import '../../../../design/components/omni_tabs.dart';
@@ -152,9 +153,7 @@ class _BoardTaskCardState extends ConsumerState<BoardTaskCard>
         _saving = false;
       });
     }
-    messenger
-      ?..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    showOmniToast(null, message, messenger: messenger);
   }
 
   @override
@@ -290,10 +289,11 @@ class _BoardTaskCardState extends ConsumerState<BoardTaskCard>
                   container: true,
                   label: 'Đã ghim',
                   child: ExcludeSemantics(
+                    // Dấu ghim không bấm được: chữ phụ, không màu nhấn.
                     child: Icon(
                       LucideIcons.pin,
                       size: 16,
-                      color: scheme.primary,
+                      color: scheme.onSurfaceVariant,
                     ),
                   ),
                 ),
@@ -498,16 +498,15 @@ class _TickBox extends StatelessWidget {
                   width: 20,
                   height: 20,
                   decoration: BoxDecoration(
-                    color: done ? scheme.primary : scheme.surface,
+                    // Nền đặc theo chế độ (Tối #2F6FE0) + ✓ trắng (G7).
+                    color: done
+                        ? OmniColors.primaryFillOf(context)
+                        : scheme.surface,
                     borderRadius: BorderRadius.circular(6),
                     border: done ? null : Border.all(color: faint, width: 1.5),
                   ),
                   child: done
-                      ? Icon(
-                          LucideIcons.check,
-                          size: 14,
-                          color: scheme.onPrimary,
-                        )
+                      ? Icon(LucideIcons.check, size: 14, color: Colors.white)
                       : null,
                 ),
               ),

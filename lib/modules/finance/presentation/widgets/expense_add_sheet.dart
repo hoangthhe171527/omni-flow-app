@@ -297,9 +297,7 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
         api: ref.read(financeApiProvider),
         onError: (msg) {
           if (!mounted) return;
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(msg)));
+          showOmniToast(context, msg);
         },
       );
       if (att != null && mounted) {
@@ -424,7 +422,8 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
                       OmniChoicePill(
                         key: ValueKey('finance-suggest-${s.title}'),
                         label: s.title,
-                        selected: true,
+                        // Gợi ý, không phải "đang chọn" (D12).
+                        selected: false,
                         onTap: () => _applyTitleSuggestion(s),
                       ),
                   ],
@@ -777,7 +776,8 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
                               onTap: _openAttachmentPicker,
                               borderRadius: BorderRadius.circular(10),
                               child: Container(
-                                height: _attachments.isNotEmpty ? 46 : 34,
+                                // Vùng chạm ≥ 44.
+                                height: _attachments.isNotEmpty ? 46 : 44,
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 12,
                                 ),

@@ -125,7 +125,9 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
                 if (required)
                   Text(
                     ' *',
-                    style: OmniType.caption.copyWith(color: scheme.error),
+                    style: OmniType.caption.copyWith(
+                      color: OmniColors.dangerTextOf(context),
+                    ),
                   ),
               ],
             ),
@@ -156,13 +158,15 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
                   Icon(
                     LucideIcons.circleAlert,
                     size: OmniIconSize.xs,
-                    color: scheme.error,
+                    color: OmniColors.dangerTextOf(context),
                   ),
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
                       error,
-                      style: OmniType.micro.copyWith(color: scheme.error),
+                      style: OmniType.micro.copyWith(
+                        color: OmniColors.dangerTextOf(context),
+                      ),
                     ),
                   ),
                 ],
@@ -188,9 +192,7 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
                   height: 44,
                 ),
                 icon: Icon(
-                  _show
-                      ? LucideIcons.eyeOff
-                      : LucideIcons.eye,
+                  _show ? LucideIcons.eyeOff : LucideIcons.eye,
                   size: OmniIconSize.md,
                   color: scheme.onSurface,
                 ),
@@ -252,7 +254,9 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Text(
               _formError!,
-              style: OmniType.caption.copyWith(color: scheme.error),
+              style: OmniType.caption.copyWith(
+                color: OmniColors.dangerTextOf(context),
+              ),
             ),
           ),
       ],

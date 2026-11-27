@@ -70,7 +70,7 @@ class _ReplyPreview extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
       decoration: BoxDecoration(
         border: Border(
-          left: BorderSide(color: OmniColors.chatPrimary, width: 3),
+          left: BorderSide(color: scheme.onSurfaceVariant, width: 3),
           bottom: BorderSide(
             color: OmniColors.byBrightness(
               context,
@@ -92,7 +92,7 @@ class _ReplyPreview extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: OmniType.micro.copyWith(
-                    color: OmniColors.chatPrimary,
+                    color: scheme.onSurface,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -330,7 +330,6 @@ class _ComposerError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     return Semantics(
       liveRegion: true,
       child: Padding(
@@ -341,13 +340,15 @@ class _ComposerError extends StatelessWidget {
             Icon(
               LucideIcons.circleAlert,
               size: OmniIconSize.sm,
-              color: scheme.error,
+              color: OmniColors.dangerTextOf(context),
             ),
             const SizedBox(width: 6),
             Expanded(
               child: Text(
                 text,
-                style: OmniType.caption.copyWith(color: scheme.error),
+                style: OmniType.caption.copyWith(
+                  color: OmniColors.dangerTextOf(context),
+                ),
               ),
             ),
           ],

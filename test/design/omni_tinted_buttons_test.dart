@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
+import 'package:omni_app/design/tokens/omni_colors.dart';
 
 /// Nút kính trắng mờ chìm trên nền trắng (form Thêm khách, sheet, thẻ nhóm).
 /// Trên bề mặt trắng nút đổi sang "kính nhuộm tông" (phương án B duyệt
@@ -75,5 +76,43 @@ void main() {
     final pri = bg(t, 'Lưu', FilledButton)!;
     expect(pri, isNot(Colors.white.withValues(alpha: .82)));
     expect(pri.b, greaterThan(pri.r));
+  });
+
+  testWidgets('Tối: nút chính trong thẻ trắng = accent-fill + chữ trắng', (
+    t,
+  ) async {
+    await t.pumpWidget(
+      MaterialApp(
+        theme: OmniTheme.dark(),
+        home: Scaffold(
+          body: OmniTintedButtons(
+            child: FilledButton(onPressed: () {}, child: const Text('Lưu')),
+          ),
+        ),
+      ),
+    );
+    final style = Theme.of(
+      t.element(find.text('Lưu')),
+    ).filledButtonTheme.style!;
+    expect(
+      style.backgroundColor!.resolve(<WidgetState>{}),
+      OmniColors.darkPrimaryFill,
+    );
+    expect(style.foregroundColor!.resolve(<WidgetState>{}), Colors.white);
+  });
+
+  testWidgets('chân sheet: nút cao 52', (t) async {
+    await t.pumpWidget(
+      host(
+        SizedBox(
+          width: 360,
+          child: OmniSheetBody(
+            footer: FilledButton(onPressed: () {}, child: const Text('Lưu')),
+            children: const [SizedBox(height: 10)],
+          ),
+        ),
+      ),
+    );
+    expect(t.getSize(find.byType(FilledButton)).height, 52);
   });
 }

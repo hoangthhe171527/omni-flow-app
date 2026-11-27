@@ -156,9 +156,7 @@ class FinanceCatalogPage extends ConsumerWidget {
       ref.read(financeLedgerProvider.notifier).refresh();
 
   static void _toast(BuildContext context, String message) {
-    ScaffoldMessenger.maybeOf(
-      context,
-    )?.showSnackBar(SnackBar(content: Text(message)));
+    showOmniToast(context, message);
   }
 
   static String _errorText(Object error) =>
@@ -298,17 +296,22 @@ class _GroupRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final row = OmniGroupRow(
+    return OmniGroupRow(
       key: ValueKey('finance-catalog-group-${group.id}'),
       leading: OmniIconTile(
         group.archived ? LucideIcons.archive : LucideIcons.tag,
       ),
       title: group.name,
-      subtitle: group.countsAsExpense ? null : 'Không tính vào chi phí',
+      // Lưu trữ nói bằng icon + chữ, không làm mờ (Opacity .6 → 2,59:1).
+      subtitle: group.archived || !group.countsAsExpense
+          ? [
+              if (group.archived) 'Đã lưu trữ',
+              if (!group.countsAsExpense) 'Không tính vào chi phí',
+            ].join(' · ')
+          : null,
       value: '${group.expenseCount} khoản',
       onTap: onTap,
     );
-    return group.archived ? Opacity(opacity: 0.6, child: row) : row;
   }
 }
 
@@ -319,15 +322,15 @@ class _AccountRow extends StatelessWidget {
   final VoidCallback onTap;
 
   static IconData _iconFor(MoneyAccountKind kind) => switch (kind) {
-    MoneyAccountKind.bank ||
-    MoneyAccountKind.company => LucideIcons.landmark,
+    MoneyAccountKind.bank || MoneyAccountKind.company => LucideIcons.landmark,
     MoneyAccountKind.cash => LucideIcons.banknote,
     MoneyAccountKind.advance => LucideIcons.wallet,
   };
 
   @override
   Widget build(BuildContext context) {
-    final row = OmniGroupRow(
+    // Lưu trữ nói bằng dòng phụ "Đã lưu trữ", không làm mờ chữ dưới ngưỡng.
+    return OmniGroupRow(
       key: ValueKey('finance-catalog-account-${account.id}'),
       leading: OmniIconTile(_iconFor(account.kind)),
       title: account.name,
@@ -335,7 +338,6 @@ class _AccountRow extends StatelessWidget {
       value: '${account.expenseCount} khoản',
       onTap: onTap,
     );
-    return account.archived ? Opacity(opacity: 0.6, child: row) : row;
   }
 }
 
@@ -539,7 +541,9 @@ class _CatalogEditSheetState extends State<_CatalogEditSheet> {
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Text(
               _error!,
-              style: OmniType.caption.copyWith(color: scheme.error),
+              style: OmniType.caption.copyWith(
+                color: OmniColors.dangerTextOf(context),
+              ),
             ),
           ),
         // Nơi người ta thật sự cần tới: đang sửa một nhóm.

@@ -491,13 +491,16 @@ void main() {
     });
 
     testWidgets(
-      'Cơ hội lỗi → coi như rỗng, không sập, không nút khi thiếu quyền tạo',
+      'Cơ hội lỗi → báo lỗi + Thử lại, không sập, không nút khi thiếu quyền '
+      'tạo',
       (tester) async {
         server.opportunitiesError = const NetworkException('mất mạng');
         await open(tester);
         await tester.tap(find.bySemanticsLabel('Cơ hội 2'));
         await tester.pumpAndSettle();
-        expect(find.text('Chưa có cơ hội'), findsOneWidget);
+        // Lỗi tải không còn giả làm rỗng: báo lỗi + "Thử lại" trong đoạn.
+        expect(find.text('Chưa có cơ hội'), findsNothing);
+        expect(find.text('Thử lại'), findsOneWidget);
         expect(find.text('Tạo cơ hội'), findsNothing);
         expect(find.text('Chú Đức'), findsOneWidget);
       },

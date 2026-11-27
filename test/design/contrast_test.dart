@@ -321,6 +321,26 @@ void main() {
       bg: OmniColors.darkCard,
       min: t,
     ),
+    // ---- Dấu (vạch, chấm, icon không chữ): 3:1 trên thẻ VÀ nền ----
+    for (final (what, fg) in [
+      ('dấu cảnh báo', OmniColors.warningMark),
+      ('dấu thành công', OmniColors.successMark),
+    ]) ...[
+      (what: '$what / thẻ', fg: fg, bg: OmniColors.card, min: ui),
+      (what: '$what / nền', fg: fg, bg: OmniColors.background, min: ui),
+    ],
+    (
+      what: 'dấu cảnh báo / thẻ (tối)',
+      fg: OmniColors.darkWarningMark,
+      bg: OmniColors.darkCard,
+      min: ui,
+    ),
+    (
+      what: 'dấu thành công / thẻ (tối)',
+      fg: OmniColors.success,
+      bg: OmniColors.darkCard,
+      min: ui,
+    ),
     // ---- Ô người phụ trách Hộp thư: nền nhạt theo người ----
     for (final (i, (bg, fg)) in OmniColors.assigneeTones.indexed)
       (what: 'ô phụ trách $i', fg: fg, bg: bg, min: t),

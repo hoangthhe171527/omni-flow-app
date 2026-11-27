@@ -270,7 +270,7 @@ class _PasteSheetState extends ConsumerState<PasteSheet> {
                   Text(
                     r.customer,
                     style: OmniType.caption.copyWith(
-                      color: scheme.primary,
+                      color: scheme.onSurface,
                       fontWeight: FontWeight.w600,
                     ),
                   ),

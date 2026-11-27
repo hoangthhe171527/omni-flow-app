@@ -34,8 +34,10 @@ Future<void> _openExternal(BuildContext context, Uri url) async {
     opened = false;
   }
   if (opened) return;
-  messenger.showSnackBar(
-    const SnackBar(content: Text('Không mở được liên kết. Vui lòng thử lại.')),
+  showOmniToast(
+    null,
+    'Không mở được liên kết. Vui lòng thử lại.',
+    messenger: messenger,
   );
 }
 
@@ -357,7 +359,6 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
         for (final t in s.tiles) t.id ?? t.label,
     ];
     WidgetsBinding.instance.addPostFrameCallback((_) => _seen.addAll(ids));
-    final scheme = Theme.of(context).colorScheme;
     // Chỉ số hoạt ảnh chạy liên tục qua các nhóm.
     final starts = <int>[];
     var running = 0;
@@ -401,15 +402,8 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
                   ),
                   children: [
                     if (nothing)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 40),
-                        child: Text(
-                          'Không tìm thấy “$_query”',
-                          textAlign: TextAlign.center,
-                          style: OmniType.body.copyWith(
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
+                      OmniEmptyState.filtered(
+                        title: 'Không tìm thấy “$_query”',
                       ),
                     for (var i = 0; i < sections.length; i++) ...[
                       if (i > 0) const SizedBox(height: OmniGroupSection.gap),

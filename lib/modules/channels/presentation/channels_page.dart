@@ -93,14 +93,10 @@ class _ChannelsPageState extends ConsumerState<ChannelsPage>
       await ref.read(channelsApiProvider).disconnect(connection.id);
       ref.invalidate(channelsProvider);
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Đã ngắt ${connection.label}')));
+      showOmniToast(context, 'Đã ngắt ${connection.label}');
     } on AppException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
+      showOmniToast(context, error.message);
     }
   }
 
@@ -152,11 +148,11 @@ class _ChannelsPageState extends ConsumerState<ChannelsPage>
         return;
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Đăng nhập xong thì quay lại đây, app tự nhận.'),
-          duration: Duration(seconds: 6),
-        ),
+      // Hướng dẫn cần đọc xong mới rời app: giữ tới khi bấm đóng.
+      showOmniToast(
+        context,
+        'Đăng nhập xong thì quay lại đây, app tự nhận.',
+        persist: true,
       );
       _watchForConnection(before);
     } catch (error) {
@@ -168,9 +164,7 @@ class _ChannelsPageState extends ConsumerState<ChannelsPage>
 
   void _snack(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    showOmniToast(context, message);
   }
 
   void _watchForConnection(Set<String> before) {
@@ -219,9 +213,7 @@ class _ChannelsPageState extends ConsumerState<ChannelsPage>
       if (firstNewId(before, fresh) != null) {
         _stopWatching();
         ref.invalidate(channelsProvider);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Đã nối kênh mới.')));
+        showOmniToast(context, 'Đã nối kênh mới.');
         return;
       }
     } catch (_) {

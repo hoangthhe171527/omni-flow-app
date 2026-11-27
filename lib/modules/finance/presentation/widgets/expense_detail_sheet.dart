@@ -313,9 +313,7 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
         api: ref.read(financeApiProvider),
         onError: (msg) {
           if (!mounted) return;
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(msg)));
+          showOmniToast(context, msg);
         },
       );
       if (att != null && mounted) {
@@ -634,9 +632,7 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                                 ? 'Trả một phần · Còn ${FinanceMonthUtils.formatVndSpace(left)}'
                                 : 'Chưa thanh toán')
                           : 'Đã trả đủ (${item.payments.length} lần)',
-                      icon: left > 0
-                          ? LucideIcons.clock
-                          : LucideIcons.check,
+                      icon: left > 0 ? LucideIcons.clock : LucideIcons.check,
                       tone: left <= 0
                           ? OmniTone.success
                           : paid > 0

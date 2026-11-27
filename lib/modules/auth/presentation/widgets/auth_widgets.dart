@@ -283,7 +283,7 @@ class AuthLabelLink extends StatelessWidget {
         onTap: onTap,
         borderRadius: OmniRadius.smAll,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minWidth: 44, minHeight: 40),
+          constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Center(
@@ -616,8 +616,9 @@ class AuthPrimaryButton extends StatelessWidget {
   }
 }
 
-/// Vệt sáng 60dp lướt chéo qua nút: lướt trong 35% đầu mỗi chu kỳ 3,2 giây,
-/// lần đầu chờ 1,2 giây (như `animation: shine 3.2s 1.2s infinite`).
+/// Vệt sáng 60dp lướt chéo qua nút MỘT lần khi vào màn: chờ 1,2 giây rồi lướt
+/// trong 35% đầu chu kỳ 3,2 giây. Không lặp — chuyển động lặp vô cớ làm phân
+/// tâm (tiêu chí 9).
 class _ShineSweep extends StatefulWidget {
   const _ShineSweep();
 
@@ -632,7 +633,16 @@ class _ShineSweepState extends State<_ShineSweep>
     duration: const Duration(milliseconds: 3200),
     // Bắt đầu ở 62,5%: còn 1,2 giây nữa mới tới lượt lướt đầu.
     value: 0.625,
-  )..repeat();
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    // `then` chỉ chạy khi chạy XONG (huỷ lúc dispose thì không) → một lượt.
+    _c.forward().then((_) {
+      if (mounted) _c.forward(from: 0);
+    });
+  }
 
   @override
   void dispose() {
@@ -766,11 +776,7 @@ class AuthPrivacyLink extends StatelessWidget {
       mode: LaunchMode.externalApplication,
     );
     if (opened || !context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Không mở được liên kết. Vui lòng thử lại.'),
-      ),
-    );
+    showOmniToast(context, 'Không mở được liên kết. Vui lòng thử lại.');
   }
 
   @override
@@ -790,7 +796,7 @@ class AuthPrivacyLink extends StatelessWidget {
           onTap: () => _open(context),
           borderRadius: OmniRadius.smAll,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 12),
             child: Text(
               'Chính sách bảo mật',
               style: style.copyWith(

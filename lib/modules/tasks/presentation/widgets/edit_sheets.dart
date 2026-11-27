@@ -240,7 +240,7 @@ class _TextEditSheetState extends State<_TextEditSheet> {
                   ? () => Navigator.of(context).pop(_controller.text.trim())
                   : null,
               style: FilledButton.styleFrom(
-                minimumSize: const Size.fromHeight(48),
+                minimumSize: const Size.fromHeight(50),
               ),
               child: const Text('Lưu'),
             ),

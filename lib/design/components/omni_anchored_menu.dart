@@ -274,7 +274,7 @@ class OmniAnchoredMenuItem extends StatelessWidget {
     final color = !enabled
         ? scheme.onSurfaceVariant.withValues(alpha: .55)
         : destructive
-        ? scheme.error
+        ? OmniColors.dangerTextOf(context)
         : scheme.onSurface;
 
     return OmniPressScale(
@@ -301,7 +301,7 @@ class OmniAnchoredMenuItem extends StatelessWidget {
                 color: !enabled
                     ? scheme.onSurfaceVariant.withValues(alpha: .45)
                     : destructive
-                    ? scheme.error
+                    ? OmniColors.dangerTextOf(context)
                     : scheme.onSurface.withValues(alpha: .78),
               ),
               const SizedBox(width: 12),

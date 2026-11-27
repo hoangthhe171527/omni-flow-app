@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../design/components/components.dart';
+import '../../../../security/session/session_controller.dart';
 import '../../../team/team.dart';
 
 class AssignResult {
@@ -38,6 +39,7 @@ class _AssignSheetState extends ConsumerState<AssignSheet> {
   @override
   Widget build(BuildContext context) {
     final members = ref.watch(teamMembersProvider);
+    final myId = ref.watch(sessionProvider).user?.id;
 
     return OmniSheetBody(
       // Đầu sheet tự có nút ✕ tròn xám (spec phong cách iOS §3.4).
@@ -96,6 +98,20 @@ class _AssignSheetState extends ConsumerState<AssignSheet> {
             return OmniGroupSection(
               dividerIndent: 62,
               children: [
+                // Lối tắt nhận việc về mình (xa-hoi-chat Áp CRM #2).
+                if (_search.isEmpty &&
+                    myId != null &&
+                    myId != widget.currentAssigneeId &&
+                    list.any((m) => m.userId == myId))
+                  OmniGroupRow(
+                    icon: LucideIcons.userCheck,
+                    title: 'Giao cho tôi',
+                    chevron: false,
+                    onTap: () => Navigator.pop(
+                      context,
+                      AssignResult(assigneeId: myId, note: _noteText),
+                    ),
+                  ),
                 OmniGroupRow(
                   icon: LucideIcons.userX,
                   title: 'Bỏ gán',

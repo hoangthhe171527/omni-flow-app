@@ -227,9 +227,7 @@ class _CommentBarState extends ConsumerState<CommentBar> {
     final messenger = ScaffoldMessenger.of(context);
     final remaining = kCommentMaxFiles - _files.length;
     if (remaining <= 0) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Tối đa 10 tệp mỗi bình luận.')),
-      );
+      showOmniToast(null, 'Tối đa 10 tệp mỗi bình luận.', messenger: messenger);
       return;
     }
     final source = await showDetailAnchoredMenu<CommentFileSource>(
@@ -263,7 +261,7 @@ class _CommentBarState extends ConsumerState<CommentBar> {
     try {
       picked = await widget.pickFiles(source, remaining);
     } on AppException catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+      showOmniToast(null, e.message, messenger: messenger);
       return;
     }
     if (picked.isEmpty || !mounted) return;
@@ -286,7 +284,7 @@ class _CommentBarState extends ConsumerState<CommentBar> {
     }
     setState(() => _files.addAll(accepted));
     if (refused != null) {
-      messenger.showSnackBar(SnackBar(content: Text(refused)));
+      showOmniToast(null, refused, messenger: messenger);
     }
   }
 
@@ -315,10 +313,12 @@ class _CommentBarState extends ConsumerState<CommentBar> {
         setState(_files.clear);
       }
     } on AppException catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+      showOmniToast(null, e.message, messenger: messenger);
     } on Object {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Chưa gửi được. Thử lại khi có mạng.')),
+      showOmniToast(
+        null,
+        'Chưa gửi được. Thử lại khi có mạng.',
+        messenger: messenger,
       );
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -351,19 +351,14 @@ class _CommentBarState extends ConsumerState<CommentBar> {
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: scheme.surface,
-          borderRadius: BorderRadius.circular(27),
+          // Viên tròn hẳn (thang bo: nút tròn = pill), bóng token `raised`.
+          borderRadius: OmniRadius.pillAll,
           border: Border.all(
             color: dark
                 ? scheme.outlineVariant.withValues(alpha: 0.45)
                 : OmniColors.ink.withValues(alpha: 0.06),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: OmniColors.ink.withValues(alpha: dark ? .32 : .09),
-              blurRadius: 24,
-              offset: const Offset(0, 6),
-            ),
-          ],
+          boxShadow: OmniShadows.raised,
         ),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(4, 5, 4, 5),
@@ -442,7 +437,7 @@ class _CommentBarState extends ConsumerState<CommentBar> {
                       decoration: BoxDecoration(
                         // Liền khối với viên kính: không nền xám riêng.
                         color: Colors.transparent,
-                        borderRadius: BorderRadius.circular(22),
+                        borderRadius: OmniRadius.pillAll,
                       ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.end,

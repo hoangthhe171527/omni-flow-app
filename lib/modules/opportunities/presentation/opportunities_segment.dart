@@ -311,9 +311,11 @@ class _StageBar extends StatelessWidget {
                 Expanded(
                   flex: (parts[i].$2 / 1000).round().clamp(1, 1 << 30),
                   child: ColoredBox(
+                    // Không bấm được → thang chữ phụ → mực (mọi đoạn ≥ 3:1),
+                    // không màu nhấn.
                     color: Color.lerp(
-                      scheme.primaryContainer,
-                      scheme.primary,
+                      scheme.onSurfaceVariant,
+                      scheme.onSurface,
                       n == 1 ? 1 : i / (n - 1),
                     )!,
                   ),
@@ -350,10 +352,10 @@ class _SectionLine extends StatelessWidget {
         child: Row(
           children: [
             Expanded(
+              // Số tiền không cắt "…": hẹp / chữ lớn thì xuống dòng 2.
               child: Text(
                 title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
                 style: OmniType.micro.copyWith(
                   color: color,
                   fontWeight: FontWeight.w600,
@@ -494,29 +496,8 @@ Future<void> showOpportunityFilterMenu({
   builder: (menuContext) => Column(
     mainAxisSize: MainAxisSize.min,
     children: [
-      Container(
-        constraints: const BoxConstraints(minHeight: 60),
-        padding: const EdgeInsets.only(left: 16, right: 8, top: 8, bottom: 4),
-        child: Row(
-          children: [
-            Icon(
-              LucideIcons.slidersHorizontal,
-              size: OmniIconSize.md,
-              color: Theme.of(menuContext).colorScheme.onSurface,
-            ),
-            const SizedBox(width: 10),
-            Expanded(child: Text('Bộ lọc', style: OmniType.bodyStrong)),
-            // Nút đóng là viên kính tròn, như bộ lọc khách.
-            OmniGlassCircle(
-              child: IconButton(
-                tooltip: 'Đóng bộ lọc',
-                onPressed: () => Navigator.of(menuContext).pop(),
-                icon: const Icon(LucideIcons.x),
-              ),
-            ),
-          ],
-        ),
-      ),
+      // Đầu bảng lọc dùng chung như Khách / Hộp thư: "Lọc" + "Đặt lại".
+      const _OpportunityFilterHeader(),
       const OpportunityFilterMenuContent(),
       const SizedBox(height: 8),
     ],
@@ -524,6 +505,26 @@ Future<void> showOpportunityFilterMenu({
 );
 
 /// Bản gọn của bộ lọc Cơ hội để đặt trong popover neo.
+/// "Đặt lại" bỏ "Chỉ của tôi" và "Đã đóng"; không có gì để đặt lại thì mờ.
+class _OpportunityFilterHeader extends ConsumerWidget {
+  const _OpportunityFilterHeader();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final active =
+        ref.watch(pipelineMineProvider) || ref.watch(segmentClosedProvider);
+    return OmniFilterHeader(
+      resetKey: const Key('opportunity-filter-reset'),
+      onReset: active
+          ? () {
+              ref.read(pipelineMineProvider.notifier).state = false;
+              ref.read(segmentClosedProvider.notifier).state = false;
+            }
+          : null,
+    );
+  }
+}
+
 class OpportunityFilterMenuContent extends ConsumerWidget {
   const OpportunityFilterMenuContent({super.key});
 

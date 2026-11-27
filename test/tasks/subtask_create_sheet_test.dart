@@ -74,6 +74,10 @@ void main() {
     );
     await t.pumpWidget(app);
     await t.pumpAndSettle();
+    // Hàng sao xuống dòng (Wrap, vùng chạm 44) làm thẻ cao hơn: cuộn nút vào
+    // tầm nhìn, khỏi bị thanh bình luận nổi che.
+    await t.ensureVisible(find.byTooltip('Thêm việc con'));
+    await t.pumpAndSettle();
     await t.tap(find.byTooltip('Thêm việc con'));
     await t.pumpAndSettle();
   }

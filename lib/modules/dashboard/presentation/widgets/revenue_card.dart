@@ -206,7 +206,8 @@ class _Delta extends StatelessWidget {
       text = '—';
     } else {
       final up = r >= 0;
-      tone = up ? OmniTone.info : OmniTone.danger;
+      // Tăng = xanh lá + ▲ (Màu bốn nghĩa), không xanh dương.
+      tone = up ? OmniTone.success : OmniTone.danger;
       icon = up ? LucideIcons.chevronUp : LucideIcons.chevronDown;
       text = '${(r.abs() * 100).round()}%';
       label = '${up ? 'tăng' : 'giảm'} $text so với cùng kỳ';

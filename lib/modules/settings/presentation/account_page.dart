@@ -40,7 +40,7 @@ class _AccountPageState extends ConsumerState<AccountPage> {
     final messenger = ScaffoldMessenger.of(context);
     final changed = await showChangePasswordSheet(context);
     if (changed == true) {
-      messenger.showSnackBar(const SnackBar(content: Text('Đã đổi mật khẩu.')));
+      showOmniToast(null, 'Đã đổi mật khẩu.', messenger: messenger);
     }
   }
 
@@ -305,15 +305,11 @@ class _AccountPageState extends ConsumerState<AccountPage> {
       await ref.read(sessionControllerProvider.notifier).refreshContext();
     } on AppException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.message)));
+        showOmniToast(context, e.message);
       }
     } on Object {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Chưa xoá được ảnh đại diện.')),
-        );
+        showOmniToast(context, 'Chưa xoá được ảnh đại diện.');
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -341,24 +337,17 @@ class _AccountPageState extends ConsumerState<AccountPage> {
       await ref.read(sessionControllerProvider.notifier).refreshContext();
     } on AppException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.message)));
+        showOmniToast(context, e.message);
       }
     } on PlatformException {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Không mở được thư viện ảnh. Vui lòng thử lại.'),
-          ),
-        );
+        showOmniToast(context, 'Không mở được thư viện ảnh. Vui lòng thử lại.');
       }
     } on Object {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Chưa cập nhật được ảnh đại diện. Vui lòng thử lại.'),
-          ),
+        showOmniToast(
+          context,
+          'Chưa cập nhật được ảnh đại diện. Vui lòng thử lại.',
         );
       }
     } finally {

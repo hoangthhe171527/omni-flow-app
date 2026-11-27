@@ -64,6 +64,12 @@ class FavoritesGroup extends StatelessWidget {
                           (canLongPressPlan?.call(f.plan) ?? true)
                       ? () => onLongPressPlan!(f.plan)
                       : null,
+                  // Lối hiện "…" cho sửa / xoá, không chỉ nhấn giữ.
+                  onActions:
+                      onLongPressPlan != null &&
+                          (canLongPressPlan?.call(f.plan) ?? true)
+                      ? () => onLongPressPlan!(f.plan)
+                      : null,
                 ),
             ],
           )

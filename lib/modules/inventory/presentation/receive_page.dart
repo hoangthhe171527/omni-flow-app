@@ -41,6 +41,28 @@ class _ReceivePageState extends ConsumerState<ReceivePage> {
   late DateTime _date = ref.read(inventoryTodayProvider);
   bool _saving = false;
 
+  /// Đã hoàn tất / đã đồng ý bỏ: cho rời màn không hỏi.
+  bool _leaving = false;
+
+  bool get _dirty =>
+      !_leaving &&
+      (_results.isNotEmpty || _serials.isNotEmpty || _claims.isNotEmpty);
+
+  /// Rời màn khi đã đánh dấu Thiếu / Lỗi, serial, khoản đòi: hỏi trước.
+  Future<void> _confirmLeave() async {
+    final leave = await showOmniConfirm(
+      context: context,
+      title: 'Bỏ kết quả nhận hàng?',
+      message: 'Đánh dấu Thiếu / Lỗi, serial và khoản đòi đã nhập sẽ mất.',
+      confirmLabel: 'Bỏ',
+      cancelLabel: 'Tiếp tục',
+      destructive: true,
+    );
+    if (!leave || !mounted) return;
+    setState(() => _leaving = true);
+    Navigator.of(context).maybePop();
+  }
+
   ReceiveResult _res(String id) => _results[id] ?? ReceiveResult.ok;
 
   void _toggle(String id, ReceiveResult r) => setState(() {
@@ -132,11 +154,21 @@ class _ReceivePageState extends ConsumerState<ReceivePage> {
       InvUi.toast(context, 'Nhập số ¥ được trừ cho cây lỗi.');
       return;
     }
-    setState(() => _saving = true);
     final count = {for (final r in ReceiveResult.values) r: 0};
     for (final u in units) {
       count[_res(u.id)] = count[_res(u.id)]! + 1;
     }
+    // Ghi sổ cả lô: hỏi một lần, nêu số (Xác nhận theo hệ quả).
+    final ok = await showOmniConfirm(
+      context: context,
+      title: 'Nhận ${lot.code}?',
+      message:
+          'Nhận ${count[ReceiveResult.ok]} · thiếu '
+          '${count[ReceiveResult.missing]} · lỗi ${count[ReceiveResult.defect]}',
+      confirmLabel: 'Ghi nhận',
+    );
+    if (!ok || !mounted) return;
+    setState(() => _saving = true);
     try {
       await ref
           .read(inventoryApiProvider)
@@ -169,7 +201,10 @@ class _ReceivePageState extends ConsumerState<ReceivePage> {
           ),
         );
       }
-      if (mounted) Navigator.of(context).maybePop();
+      if (mounted) {
+        setState(() => _leaving = true);
+        Navigator.of(context).maybePop();
+      }
     } catch (e) {
       if (mounted) {
         setState(() => _saving = false);
@@ -223,118 +258,131 @@ class _ReceivePageState extends ConsumerState<ReceivePage> {
       );
     }
 
-    return Scaffold(
-      appBar: OmniAppBar(
-        title: lot == null ? 'Nhận hàng' : 'Nhận hàng · ${lot.code}',
-        close: true,
-        showAccount: false,
-        fallbackBack: backToLot,
-        bottom: OmniSearchBottom(
-          fieldKey: const ValueKey('inv-receive-search'),
-          hint: 'Gõ serial hoặc model',
-          debounce: const Duration(milliseconds: 150),
-          onChanged: (v) => setState(() => _q = v),
-        ),
-      ),
-      // Nút chính trong khay kính đáy (rà soát 12/11) kèm tóm tắt kết quả,
-      // không treo lơ lửng trên danh sách.
-      body: OmniDockLayer(
-        dock: OmniBottomDock(
-          title: units.isEmpty
-              ? null
-              : '${units.where((u) => _res(u.id) == ReceiveResult.ok).length}/${units.length} cây đã nhận',
-          subtitle: () {
-            final miss = units
-                .where((u) => _res(u.id) == ReceiveResult.missing)
-                .length;
-            final bad = units
-                .where((u) => _res(u.id) == ReceiveResult.defect)
-                .length;
-            if (miss == 0 && bad == 0) return null;
-            return [
-              if (miss > 0) '$miss thiếu',
-              if (bad > 0) '$bad lỗi',
-            ].join(' · ');
-          }(),
-          action: FilledButton(
-            key: const ValueKey('inv-receive-finish'),
-            onPressed: lot == null || units.isEmpty || _saving
-                ? null
-                : () => _finish(lot, units, location: location),
-            child: const Text('Hoàn tất'),
+    return PopScope(
+      canPop: !_dirty,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _confirmLeave();
+      },
+      child: Scaffold(
+        appBar: OmniAppBar(
+          title: lot == null ? 'Nhận hàng' : 'Nhận hàng · ${lot.code}',
+          close: true,
+          showAccount: false,
+          fallbackBack: backToLot,
+          bottom: OmniSearchBottom(
+            fieldKey: const ValueKey('inv-receive-search'),
+            hint: 'Gõ serial hoặc model',
+            debounce: const Duration(milliseconds: 150),
+            onChanged: (v) => setState(() => _q = v),
           ),
         ),
-        body: Stack(
-          children: [
-            Positioned.fill(
-              child: ListView(
-                keyboardDismissBehavior:
-                    ScrollViewKeyboardDismissBehavior.onDrag,
-                padding: EdgeInsets.fromLTRB(
-                  16,
-                  12,
-                  16,
-                  OmniDockLayer.listBottom(context),
-                ),
-                children: [
-                  OmniGroupSection(
-                    children: [
-                      OmniGroupRow(
-                        key: const ValueKey('inv-receive-counts'),
-                        title:
-                            '${n(ReceiveResult.ok)} nhận · ${n(ReceiveResult.missing)} thiếu · ${n(ReceiveResult.defect)} lỗi',
-                      ),
-                      OmniGroupRow(
-                        title: 'Ngày nhập kho',
-                        value: InventoryFormat.dmy(
-                          InventoryFormat.isoDay(_date),
-                        ),
-                        onTap: _pickDate,
-                      ),
-                      OmniGroupRow(
-                        title: 'Tình trạng ban đầu',
-                        value: UnitCondition.labelOf(_condition),
-                        onTap: _pickCondition,
-                      ),
-                      if (location != null)
-                        OmniGroupRow(
-                          key: const ValueKey('inv-receive-location'),
-                          title: 'Nhận vào',
-                          value: location.name,
-                          onTap: () => _pickLocation(locations),
-                        ),
-                    ],
+        // Nút chính trong khay kính đáy (rà soát 12/11) kèm tóm tắt kết quả,
+        // không treo lơ lửng trên danh sách.
+        body: OmniDockLayer(
+          dock: OmniBottomDock(
+            title: units.isEmpty
+                ? null
+                : '${units.where((u) => _res(u.id) == ReceiveResult.ok).length}/${units.length} cây đã nhận',
+            subtitle: () {
+              final miss = units
+                  .where((u) => _res(u.id) == ReceiveResult.missing)
+                  .length;
+              final bad = units
+                  .where((u) => _res(u.id) == ReceiveResult.defect)
+                  .length;
+              if (miss == 0 && bad == 0) return null;
+              return [
+                if (miss > 0) '$miss thiếu',
+                if (bad > 0) '$bad lỗi',
+              ].join(' · ');
+            }(),
+            action: FilledButton(
+              key: const ValueKey('inv-receive-finish'),
+              onPressed: lot == null || units.isEmpty || _saving
+                  ? null
+                  : () => _finish(lot, units, location: location),
+              child: const Text('Hoàn tất'),
+            ),
+          ),
+          body: Stack(
+            children: [
+              Positioned.fill(
+                child: ListView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    12,
+                    16,
+                    OmniDockLayer.listBottom(context),
                   ),
-                  const SizedBox(height: OmniGroupSection.gap),
-                  if (units.isEmpty)
-                    unitsAsync.isLoading
-                        ? const InvSkeleton()
-                        : const OmniGroupSection(
-                            children: [OmniGroupRow(title: 'Chưa có cây')],
-                          )
-                  else
+                  children: [
                     OmniGroupSection(
                       children: [
-                        for (final u in ordered) ...[
-                          _ReceiveRow(
-                            key: ValueKey('inv-recv-${u.id}'),
-                            unit: u,
-                            serial: _serials[u.id] ?? u.serial,
-                            hit: hit(u),
-                            result: _res(u.id),
-                            onToggle: (r) => _toggle(u.id, r),
-                            onSerial: (s) async =>
-                                setState(() => _serials[u.id] = s),
+                        OmniGroupRow(
+                          key: const ValueKey('inv-receive-counts'),
+                          title:
+                              '${n(ReceiveResult.ok)} nhận · ${n(ReceiveResult.missing)} thiếu · ${n(ReceiveResult.defect)} lỗi',
+                        ),
+                        OmniGroupRow(
+                          title: 'Ngày nhập kho',
+                          value: InventoryFormat.dmy(
+                            InventoryFormat.isoDay(_date),
                           ),
-                          if (perms.claims && _res(u.id) != ReceiveResult.ok)
-                            ..._claimRows(u),
-                        ],
+                          onTap: _pickDate,
+                        ),
+                        OmniGroupRow(
+                          title: 'Tình trạng ban đầu',
+                          value: UnitCondition.labelOf(_condition),
+                          onTap: _pickCondition,
+                        ),
+                        if (location != null)
+                          OmniGroupRow(
+                            key: const ValueKey('inv-receive-location'),
+                            title: 'Nhận vào',
+                            value: location.name,
+                            onTap: () => _pickLocation(locations),
+                          ),
                       ],
                     ),
-                ],
+                    const SizedBox(height: OmniGroupSection.gap),
+                    if (units.isEmpty)
+                      unitsAsync.isLoading
+                          ? const InvSkeleton()
+                          : unitsAsync.hasError
+                          ? OmniErrorView(
+                              error: InvUi.error(unitsAsync.error!),
+                              onRetry: () => ref.invalidate(
+                                lotUnitsProvider(widget.lotId),
+                              ),
+                            )
+                          : const OmniGroupSection(
+                              children: [OmniGroupRow(title: 'Chưa có cây')],
+                            )
+                    else
+                      OmniGroupSection(
+                        children: [
+                          for (final u in ordered) ...[
+                            _ReceiveRow(
+                              key: ValueKey('inv-recv-${u.id}'),
+                              unit: u,
+                              serial: _serials[u.id] ?? u.serial,
+                              hit: hit(u),
+                              result: _res(u.id),
+                              onToggle: (r) => _toggle(u.id, r),
+                              onSerial: (s) async =>
+                                  setState(() => _serials[u.id] = s),
+                            ),
+                            if (perms.claims && _res(u.id) != ReceiveResult.ok)
+                              ..._claimRows(u),
+                          ],
+                        ],
+                      ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -443,7 +491,8 @@ class _ReceiveRow extends StatelessWidget {
             selected: result == ReceiveResult.missing,
             onTap: () => onToggle(ReceiveResult.missing),
           ),
-          const SizedBox(width: 6),
+          // Khe ≥ 8 giữa hai ô chạm (đứng ở kho: 12).
+          const SizedBox(width: 12),
           OmniChoicePill(
             key: ValueKey('inv-recv-defect-${u.id}'),
             label: 'Lỗi',

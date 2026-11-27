@@ -29,7 +29,7 @@ Future<void> requestAccountDeletion(BuildContext context) async {
         .requestAccountDeletion(password: password);
   } on AppException catch (error) {
     // `ValidationException` (sai mật khẩu…) là con của `AppException`.
-    messenger.showSnackBar(SnackBar(content: Text(error.message)));
+    showOmniToast(null, error.message, messenger: messenger);
   }
 }
 
@@ -72,32 +72,15 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
             controller: _password,
             obscureText: _obscure,
             autofocus: true,
+            // Nền, viền (≥ 3:1), bo 10 lấy từ `inputDecorationTheme` chung —
+            // không tự viền riêng.
             decoration: InputDecoration(
               labelText: 'Mật khẩu hiện tại',
-              filled: true,
-              fillColor: scheme.surfaceContainerHighest.withValues(alpha: 0.55),
-              // Ô nhập bo 10 (thang 6/10/16/32).
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: scheme.outlineVariant),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: scheme.outlineVariant),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: scheme.primary, width: 1.5),
-              ),
               suffixIcon: IconButton(
                 // Nhãn nói cả trạng thái — xem login_page.dart.
                 tooltip: _obscure ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
                 onPressed: () => setState(() => _obscure = !_obscure),
-                icon: Icon(
-                  _obscure
-                      ? LucideIcons.eye
-                      : LucideIcons.eyeOff,
-                ),
+                icon: Icon(_obscure ? LucideIcons.eye : LucideIcons.eyeOff),
               ),
             ),
             onChanged: (_) => setState(() {}),
@@ -113,8 +96,11 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
                 HapticFeedback.selectionClick();
                 setState(() => _confirmed = !_confirmed);
               },
-              child: Padding(
+              child: Container(
+                // Vùng chạm ≥ 44 kể cả khi câu xác nhận chỉ một dòng.
+                constraints: const BoxConstraints(minHeight: 44),
                 padding: const EdgeInsets.symmetric(vertical: 6),
+                alignment: Alignment.centerLeft,
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -125,19 +111,22 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
                         height: 22,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
+                          // Đã tick: nền đặc `accent-fill` + ✓ trắng (G10).
                           color: _confirmed
-                              ? OmniGlass.selectionOf(context)
+                              ? OmniColors.primaryFillOf(context)
                               : Colors.transparent,
                           border: Border.all(
-                            color: _confirmed ? scheme.primary : scheme.outline,
+                            color: _confirmed
+                                ? OmniColors.primaryFillOf(context)
+                                : scheme.outline,
                             width: 1.5,
                           ),
                         ),
                         child: _confirmed
-                            ? Icon(
+                            ? const Icon(
                                 LucideIcons.check,
                                 size: 14,
-                                color: scheme.primary,
+                                color: OmniColors.primaryForeground,
                               )
                             : null,
                       ),

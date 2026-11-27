@@ -108,7 +108,7 @@ class OpportunityRow extends ConsumerWidget {
                         maxLines: 2,
                         style: OmniType.micro.copyWith(
                           color: overdue
-                              ? scheme.error
+                              ? OmniColors.dangerTextOf(context)
                               : scheme.onSurfaceVariant,
                         ),
                       ),
@@ -151,11 +151,13 @@ class OpportunityRow extends ConsumerWidget {
       final stage = await pickOpportunityStage(context, ref, opportunity);
       if (stage == null) return;
       await actions.moveStage(opportunity, stage.code);
-      messenger.showSnackBar(
-        SnackBar(content: Text('Đã chuyển sang "${stage.label}".')),
+      showOmniToast(
+        null,
+        'Đã chuyển sang "${stage.label}".',
+        messenger: messenger,
       );
     } on AppException catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      showOmniToast(null, error.message, messenger: messenger);
     }
   }
 }

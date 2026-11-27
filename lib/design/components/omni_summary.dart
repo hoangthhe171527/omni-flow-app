@@ -195,8 +195,9 @@ class _Stat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    // Đang chọn = mực đậm hơn (D12), không màu nhấn: số không phải nút.
     final color = stat.active
-        ? scheme.primary
+        ? scheme.onSurface
         : stat.warning
         ? OmniColors.warningTextOf(context)
         : scheme.onSurface;
@@ -207,7 +208,11 @@ class _Stat extends StatelessWidget {
         // `stat` 15/600 — không thu nhỏ, hẹp thì xuống dòng ở dấu ngăn nghìn.
         _HeroAmount(
           amount: stat.value,
-          style: OmniType.money.copyWith(height: 1.4, color: color),
+          style: OmniType.money.copyWith(
+            height: 1.4,
+            color: color,
+            fontWeight: stat.active ? FontWeight.w700 : null,
+          ),
         ),
         Text(
           stat.label,
@@ -362,16 +367,8 @@ class OmniMoneyRow extends StatelessWidget {
       button: onTap != null,
       selected: selected,
       label: semanticsLabel,
-      child: ColoredBox(
-        color: selected
-            ? scheme.primary.withValues(
-                alpha: Theme.of(context).brightness == Brightness.dark
-                    ? .16
-                    : .10,
-              )
-            : Colors.transparent,
-        child: onTap == null ? row : InkWell(onTap: onTap, child: row),
-      ),
+      // Đang chọn = dấu ✓ cuối dòng; không tô nền dòng màu nhấn.
+      child: onTap == null ? row : InkWell(onTap: onTap, child: row),
     );
   }
 }

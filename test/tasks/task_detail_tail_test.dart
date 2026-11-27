@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
+import 'package:omni_app/design/tokens/tokens.dart';
 import 'package:omni_app/modules/tasks/application/task_controller.dart';
 import 'package:omni_app/modules/tasks/application/tasks_providers.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
@@ -226,15 +227,15 @@ void main() {
         final r = t.getRect(find.bySemanticsLabel('$n sao'));
         expect(r.left, greaterThanOrEqualTo(0), reason: '$n sao');
         expect(r.right, lessThanOrEqualTo(width), reason: '$n sao');
-        // Bản mẫu: sao 30×44 liền nhau (plan Việc mới, Global Constraints).
+        // Vùng chạm mỗi sao 44×44 (lõi Vùng ngón cái).
+        expect(r.width, greaterThanOrEqualTo(44));
         expect(r.height, greaterThanOrEqualTo(44));
       }
       final label = t.getRect(find.text('3/5 · 0 lượt'));
       expect(label.right, lessThanOrEqualTo(width));
-      expect(
-        t.getRect(find.bySemanticsLabel('5 sao')).right,
-        lessThanOrEqualTo(label.left),
-      );
+      // Nút thích nằm sau sao 5: cùng hàng bên phải, hoặc xuống hàng dưới.
+      final star5 = t.getRect(find.bySemanticsLabel('5 sao'));
+      expect(star5.right <= label.left || star5.bottom <= label.top, isTrue);
     });
 
     tw('rộng $width: ô tệp >= 44 và ảnh mang nhãn là tên tệp', (t) async {
@@ -286,7 +287,7 @@ void main() {
         ),
         findsNothing,
       );
-      // Viên kính nổi bo 27, nền .92 che chữ cuộn bên dưới.
+      // Viên nổi tròn hẳn (OmniRadius.pill), nền đặc che chữ cuộn bên dưới.
       final bar = t.widget<DecoratedBox>(
         find
             .descendant(
@@ -298,7 +299,7 @@ void main() {
       final deco = bar.decoration as BoxDecoration;
       // Nền đặc (bớt kính mờ 26/11): chữ cuộn bên dưới không lộ qua.
       expect(deco.color!.a, 1);
-      expect(deco.borderRadius, BorderRadius.circular(27));
+      expect(deco.borderRadius, OmniRadius.pillAll);
       expect(find.bySemanticsLabel('Chụp ảnh'), findsNothing);
       // Nhóm 2: nút ảnh đính kèm bình luận chưa có khoá API.
       expect(find.byTooltip('Đính kèm ảnh hoặc tệp'), findsNothing);

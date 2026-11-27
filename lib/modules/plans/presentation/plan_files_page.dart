@@ -200,9 +200,9 @@ class PlanFilesPage extends ConsumerWidget {
     try {
       await container.read(tasksApiProvider).deleteAttachment(task.id, file.id);
       container.invalidate(planTasksProvider(planId));
-      messenger.showSnackBar(const SnackBar(content: Text('Đã xoá tệp.')));
+      showOmniToast(null, 'Đã xoá tệp.', messenger: messenger);
     } on AppException catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      showOmniToast(null, error.message, messenger: messenger);
     }
   }
 }

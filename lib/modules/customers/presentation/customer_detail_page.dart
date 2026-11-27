@@ -112,12 +112,10 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
       } else {
         router.go('/customers');
       }
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            'Đã giao khách cho ${saved.ownerName ?? 'người khác'}.',
-          ),
-        ),
+      showOmniToast(
+        null,
+        'Đã giao khách cho ${saved.ownerName ?? 'người khác'}.',
+        messenger: messenger,
       );
       return;
     }
@@ -148,7 +146,7 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
     try {
       await _save(c, f, v, activity: activity, opps: opps);
     } catch (_) {
-      messenger.showSnackBar(const SnackBar(content: Text('Không lưu được.')));
+      showOmniToast(null, 'Không lưu được.', messenger: messenger);
     }
   }
 

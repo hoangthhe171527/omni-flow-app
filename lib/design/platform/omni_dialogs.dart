@@ -112,7 +112,9 @@ class OmniGlassAlert extends StatelessWidget {
         style: TextButton.styleFrom(
           minimumSize: const Size(0, 46),
           shape: const RoundedRectangleBorder(),
-          foregroundColor: a.destructive ? scheme.error : scheme.primary,
+          foregroundColor: a.destructive
+              ? OmniColors.dangerTextOf(context)
+              : scheme.primary,
           textStyle: OmniType.body.copyWith(
             fontSize: 16,
             fontWeight: a.strong ? FontWeight.w600 : FontWeight.w500,

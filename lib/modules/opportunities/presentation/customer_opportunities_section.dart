@@ -36,8 +36,8 @@ final opportunitiesCustomerSection = CustomerOpportunitiesSection(
       container.invalidate(customerOpportunitiesProvider(customerId)),
 );
 
-/// Đoạn Cơ hội của hồ sơ khách: danh sách `OpportunityRow`; rỗng (hoặc lỗi
-/// tải) → "Chưa có cơ hội" + nút Tạo cơ hội khi được tạo.
+/// Đoạn Cơ hội của hồ sơ khách: danh sách `OpportunityRow`; rỗng → "Chưa có
+/// cơ hội" + nút Tạo cơ hội khi được tạo; lỗi tải → báo lỗi + "Thử lại".
 class CustomerOpportunitiesTab extends ConsumerWidget {
   const CustomerOpportunitiesTab({super.key, required this.customerId});
 
@@ -59,7 +59,15 @@ class CustomerOpportunitiesTab extends ConsumerWidget {
         child: Center(child: CircularProgressIndicator.adaptive()),
       );
     }
-    // Lỗi đọc cơ hội = coi như chưa có (không chặn phần còn lại của hồ sơ).
+    // Lỗi đọc cơ hội: báo lỗi + "Thử lại" ngay trong đoạn (không giả làm
+    // rỗng, không chặn phần còn lại của hồ sơ).
+    if (opps.hasError && !opps.hasValue) {
+      return OmniErrorView(
+        error: opps.error!,
+        onRetry: () =>
+            ref.invalidate(customerOpportunitiesProvider(customerId)),
+      );
+    }
     final items = opps.valueOrNull ?? const [];
     if (items.isEmpty) {
       return Padding(

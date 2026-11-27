@@ -445,6 +445,10 @@ void main() {
         await t.pumpAndSettle();
         await t.tap(find.byKey(const ValueKey('inv-receive-finish')));
         await t.pumpAndSettle();
+        // Hỏi một lần, nêu số trước khi ghi sổ cả lô.
+        expect(find.text('Nhận 1 · thiếu 1 · lỗi 1'), findsOneWidget);
+        await t.tap(find.text('Ghi nhận'));
+        await t.pumpAndSettle();
         expect(api.receives.single['location_id'], 'p1');
         expect(api.receives.single['results'], [
           {'unit_id': 'b', 'result': 'missing', 'resolution': 'replace_later'},
@@ -465,6 +469,8 @@ void main() {
       expect(find.byKey(const ValueKey('inv-recv-claim-b')), findsNothing);
       expect(find.byKey(const ValueKey('inv-receive-location')), findsNothing);
       await t.tap(find.byKey(const ValueKey('inv-receive-finish')));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Ghi nhận'));
       await t.pumpAndSettle();
       expect(api.receives.single['location_id'], isNull);
       expect(api.receives.single['results'], [

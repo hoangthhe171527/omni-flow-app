@@ -181,7 +181,14 @@ void main() {
     await pickLong(t);
 
     expect(find.text('Đặt trước'), findsNothing);
-    expect(find.text('Tạo đơn'), findsOneWidget);
+    // Nút chính mang số tiền: "Tạo đơn · <tổng>".
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('inv-sell-save')),
+        matching: find.textContaining('Tạo đơn'),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('tạo nhanh khách từ chữ đã gõ', (t) async {

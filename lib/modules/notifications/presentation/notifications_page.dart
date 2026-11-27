@@ -158,7 +158,8 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
                         16,
                         OmniTopBarOverlap.of(context) + 4,
                         16,
-                        OmniSpacing.bottomSafe,
+                        // Phần thanh tab che + 24 (G9), không hằng 112.
+                        OmniFabLayer.listBottom(context, hasFab: false),
                       ),
                       sliver: SliverMainAxisGroup(
                         slivers: [
@@ -355,7 +356,7 @@ class NotificationRow extends StatelessWidget {
                         height: 38,
                         decoration: BoxDecoration(
                           color: tileBg,
-                          borderRadius: BorderRadius.circular(11),
+                          borderRadius: OmniRadius.mdAll,
                         ),
                         child: Icon(
                           _iconFor(notification),

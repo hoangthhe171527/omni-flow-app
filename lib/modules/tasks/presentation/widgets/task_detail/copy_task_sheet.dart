@@ -406,7 +406,7 @@ class _CopyTaskSheetState extends ConsumerState<CopyTaskSheet> {
           onPressed: canSubmit
               ? () => _submit(extended: extended, people: people)
               : null,
-          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(50)),
           child: const Text('Sao chép'),
         ),
         children: [
@@ -688,7 +688,9 @@ class _CopyTaskSheetState extends ConsumerState<CopyTaskSheet> {
           padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Text(
             'Ngày kết thúc phải từ ngày bắt đầu trở đi.',
-            style: OmniType.caption.copyWith(color: scheme.error),
+            style: OmniType.caption.copyWith(
+              color: OmniColors.dangerTextOf(context),
+            ),
           ),
         ),
     ];

@@ -155,18 +155,18 @@ class _FilesCardState extends ConsumerState<FilesCard> {
     try {
       await container.read(tasksApiProvider).attach(task.id, path);
       await container.read(taskDetailProvider(task.id).notifier).refresh();
-      messenger.showSnackBar(const SnackBar(content: Text('Đã đính kèm ảnh.')));
+      showOmniToast(null, 'Đã đính kèm ảnh.', messenger: messenger);
     } on AppException catch (error) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            failureText(error, 'Chưa gửi được ảnh. Thử lại khi có mạng.'),
-          ),
-        ),
+      showOmniToast(
+        null,
+        failureText(error, 'Chưa gửi được ảnh. Thử lại khi có mạng.'),
+        messenger: messenger,
       );
     } on Object {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Chưa gửi được ảnh. Vui lòng thử lại.')),
+      showOmniToast(
+        null,
+        'Chưa gửi được ảnh. Vui lòng thử lại.',
+        messenger: messenger,
       );
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -204,9 +204,9 @@ class _FilesCardState extends ConsumerState<FilesCard> {
 
     try {
       await controller.deleteAttachment(file.id);
-      messenger.showSnackBar(const SnackBar(content: Text('Đã xoá tệp.')));
+      showOmniToast(null, 'Đã xoá tệp.', messenger: messenger);
     } on AppException catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      showOmniToast(null, error.message, messenger: messenger);
     }
   }
 }

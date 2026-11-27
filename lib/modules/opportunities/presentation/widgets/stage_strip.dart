@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../../../design/components/components.dart';
-import '../../../../design/platform/omni_motion_scope.dart';
 import '../../../../design/tokens/contrast.dart';
-import '../../../../design/tokens/tokens.dart';
 import '../../domain/opportunity.dart';
 import '../../domain/pipeline_catalog.dart';
 
@@ -73,10 +70,8 @@ class StageStrip extends StatelessWidget {
               count: allCount,
               semanticsLabel: 'Tất cả, ${allCount ?? 0} cơ hội',
               selected: selected == null,
-              onTap: () {
-                HapticFeedback.selectionClick();
-                onSelected(null);
-              },
+              // Rung nhẹ đã có trong OmniFilterPill.
+              onTap: () => onSelected(null),
             ),
           for (final stage in stages)
             _StageChip(
@@ -85,10 +80,8 @@ class StageStrip extends StatelessWidget {
               semanticsLabel:
                   '${stage.label}, ${summary?.totalFor(stage.code).count ?? 0} cơ hội',
               selected: stage.code == selected,
-              onTap: () {
-                HapticFeedback.selectionClick();
-                onSelected(stage.code == selected ? null : stage.code);
-              },
+              onTap: () =>
+                  onSelected(stage.code == selected ? null : stage.code),
             ),
         ],
       ),
@@ -96,8 +89,8 @@ class StageStrip extends StatelessWidget {
   }
 }
 
-/// Chip kính cùng dáng `OmniChoicePill`, nhưng tên và số là hai mẩu chữ riêng
-/// (số mờ hơn, chữ số đều) để tên giai đoạn đứng một mình.
+/// Chip lọc giai đoạn = [OmniFilterPill] (viên mực đặc khi chọn — D12),
+/// giữ nhãn trợ năng "tên, n cơ hội".
 class _StageChip extends StatelessWidget {
   const _StageChip({
     required this.label,
@@ -115,82 +108,19 @@ class _StageChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final motion = OmniMotion.enabled(context);
-    final base = scheme.onSurface.withValues(alpha: dark ? .08 : .05);
-    final count = this.count;
-
     return Padding(
       padding: const EdgeInsets.only(right: 8),
-      child: SizedBox(
-        height: 44,
-        child: Center(
-          widthFactor: 1,
-          child: Semantics(
-            button: true,
-            selected: selected,
-            label: semanticsLabel,
-            onTap: onTap,
-            excludeSemantics: true,
-            child: Material(
-              type: MaterialType.transparency,
-              child: InkWell(
-                customBorder: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(10)),
-                ),
-                onTap: onTap,
-                child: AnimatedContainer(
-                  duration: motion
-                      ? const Duration(milliseconds: 160)
-                      : Duration.zero,
-                  constraints: const BoxConstraints(minHeight: 36),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 7,
-                  ),
-                  // Chip chọn (spec phong cách iOS §3.4): bo 10; đang chọn =
-                  // nền xanh nhạt, chữ xanh, viền xanh 1.5.
-                  decoration: BoxDecoration(
-                    color: selected ? OmniGlass.selectionOf(context) : base,
-                    borderRadius: const BorderRadius.all(Radius.circular(10)),
-                    border: selected
-                        ? Border.all(color: scheme.primary, width: 1.5)
-                        : null,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        label,
-                        style: OmniType.chip.copyWith(
-                          fontWeight: selected
-                              ? FontWeight.w600
-                              : FontWeight.w500,
-                          color: selected
-                              ? scheme.primary
-                              : scheme.onSurfaceVariant,
-                        ),
-                      ),
-                      if (count != null) ...[
-                        const SizedBox(width: 6),
-                        Text(
-                          '$count',
-                          style: OmniType.chip.copyWith(
-                            fontWeight: FontWeight.w500,
-                            color: selected
-                                ? scheme.primary
-                                : scheme.onSurfaceVariant,
-                            fontFeatures: OmniType.tabular,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
+      child: Semantics(
+        button: true,
+        selected: selected,
+        label: semanticsLabel,
+        onTap: onTap,
+        excludeSemantics: true,
+        child: OmniFilterPill(
+          label: label,
+          count: count,
+          selected: selected,
+          onTap: onTap,
         ),
       ),
     );

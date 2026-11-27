@@ -83,32 +83,51 @@ class ConversationActions {
   }, 'Đã đánh dấu đã đọc.');
 
   /// "Lưu trữ" = đóng hội thoại; máy chủ không có trạng thái lưu trữ riêng.
-  Future<void> setArchived(Conversation c, bool archived) => _run(
+  Future<void> setArchived(
+    Conversation c,
+    bool archived, {
+    bool undoable = true,
+  }) => _run(
     () => _api.setStatus(
       c.id,
       archived ? ConversationStatus.closed : ConversationStatus.open,
     ),
     archived ? 'Đã lưu trữ hội thoại.' : 'Đã mở lại hội thoại.',
+    undo: undoable ? () => setArchived(c, !archived, undoable: false) : null,
   );
 
   /// Đánh dấu chưa đọc (dùng chung cả đội). Trả `true` khi server đã nhận.
-  Future<bool> markUnread(Conversation c) => _run(() async {
-    final count = await _api.markUnread(c.id);
-    return _latest(c).copyWith(unread: count < 1 ? 1 : count);
-  }, 'Đã đánh dấu chưa đọc.');
+  Future<bool> markUnread(Conversation c) => _run(
+    () async {
+      final count = await _api.markUnread(c.id);
+      return _latest(c).copyWith(unread: count < 1 ? 1 : count);
+    },
+    'Đã đánh dấu chưa đọc.',
+    undo: () => markRead(c),
+  );
 
   /// Ghim / bỏ ghim cho riêng mình. Vượt trần → 422 `pin_limit_reached`, báo
   /// đúng câu của server (qua [AppException.message]).
-  Future<bool> setPinned(Conversation c, bool on) => _run(() async {
-    final pinned = await _api.setPinned(c.id, on);
-    return _latest(c).copyWith(isPinned: pinned);
-  }, on ? 'Đã ghim hội thoại.' : 'Đã bỏ ghim.');
+  Future<bool> setPinned(Conversation c, bool on, {bool undoable = true}) =>
+      _run(
+        () async {
+          final pinned = await _api.setPinned(c.id, on);
+          return _latest(c).copyWith(isPinned: pinned);
+        },
+        on ? 'Đã ghim hội thoại.' : 'Đã bỏ ghim.',
+        undo: undoable ? () => setPinned(c, !on, undoable: false) : null,
+      );
 
   /// Tắt (`on`) / bật thông báo cho riêng mình.
-  Future<bool> setMuted(Conversation c, bool on) => _run(() async {
-    final muted = await _api.setMuted(c.id, on);
-    return _latest(c).copyWith(isMuted: muted);
-  }, on ? 'Đã tắt thông báo.' : 'Đã bật thông báo.');
+  Future<bool> setMuted(Conversation c, bool on, {bool undoable = true}) =>
+      _run(
+        () async {
+          final muted = await _api.setMuted(c.id, on);
+          return _latest(c).copyWith(isMuted: muted);
+        },
+        on ? 'Đã tắt thông báo.' : 'Đã bật thông báo.',
+        undo: undoable ? () => setMuted(c, !on, undoable: false) : null,
+      );
 
   /// "Chặn hội thoại" — CHỈ trong CRM: hội thoại ẩn khỏi Hộp thư của cả đội,
   /// tin mới vẫn lưu nhưng không báo. Không chặn khách trên nền tảng. Chặn
@@ -179,7 +198,11 @@ class ConversationActions {
 
   /// Gọi API → vá cả hai mục (danh sách chính + "Đã ghim") → làm mới hội
   /// thoại đang mở → báo. `true` khi server đã nhận; lỗi thì chỉ báo lỗi.
-  Future<bool> _run(Future<Conversation> Function() call, String done) async {
+  Future<bool> _run(
+    Future<Conversation> Function() call,
+    String done, {
+    VoidCallback? undo,
+  }) async {
     final Conversation updated;
     try {
       updated = await call();
@@ -202,13 +225,19 @@ class ConversationActions {
       }
       _container.invalidate(conversationProvider(updated.id));
     } catch (_) {}
-    _say(done);
+    _say(done, undo: undo);
     return true;
   }
 
-  void _say(String text) {
-    if (!_messenger.mounted) return;
-    _messenger.showSnackBar(SnackBar(content: Text(text)));
+  /// Toast; thao tác đảo được thì kèm "Hoàn tác" (G12 — xác nhận theo hệ quả).
+  void _say(String text, {VoidCallback? undo}) {
+    showOmniToast(
+      null,
+      text,
+      messenger: _messenger,
+      actionLabel: undo == null ? null : omniUndoLabel,
+      onAction: undo,
+    );
   }
 }
 
@@ -348,17 +377,15 @@ Future<void> convertConversation(
       container.invalidate(conversationProvider(conversationId));
     } catch (_) {}
     if (!messenger.mounted) return;
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          result.linkedExisting
-              ? 'Đã liên kết với khách hàng có sẵn.'
-              : 'Đã tạo khách hàng mới.',
-        ),
-      ),
+    showOmniToast(
+      null,
+      result.linkedExisting
+          ? 'Đã liên kết với khách hàng có sẵn.'
+          : 'Đã tạo khách hàng mới.',
+      messenger: messenger,
     );
   } on AppException catch (error) {
     if (!messenger.mounted) return;
-    messenger.showSnackBar(SnackBar(content: Text(error.message)));
+    showOmniToast(null, error.message, messenger: messenger);
   }
 }

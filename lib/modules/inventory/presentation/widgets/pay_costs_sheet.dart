@@ -133,7 +133,9 @@ class _PayCostsSheetState extends ConsumerState<PayCostsSheet> {
         onPressed: _amounts.values.every((v) => v > 0) && !_saving
             ? _save
             : null,
-        child: const Text('Ghi đã trả'),
+        child: Text(
+          total > 0 ? 'Ghi đã trả · ${InvUi.vnd(total)}' : 'Ghi đã trả',
+        ),
       ),
       children: [
         OmniGroupSection(

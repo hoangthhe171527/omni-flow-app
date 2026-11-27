@@ -22,6 +22,14 @@ class OmniTintedButtons extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    // Nền nút ĐẶC: ở Tối `scheme.primary` là xanh CHỮ (#5E9BFF, chữ đen trên
+    // nó) — nút đặc phải dùng `accent-fill` + chữ trắng như nút ngoài sheet.
+    final fill = OmniColors.byBrightness(
+      context,
+      scheme.primary,
+      OmniColors.primaryFillOf(context),
+    );
+    const onFill = OmniColors.primaryForeground;
     return Theme(
       data: theme.copyWith(
         filledButtonTheme: FilledButtonThemeData(
@@ -34,16 +42,14 @@ class OmniTintedButtons extends StatelessWidget {
             backgroundColor: WidgetStateProperty.resolveWith(
               (s) => s.contains(WidgetState.disabled)
                   ? scheme.onSurface.withValues(alpha: .10)
-                  : scheme.primary,
+                  : fill,
             ),
             foregroundColor: WidgetStateProperty.resolveWith(
               (s) => s.contains(WidgetState.disabled)
                   ? scheme.onSurface.withValues(alpha: .38)
-                  : scheme.onPrimary,
+                  : onFill,
             ),
-            overlayColor: WidgetStatePropertyAll(
-              scheme.onPrimary.withValues(alpha: .12),
-            ),
+            overlayColor: WidgetStatePropertyAll(onFill.withValues(alpha: .12)),
           ),
         ),
         outlinedButtonTheme: OutlinedButtonThemeData(
@@ -56,6 +62,26 @@ class OmniTintedButtons extends StatelessWidget {
         ),
       ),
       child: child,
+    );
+  }
+
+  /// Chiều cao nút ĐÁY (khay đáy màn, chân sheet): lõi 50–56, thân giữ 48.
+  static const dockHeight = 52.0;
+
+  /// Nâng mọi nút trong [child] lên [dockHeight], giữ nguyên màu của theme.
+  static Widget dock(BuildContext context, Widget child) {
+    const size = WidgetStatePropertyAll(Size.fromHeight(dockHeight));
+    final filled = FilledButtonTheme.of(context).style ?? const ButtonStyle();
+    final outlined =
+        OutlinedButtonTheme.of(context).style ?? const ButtonStyle();
+    return FilledButtonTheme(
+      data: FilledButtonThemeData(style: filled.copyWith(minimumSize: size)),
+      child: OutlinedButtonTheme(
+        data: OutlinedButtonThemeData(
+          style: outlined.copyWith(minimumSize: size),
+        ),
+        child: child,
+      ),
     );
   }
 

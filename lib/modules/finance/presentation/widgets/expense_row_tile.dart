@@ -423,7 +423,12 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
       return const OmniStatusLabel(label: 'Hoàn/giảm');
     }
     if (left <= 0) {
-      return Icon(LucideIcons.check, size: 16, color: p.ok);
+      return Icon(
+        LucideIcons.check,
+        size: 16,
+        color: p.ok,
+        semanticLabel: 'Đã trả đủ',
+      );
     }
     if (paid > 0) {
       return OmniStatusLabel(

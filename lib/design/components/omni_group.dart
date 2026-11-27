@@ -530,7 +530,7 @@ class OmniSheetBody extends StatelessWidget {
         if (footer != null)
           Padding(
             padding: const EdgeInsets.fromLTRB(10, 12, 10, 14),
-            child: footer,
+            child: OmniTintedButtons.dock(context, footer!),
           ),
       ],
     );

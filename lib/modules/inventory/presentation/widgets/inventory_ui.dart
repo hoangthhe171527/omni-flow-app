@@ -12,9 +12,7 @@ import '../../domain/inventory_models.dart';
 /// Mẩu giao diện dùng chung của Kho: thông báo ngắn, câu lỗi, tiền, dòng phụ.
 abstract final class InvUi {
   static void toast(BuildContext context, String message) {
-    ScaffoldMessenger.maybeOf(context)
-      ?..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    showOmniToast(context, message);
   }
 
   static String error(Object e) =>
@@ -34,15 +32,6 @@ abstract final class InvUi {
     UnitCondition.refurbishing => OmniTone.info,
     UnitCondition.sealed || null => OmniTone.neutral,
   };
-
-  static Color? conditionColor(BuildContext context, UnitCondition? c) =>
-      switch (c) {
-        UnitCondition.ready => OmniColors.successTextOf(context),
-        UnitCondition.refurbishing => Theme.of(context).colorScheme.primary,
-        UnitCondition.defective => OmniColors.warningTextOf(context),
-        UnitCondition.missing => OmniColors.dangerTextOf(context),
-        _ => null,
-      };
 
   /// Rút gọn tên loại dài cho dòng phụ (`Piano Upright cũ` → `Upright`).
   static String shortCategory(String? c) => switch (c) {
@@ -275,7 +264,7 @@ class InvMutedRow extends StatelessWidget {
   );
 }
 
-/// Nút thả xuống của hàng lọc: kính trắng mờ khi đang lọc, mũi tên ▾.
+/// Nút thả xuống của hàng lọc: đang lọc = viên mực đặc (D12), mũi tên ▾.
 class InvDropPill extends StatelessWidget {
   const InvDropPill({
     super.key,
@@ -308,12 +297,13 @@ class InvDropPill extends StatelessWidget {
             onTap();
           },
           child: Container(
-            constraints: const BoxConstraints(minHeight: 40),
+            constraints: const BoxConstraints(minHeight: 44),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            // Chip lọc: nền đặc, đang lọc = xanh nhạt chữ xanh (spec §3.4).
+            // Chip lọc: nền đặc, đang lọc = viên mực đặc chữ nền (D12, như
+            // OmniFilterPill); vùng chạm 44.
             decoration: active
                 ? BoxDecoration(
-                    color: OmniGlass.selectionOf(context),
+                    color: scheme.onSurface,
                     borderRadius: BorderRadius.circular(999),
                   )
                 : BoxDecoration(
@@ -331,7 +321,7 @@ class InvDropPill extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: OmniType.chip.copyWith(
                       fontWeight: active ? FontWeight.w600 : FontWeight.w500,
-                      color: active ? scheme.primary : scheme.onSurfaceVariant,
+                      color: active ? scheme.surface : scheme.onSurfaceVariant,
                     ),
                   ),
                 ),
@@ -339,7 +329,7 @@ class InvDropPill extends StatelessWidget {
                 Icon(
                   LucideIcons.chevronDown,
                   size: 16,
-                  color: scheme.onSurfaceVariant,
+                  color: active ? scheme.surface : scheme.onSurfaceVariant,
                 ),
               ],
             ),
@@ -350,7 +340,7 @@ class InvDropPill extends StatelessWidget {
   }
 }
 
-/// Bộ đếm −  n  + (số lượng cây) trong khay viên thuốc mặt kính gọn.
+/// Bộ đếm −  n  + (số lượng cây) trong khay viên thuốc nền đặc; nút 44.
 class InvStepper extends StatelessWidget {
   const InvStepper({
     super.key,
@@ -374,12 +364,16 @@ class InvStepper extends StatelessWidget {
     Widget btn(IconData icon, String tip, int next, bool enabled) => IconButton(
       tooltip: tip,
       onPressed: enabled ? () => onChanged(next) : null,
-      constraints: const BoxConstraints.tightFor(width: 40, height: 40),
+      constraints: const BoxConstraints.tightFor(width: 44, height: 44),
       padding: EdgeInsets.zero,
       icon: Container(
         width: 32,
         height: 32,
-        decoration: OmniGlass.buttonDecoration(context, radius: 16),
+        // Nút tròn nền đặc trên khay xám (không kính trên nội dung).
+        decoration: BoxDecoration(
+          color: scheme.surface,
+          shape: BoxShape.circle,
+        ),
         child: Icon(
           icon,
           size: 17,

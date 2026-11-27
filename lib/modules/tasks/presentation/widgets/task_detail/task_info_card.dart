@@ -355,11 +355,10 @@ class _Time extends StatelessWidget {
   }
 }
 
-/// Năm sao 22 (vùng chạm 28×44, liền nhau) + "n/5 · m lượt" là nút thích.
+/// Năm sao 22 (vùng chạm 44×44, liền nhau) + "n/5 · m lượt" là nút thích.
 ///
-/// Bản mẫu vẽ ô sao 30; ở 390 với Be Vietnam Pro thật, 5×30 cộng "4/5 · 3
-/// lượt" vượt ô giá trị (~224) vài px và chữ rớt dòng. 28 giữ chữ một dòng;
-/// sao vẫn 22.
+/// Vùng chạm 44 là sàn (lõi Vùng ngón cái): 5×44 = 220 gần hết ô giá trị
+/// (~224) ở 390, nên nút thích xuống dòng dưới sao khi không vừa (Wrap).
 class _Rating extends StatelessWidget {
   const _Rating({
     required this.rating,
@@ -398,8 +397,11 @@ class _Rating extends StatelessWidget {
     Color secondary,
     ColorScheme scheme,
   ) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
+    return Wrap(
+      alignment: WrapAlignment.end,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      // Sao và nút thích là con trực tiếp của Wrap: màn hẹp thì xuống dòng,
+      // không tràn.
       children: [
         for (var n = 1; n <= 5; n++)
           Semantics(
@@ -411,7 +413,7 @@ class _Rating extends StatelessWidget {
               behavior: HitTestBehavior.opaque,
               onTap: onRate == null ? null : () => onRate!(n),
               child: SizedBox(
-                width: 28,
+                width: 44,
                 height: 44,
                 child: Center(
                   child: Icon(
@@ -424,31 +426,27 @@ class _Rating extends StatelessWidget {
               ),
             ),
           ),
-        Flexible(
-          child: Semantics(
-            button: onLike != null,
-            toggled: likedByMe,
-            label: 'Thích việc này, $likes lượt',
-            excludeSemantics: true,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: onLike,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 44, minWidth: 48),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(4, 0, 6, 0),
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    widthFactor: 1,
-                    child: Text(
-                      text,
-                      textAlign: TextAlign.right,
-                      style: OmniType.micro.copyWith(
-                        fontWeight: likedByMe
-                            ? FontWeight.w600
-                            : FontWeight.w400,
-                        color: likedByMe ? scheme.primary : secondary,
-                      ),
+        Semantics(
+          button: onLike != null,
+          toggled: likedByMe,
+          label: 'Thích việc này, $likes lượt',
+          excludeSemantics: true,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onLike,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 44, minWidth: 48),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(4, 0, 6, 0),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  widthFactor: 1,
+                  child: Text(
+                    text,
+                    textAlign: TextAlign.right,
+                    style: OmniType.micro.copyWith(
+                      fontWeight: likedByMe ? FontWeight.w600 : FontWeight.w400,
+                      color: likedByMe ? scheme.primary : secondary,
                     ),
                   ),
                 ),
@@ -539,7 +537,7 @@ class _TimeSheetState extends State<_TimeSheet> {
           onPressed: () => Navigator.of(
             context,
           ).pop(TaskTimeChoice(start: _start, due: _due)),
-          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(50)),
           child: const Text('Lưu'),
         ),
         children: [

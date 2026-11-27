@@ -6,6 +6,7 @@ import 'package:omni_app/core/error/app_exception.dart';
 import 'package:omni_app/core/network/api_envelope.dart';
 import 'package:go_router/go_router.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
+import 'package:omni_app/design/tokens/omni_colors.dart';
 import 'package:omni_app/modules/plans/application/plans_providers.dart';
 import 'package:omni_app/modules/plans/data/plans_api.dart';
 import 'package:omni_app/modules/plans/domain/plan.dart';
@@ -275,7 +276,8 @@ void main() {
     final close = tester.widget<Text>(find.text('Đóng kế hoạch'));
     expect(
       close.style?.color,
-      Theme.of(tester.element(menu)).colorScheme.error,
+      // Chữ đỏ = token CHỮ (≥ 4.5:1 cả Tối), không `scheme.error` (nền).
+      OmniColors.dangerTextOf(tester.element(menu)),
     );
     expect(close.style?.fontSize, 15);
     expect(close.style?.fontWeight, FontWeight.w500);

@@ -127,7 +127,10 @@ class _RecordPaymentSheetState extends ConsumerState<RecordPaymentSheet> {
       footer: FilledButton(
         key: const ValueKey('pay-save'),
         onPressed: _amount <= 0 || over || _saving ? null : _save,
-        child: const Text('Ghi thu'),
+        // Nút mang số tiền ("<Việc> · <số tiền>").
+        child: Text(
+          _amount > 0 ? 'Ghi thu · ${Formatters.vnd(_amount)}' : 'Ghi thu',
+        ),
       ),
       children: [
         Semantics(

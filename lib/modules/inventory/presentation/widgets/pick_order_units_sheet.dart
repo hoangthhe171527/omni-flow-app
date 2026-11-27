@@ -39,6 +39,7 @@ class _PickOrderUnitsSheetState extends ConsumerState<_PickOrderUnitsSheet> {
   bool _loading = true;
   Object? _error;
   int _seq = 0;
+  String _q = '';
 
   @override
   void initState() {
@@ -48,6 +49,7 @@ class _PickOrderUnitsSheetState extends ConsumerState<_PickOrderUnitsSheet> {
 
   Future<void> _load(String q) async {
     final seq = ++_seq;
+    _q = q;
     setState(() {
       _loading = true;
       _error = null;
@@ -128,8 +130,10 @@ class _PickOrderUnitsSheetState extends ConsumerState<_PickOrderUnitsSheet> {
         else if (_loading)
           const InvSkeleton(count: 3, height: 56)
         else if (_error != null)
-          OmniGroupSection(
-            children: [OmniGroupRow(title: InvUi.error(_error!))],
+          // Lỗi tải có "Thử lại" (Năm trạng thái).
+          OmniErrorView(
+            error: InvUi.error(_error!),
+            onRetry: () => unawaited(_load(_q)),
           )
         else
           const OmniGroupSection(

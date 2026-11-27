@@ -107,7 +107,12 @@ Widget _groupField({
               ),
             ),
             if (required)
-              Text(' *', style: OmniType.caption.copyWith(color: scheme.error)),
+              Text(
+                ' *',
+                style: OmniType.caption.copyWith(
+                  color: OmniColors.dangerTextOf(context),
+                ),
+              ),
           ],
         ),
         const SizedBox(height: 4),

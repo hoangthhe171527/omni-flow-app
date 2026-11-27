@@ -194,12 +194,32 @@ Color? hrDayDot(BuildContext context, HrDay? day) {
     'w' when day.isLate => OmniColors.warningTextOf(context),
     'w' when day.hasOt => OmniTaskTones.of(context).violet.foreground,
     'w' => OmniColors.successTextOf(context),
-    'p' || 'le' => scheme.primary,
+    // Phép / lễ: tông thông tin, không màu nhấn (Màu bốn nghĩa).
+    'p' || 'le' => _infoMark(context),
     'k' => scheme.onSurfaceVariant,
     'x' => OmniColors.dangerTextOf(context),
     _ => null,
   };
 }
+
+Color _infoMark(BuildContext context) => OmniTone.info
+    .resolve(
+      Theme.of(context).colorScheme,
+      dark: Theme.of(context).brightness == Brightness.dark,
+    )
+    .$1;
+
+/// Nghĩa của chấm ngày cho trình đọc màn hình (không chỉ dựa màu).
+String? _dayMeaning(HrDay? day) => switch (day?.status) {
+  'w' when day!.isLate => 'đi muộn',
+  'w' when day!.hasOt => 'tăng ca',
+  'w' => 'đủ công',
+  'p' => 'nghỉ phép',
+  'le' => 'ngày lễ',
+  'k' => 'nghỉ không lương',
+  'x' => 'thiếu chấm',
+  _ => null,
+};
 
 /// Lịch tháng: hàng T2…CN, mỗi ô một số ngày + chấm màu.
 class HrCalendar extends StatelessWidget {
@@ -266,9 +286,10 @@ class HrCalendar extends StatelessWidget {
       children: [
         Text(
           '$d',
+          // Hôm nay: chữ mực đậm (không màu nhấn).
           style: OmniType.body.copyWith(
-            color: isToday ? scheme.primary : color,
-            fontWeight: isToday ? FontWeight.w600 : FontWeight.w500,
+            color: isToday ? scheme.onSurface : color,
+            fontWeight: isToday ? FontWeight.w800 : FontWeight.w500,
             fontFeatures: OmniType.tabular,
           ),
         ),
@@ -286,7 +307,7 @@ class HrCalendar extends StatelessWidget {
     if (!tappable) return content;
     return Semantics(
       button: true,
-      label: 'Ngày $d',
+      label: ['Ngày $d', if (isToday) 'hôm nay', ?_dayMeaning(day)].join(', '),
       child: InkWell(
         borderRadius: BorderRadius.circular(10),
         onTap: () => onDay(day),
@@ -306,7 +327,7 @@ class HrCalendarLegend extends StatelessWidget {
       ('Đủ', OmniColors.successTextOf(context)),
       ('Muộn', OmniColors.warningTextOf(context)),
       ('Tăng ca', OmniTaskTones.of(context).violet.foreground),
-      ('Phép', scheme.primary),
+      ('Phép', _infoMark(context)),
       ('Thiếu chấm', OmniColors.dangerTextOf(context)),
     ];
     return Padding(
