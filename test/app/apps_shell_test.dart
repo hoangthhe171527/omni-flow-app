@@ -10,6 +10,7 @@ import 'package:omni_app/core/module/module_route.dart';
 import 'package:omni_app/core/module/nav_destination.dart';
 import 'package:omni_app/core/module/omni_module.dart';
 import 'package:omni_app/design/components/components.dart';
+import 'package:omni_app/core/storage/preferences_store.dart';
 import 'package:omni_app/security/guard/access_requirement.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
 import 'package:omni_app/security/session/session.dart';
@@ -25,7 +26,11 @@ Finder _tab(String name) =>
     find.bySemanticsLabel(RegExp('^${RegExp.escape(name)}(,|\$)'));
 
 void main() {
-  setUp(() => SharedPreferences.setMockInitialValues({}));
+  late SharedPreferences prefs;
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    prefs = await SharedPreferences.getInstance();
+  });
 
   const allCaps = {
     appsManifestCapability,
@@ -44,6 +49,7 @@ void main() {
     Set<String> caps = allCaps,
   }) => Session(
     status: SessionStatus.authenticated,
+    user: const SessionUser(id: 'u1', fullName: 'Lan', email: 'lan@a.vn'),
     tenant: const SessionTenant(id: 't1', name: 'Công ty Sao Mai'),
     policy: AccessPolicy(permissions),
     features: {appShellFeature: shell},
@@ -54,6 +60,7 @@ void main() {
       ProviderContainer(
         overrides: [
           modulesProvider.overrideWithValue(const [_FakeModule()]),
+          sharedPreferencesProvider.overrideWithValue(prefs),
           sessionProvider.overrideWithValue(s),
           appManifestProvider.overrideWith(
             (ref) async =>
@@ -201,7 +208,7 @@ void main() {
         return landingPath(c.read(Provider<Ref>((ref) => ref)));
       }
 
-      expect(landing(session()), '/apps');
+      expect(landing(session()), '/apps?resume=1');
       expect(landing(session(shell: false)), '/home');
       expect(landing(session(caps: {'inventory'})), '/home');
     });
@@ -214,7 +221,7 @@ void main() {
       final c = containerFor(session());
       addTearDown(c.dispose);
 
-      expect(await boot(tester, c), '/apps');
+      expect(await boot(tester, c), '/apps?resume=1');
       expect(find.text('Bàn làm việc'), findsOneWidget);
       expect(find.text('Kho'), findsOneWidget);
       expect(find.text('Công ty Sao Mai'), findsOneWidget);
@@ -268,6 +275,47 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('app-switch-button')));
       await settle(tester);
       expect(find.byKey(const ValueKey('app-tile-home')), findsOneWidget);
+    });
+
+    testWidgets(
+      'mở lại: vào thẳng ứng dụng dùng lần trước; nút lưới vẫn ra lưới',
+      (tester) async {
+        final c = containerFor(session());
+        addTearDown(c.dispose);
+        await c.read(lastAppStoreProvider).write('stock');
+
+        expect(await boot(tester, c), isNot(startsWith('/apps')));
+        expect(find.text('page Hàng sắp về'), findsOneWidget);
+        expect(find.byKey(const ValueKey('app-tile-home')), findsNothing);
+
+        // Chủ động bấm nút lưới: hiện lưới, không tự nhảy lại.
+        await tester.tap(find.byKey(const ValueKey('app-switch-button')));
+        await settle(tester);
+        expect(find.byKey(const ValueKey('app-tile-home')), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'mở lại: nhớ theo người + công ty; ứng dụng đã mất thì ra lưới',
+      (tester) async {
+        final c = containerFor(session());
+        addTearDown(c.dispose);
+        // Ghi cho công ty khác và một ứng dụng không còn trong lưới.
+        await prefs.setString('omni.apps.last_app.u1.t2', 'stock');
+        await c.read(lastAppStoreProvider).write('finance');
+
+        expect(await boot(tester, c), '/apps?resume=1');
+        expect(find.byKey(const ValueKey('app-tile-home')), findsOneWidget);
+      },
+    );
+
+    testWidgets('chọn ô thì nhớ cho lần sau', (tester) async {
+      final c = containerFor(session());
+      addTearDown(c.dispose);
+      await boot(tester, c);
+      await tester.tap(find.byKey(const ValueKey('app-tile-stock')));
+      await settle(tester);
+      expect(prefs.getString('omni.apps.last_app.u1.t1'), 'stock');
     });
 
     testWidgets('một ô: vào thẳng ô đó, không có nút ô lưới', (tester) async {

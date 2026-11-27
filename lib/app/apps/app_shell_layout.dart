@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/module/module_registry.dart';
+import '../../core/storage/preferences_store.dart';
+import '../../core/storage/storage_keys.dart';
 import '../../core/module/module_route.dart';
 import '../../core/module/nav_destination.dart';
 import '../../security/session/session_controller.dart';
@@ -387,11 +389,46 @@ final appShellLayoutProvider = Provider<AppShellLayout?>((ref) {
   );
 });
 
-/// Ứng dụng người dùng vừa chọn. Không nhớ qua lần mở app (quyết định 1: luôn
-/// về màn Chọn ứng dụng); đổi công ty là về trống.
+/// Ứng dụng người dùng vừa chọn trong phiên này; đổi công ty là về trống.
+/// Lần mở app sau dùng [LastAppStore] (vào thẳng lại ứng dụng dùng lần trước).
 final currentAppKeyProvider = StateProvider<String?>((ref) {
   ref.watch(sessionProvider.select((s) => s.tenant?.id));
   return null;
+});
+
+/// Nhớ ứng dụng mở lần cuối theo người dùng + công ty (duyệt 27/11/2026: sau
+/// đăng nhập vào lại ứng dụng dùng lần trước; chưa từng mở thì màn Ứng dụng).
+class LastAppStore {
+  LastAppStore(this._prefs, this._userId, this._tenantId);
+
+  /// Lấy khi cần (chưa có người dùng + công ty thì không đụng tới bộ nhớ).
+  final PreferencesStore Function() _prefs;
+  final String? _userId;
+  final String? _tenantId;
+
+  String? get _key => (_userId == null || _tenantId == null)
+      ? null
+      : '${StorageKeys.lastApp}.$_userId.$_tenantId';
+
+  String? read() {
+    final key = _key;
+    return key == null ? null : _prefs().getString(key);
+  }
+
+  Future<void> write(String appKey) async {
+    final key = _key;
+    if (key == null) return;
+    await _prefs().setString(key, appKey);
+  }
+}
+
+final lastAppStoreProvider = Provider<LastAppStore>((ref) {
+  final session = ref.watch(sessionProvider);
+  return LastAppStore(
+    () => ref.read(preferencesStoreProvider),
+    session.user?.id,
+    session.tenant?.id,
+  );
 });
 
 /// Tiền tố đường dẫn của bản sao route làm gốc thanh dưới (xem
