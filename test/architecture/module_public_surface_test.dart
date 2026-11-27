@@ -35,6 +35,28 @@ void main() {
     );
   });
 
+  test('không module nào import data/ của module khác', () {
+    // Lớp dữ liệu của module A là chi tiết của A: đổi chữ ký một hàm API
+    // không được làm vỡ module B. Cái gì B được mượn thì A xuất có tên trong
+    // barrel (`export 'data/tasks_api.dart' show tasksApiProvider;`).
+    final offenders = <String>[];
+
+    for (final (module, file, line) in _crossModuleImports()) {
+      if (line.contains('/data/')) {
+        offenders.add('$module: ${file.path}: $line');
+      }
+    }
+
+    expect(
+      offenders,
+      isEmpty,
+      reason:
+          'Import với vào data/ của module khác:\n${offenders.join('\n')}\n\n'
+          'Cách gỡ: module chủ xuất đúng tên cần mượn trong barrel '
+          '`lib/modules/<module>/<module>.dart` (export … show …).',
+    );
+  });
+
   test('barrel không xuất lớp module (cửa hậu của chu trình)', () {
     final offenders = <String>[];
 
@@ -91,6 +113,9 @@ Iterable<(String, File, String)> _crossModuleImports() sync* {
         if (const {'core', 'design', 'security', 'app'}.contains(target)) {
           continue;
         }
+        // `../data/x.dart` từ application/ là CÙNG module: chỉ tính tên là
+        // một thư mục module thật.
+        if (!Directory('lib/modules/$target').existsSync()) continue;
         yield (name, entity, line);
       }
     }

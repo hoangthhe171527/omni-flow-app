@@ -13,7 +13,7 @@ import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../security/session/session_controller.dart';
 import '../../tasks/application/tasks_providers.dart';
-import '../../tasks/data/tasks_api.dart';
+import '../../tasks/tasks.dart';
 import '../../tasks/domain/task.dart';
 import '../../tasks/tasks_module.dart';
 import '../application/plans_providers.dart';

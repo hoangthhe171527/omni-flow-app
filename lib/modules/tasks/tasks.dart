@@ -6,6 +6,9 @@
 /// provider, không phải màn hình); riêng widget và trang thì chỉ đi qua đây.
 library;
 
+// Lớp dữ liệu mà module khác được mượn (bảng dự án đọc việc, Tổng quan đếm
+// việc) — chỉ những tên này, không cả file `data/`.
+export 'data/tasks_api.dart' show TasksApi, TaskBucket, tasksApiProvider;
 export 'presentation/create_task_page.dart';
 export 'presentation/widgets/due_chip.dart';
 export 'presentation/widgets/edit_sheets.dart' show showTextEditSheet;

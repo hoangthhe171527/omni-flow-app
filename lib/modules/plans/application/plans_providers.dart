@@ -7,7 +7,7 @@ import '../../../core/network/active_tenant.dart';
 import '../../../core/realtime/realtime_client.dart';
 import '../../../security/session/session_controller.dart';
 import '../../tasks/application/tasks_providers.dart';
-import '../../tasks/data/tasks_api.dart';
+import '../../tasks/tasks.dart';
 import '../../tasks/domain/task.dart';
 import '../data/plans_api.dart';
 import '../domain/board_person.dart';
