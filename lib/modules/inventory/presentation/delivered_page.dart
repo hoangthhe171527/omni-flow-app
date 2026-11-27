@@ -58,43 +58,49 @@ class _DeliveredPageState extends ConsumerState<DeliveredPage> {
     final page = res.valueOrNull ?? (res.hasError ? null : _last);
     final bottom = ShellBarInset.coveredBottom(context);
 
+    // Mỗi phần tử là một SLIVER. Danh sách cây đã giao dài thêm sau mỗi lần
+    // "Xem thêm" — nhóm lười chỉ dựng dòng trong tầm nhìn (rà soát kiến trúc
+    // 27/11/2026).
     final list = <Widget>[
       ...switch (res) {
         AsyncValue(:final error?) when page == null => [
-          OmniErrorView(
-            error: InvUi.error(error),
-            onRetry: () => ref.invalidate(deliveredProvider(_q)),
+          SliverToBoxAdapter(
+            child: OmniErrorView(
+              error: InvUi.error(error),
+              onRetry: () => ref.invalidate(deliveredProvider(_q)),
+            ),
           ),
         ],
-        _ when page == null => [const InvSkeleton(count: 5, height: 64)],
+        _ when page == null => [
+          const SliverToBoxAdapter(child: InvSkeleton(count: 5, height: 64)),
+        ],
         _ when page.items.isEmpty => [
-          const OmniGroupSection(
-            children: [OmniGroupRow(title: 'Không có cây khớp')],
+          const SliverToBoxAdapter(
+            child: OmniGroupSection(
+              children: [OmniGroupRow(title: 'Không có cây khớp')],
+            ),
           ),
         ],
         _ => [
-          OmniGroupSection(
-            children: [
-              OmniGroupRow(
-                key: const ValueKey('inv-delivered-count'),
-                title: '${InventoryFormat.number(page.total)} cây',
-              ),
-            ],
-          ),
-          const SizedBox(height: OmniGroupSection.gap),
-          OmniGroupSection(
-            key: const ValueKey('inv-delivered-list'),
-            children: [
-              for (final u in page.items)
-                DeliveredUnitRow(
-                  key: ValueKey('inv-delivered-${u.id}'),
-                  unit: u,
-                  showInvoice: perms.invoices,
-                  onTap: () =>
-                      openUnitSheet(context, unit: u, onChanged: (_) {}),
-                ),
-              if (page.hasMore)
+          SliverToBoxAdapter(
+            child: OmniGroupSection(
+              children: [
                 OmniGroupRow(
+                  key: const ValueKey('inv-delivered-count'),
+                  title: '${InventoryFormat.number(page.total)} cây',
+                ),
+              ],
+            ),
+          ),
+          const SliverToBoxAdapter(
+            child: SizedBox(height: OmniGroupSection.gap),
+          ),
+          OmniSliverGroup(
+            key: const ValueKey('inv-delivered-list'),
+            itemCount: page.items.length + (page.hasMore ? 1 : 0),
+            itemBuilder: (context, i) {
+              if (i == page.items.length) {
+                return OmniGroupRow(
                   key: const ValueKey('inv-delivered-more'),
                   title: page.loadingMore ? 'Đang tải...' : 'Xem thêm',
                   accent: true,
@@ -103,8 +109,16 @@ class _DeliveredPageState extends ConsumerState<DeliveredPage> {
                       ? null
                       : () =>
                             ref.read(deliveredProvider(_q).notifier).loadMore(),
-                ),
-            ],
+                );
+              }
+              final u = page.items[i];
+              return DeliveredUnitRow(
+                key: ValueKey('inv-delivered-${u.id}'),
+                unit: u,
+                showInvoice: perms.invoices,
+                onTap: () => openUnitSheet(context, unit: u, onChanged: (_) {}),
+              );
+            },
           ),
         ],
       },
@@ -136,13 +150,22 @@ class _DeliveredPageState extends ConsumerState<DeliveredPage> {
                     .read(deliveredProvider(_q).future)
                     .catchError((_) => const StockState(items: [], total: 0));
               },
-              child: ListView(
+              child: CustomScrollView(
                 key: const ValueKey('inv-delivered-scroll'),
                 physics: const AlwaysScrollableScrollPhysics(),
                 keyboardDismissBehavior:
                     ScrollViewKeyboardDismissBehavior.onDrag,
-                padding: EdgeInsets.fromLTRB(16, topInset + 4, 16, bottom + 24),
-                children: list,
+                slivers: [
+                  SliverPadding(
+                    padding: EdgeInsets.fromLTRB(
+                      16,
+                      topInset + 4,
+                      16,
+                      bottom + 24,
+                    ),
+                    sliver: SliverMainAxisGroup(slivers: list),
+                  ),
+                ],
               ),
             );
           },

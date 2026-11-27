@@ -1,8 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../modules/customers/routes.dart';
-import '../../modules/plans/routes.dart';
 import '../module/module_registry.dart';
 import '../module/nav_destination.dart';
 
@@ -16,8 +14,10 @@ const maxTabs = 4;
 const tabRouteOrder = <String>[
   'dashboard.home',
   'inbox.list',
-  CustomerRoutes.list,
-  PlanRoutes.teams,
+  // Viết thẳng tên route: `core` không import module (test kiến trúc
+  // `core_layer_test`); tab_order_test canh tên còn khớp route thật.
+  'customers.list',
+  'plans.teams',
 ];
 
 /// Khoá mới: khoá ghim cũ (`nav_pinned_routes`, gỡ ngày 09/10) lưu lựa chọn

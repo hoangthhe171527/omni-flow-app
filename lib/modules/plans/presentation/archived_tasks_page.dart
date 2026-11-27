@@ -13,7 +13,7 @@ import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../security/session/session_controller.dart';
 import '../../tasks/application/tasks_providers.dart';
-import '../../tasks/data/tasks_api.dart';
+import '../../tasks/tasks.dart';
 import '../../tasks/domain/task.dart';
 import '../../tasks/tasks_module.dart';
 import '../application/plans_providers.dart';
@@ -277,74 +277,91 @@ class _ArchivedTasksPageState extends ConsumerState<ArchivedTasksPage> {
               );
             }
 
-            return ListView(
+            // Tới 500 việc lưu trữ: nhóm LƯỜI chỉ dựng dòng trong tầm nhìn
+            // (rà soát kiến trúc 27/11/2026).
+            return CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: EdgeInsets.fromLTRB(
-                OmniSpacing.lg,
-                OmniSpacing.md,
-                OmniSpacing.lg,
-                bottomPadding,
-              ),
-              children: [
-                if (filterSection != null) ...[
-                  filterSection,
-                  const SizedBox(height: OmniGroupSection.gap),
-                ],
-                // Dừng ở trần mà server còn nữa: nói ra ở ĐẦU danh sách, không
-                // lặng lẽ dừng ở việc thứ 500.
-                if (result.truncated) ...[
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
-                    child: Text(
-                      'Chỉ hiện $kMaxArchivedTasks việc lưu trữ đầu tiên. '
-                      'Tìm việc cũ hơn trên web.',
-                      style: OmniType.caption.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
+              slivers: [
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(
+                    OmniSpacing.lg,
+                    OmniSpacing.md,
+                    OmniSpacing.lg,
+                    bottomPadding,
                   ),
-                ],
-                OmniGroupSection(
-                  dividerIndent: 14,
-                  children: [
-                    for (final task in tasks)
-                      if (_canRestoreTask(task, planById, canUpdate, me))
-                        Stack(
-                          key: ValueKey('archived-${task.id}'),
-                          alignment: Alignment.centerRight,
-                          children: [
-                            OmniGroupRow(
-                              title: task.title,
-                              subtitle: _subtitleOf(task, planById),
-                              chevron: false,
-                              onTap: () => context.pushNamed(
-                                TasksModule.detail,
-                                pathParameters: {'id': task.id},
-                              ),
-                              trailing: const SizedBox(width: 92, height: 32),
+                  sliver: SliverMainAxisGroup(
+                    slivers: [
+                      if (filterSection != null)
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.only(
+                              bottom: OmniGroupSection.gap,
                             ),
-                            Positioned(
-                              right: 14,
-                              child: _RestoreGlassPill(
-                                taskTitle: task.title,
-                                busy: _busy.contains(task.id),
-                                onPressed: () => _restore(task),
-                              ),
-                            ),
-                          ],
-                        )
-                      else
-                        OmniGroupRow(
-                          key: ValueKey('archived-${task.id}'),
-                          title: task.title,
-                          subtitle: _subtitleOf(task, planById),
-                          chevron: true,
-                          onTap: () => context.pushNamed(
-                            TasksModule.detail,
-                            pathParameters: {'id': task.id},
+                            child: filterSection,
                           ),
                         ),
-                  ],
+                      // Dừng ở trần mà server còn nữa: nói ra ở ĐẦU danh sách,
+                      // không lặng lẽ dừng ở việc thứ 500.
+                      if (result.truncated)
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+                            child: Text(
+                              'Chỉ hiện $kMaxArchivedTasks việc lưu trữ đầu tiên. '
+                              'Tìm việc cũ hơn trên web.',
+                              style: OmniType.caption.copyWith(
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        ),
+                      OmniSliverGroup(
+                        dividerIndent: 14,
+                        itemCount: tasks.length,
+                        itemBuilder: (context, i) {
+                          final task = tasks[i];
+                          return _canRestoreTask(task, planById, canUpdate, me)
+                              ? Stack(
+                                  key: ValueKey('archived-${task.id}'),
+                                  alignment: Alignment.centerRight,
+                                  children: [
+                                    OmniGroupRow(
+                                      title: task.title,
+                                      subtitle: _subtitleOf(task, planById),
+                                      chevron: false,
+                                      onTap: () => context.pushNamed(
+                                        TasksModule.detail,
+                                        pathParameters: {'id': task.id},
+                                      ),
+                                      trailing: const SizedBox(
+                                        width: 92,
+                                        height: 32,
+                                      ),
+                                    ),
+                                    Positioned(
+                                      right: 14,
+                                      child: _RestoreGlassPill(
+                                        taskTitle: task.title,
+                                        busy: _busy.contains(task.id),
+                                        onPressed: () => _restore(task),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : OmniGroupRow(
+                                  key: ValueKey('archived-${task.id}'),
+                                  title: task.title,
+                                  subtitle: _subtitleOf(task, planById),
+                                  chevron: true,
+                                  onTap: () => context.pushNamed(
+                                    TasksModule.detail,
+                                    pathParameters: {'id': task.id},
+                                  ),
+                                );
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               ],
             );

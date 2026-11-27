@@ -147,35 +147,66 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
               data: (state) {
                 final groups = groupNotificationsByDay(state.items);
 
-                return ListView.separated(
+                // Nhóm LƯỜI (rà soát kiến trúc 27/11/2026): "Trước đó" dài
+                // dần theo từng trang tải thêm — chỉ dựng dòng trong tầm nhìn.
+                return CustomScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   controller: _scrollController,
-                  padding: EdgeInsets.fromLTRB(
-                    16,
-                    OmniTopBarOverlap.of(context) + 4,
-                    16,
-                    OmniSpacing.bottomSafe,
-                  ),
-                  itemCount: groups.length,
-                  separatorBuilder: (_, _) =>
-                      const SizedBox(height: OmniGroupSection.gap),
-                  itemBuilder: (context, index) {
-                    final group = groups[index];
-                    final section = OmniGroupSection(
-                      key: ValueKey('notification-group-${group.label}'),
-                      title: group.label,
-                      dividerIndent: NotificationRow.textInset,
-                      children: [
-                        for (final item in group.items)
-                          NotificationRow(
-                            notification: item,
-                            onTap: () => _open(item),
-                          ),
-                      ],
-                    );
-                    // Hiện dần chỉ ở lượt mở đầu; nhóm cuộn tới sau thì hiện ngay.
-                    return _entered ? section : _Rise(child: section);
-                  },
+                  slivers: [
+                    SliverPadding(
+                      padding: EdgeInsets.fromLTRB(
+                        16,
+                        OmniTopBarOverlap.of(context) + 4,
+                        16,
+                        OmniSpacing.bottomSafe,
+                      ),
+                      sliver: SliverMainAxisGroup(
+                        slivers: [
+                          for (var g = 0; g < groups.length; g++) ...[
+                            if (g > 0)
+                              const SliverToBoxAdapter(
+                                child: SizedBox(height: OmniGroupSection.gap),
+                              ),
+                            // Hiện dần chỉ ở lượt mở đầu; nhóm cuộn tới sau
+                            // thì hiện ngay.
+                            _entered
+                                ? OmniSliverGroup(
+                                    key: ValueKey(
+                                      'notification-group-${groups[g].label}',
+                                    ),
+                                    title: groups[g].label,
+                                    dividerIndent: NotificationRow.textInset,
+                                    itemCount: groups[g].items.length,
+                                    itemBuilder: (context, i) {
+                                      final item = groups[g].items[i];
+                                      return NotificationRow(
+                                        notification: item,
+                                        onTap: () => _open(item),
+                                      );
+                                    },
+                                  )
+                                : _Rise(
+                                    sliver: OmniSliverGroup(
+                                      key: ValueKey(
+                                        'notification-group-${groups[g].label}',
+                                      ),
+                                      title: groups[g].label,
+                                      dividerIndent: NotificationRow.textInset,
+                                      itemCount: groups[g].items.length,
+                                      itemBuilder: (context, i) {
+                                        final item = groups[g].items[i];
+                                        return NotificationRow(
+                                          notification: item,
+                                          onTap: () => _open(item),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
                 );
               },
             ),
@@ -235,30 +266,25 @@ class _AllReadEmpty extends StatelessWidget {
 
 /// `rise`: hiện dần và trượt lên 10px trong 450ms. Tắt khi giảm chuyển động.
 class _Rise extends StatelessWidget {
-  const _Rise({required this.child});
+  const _Rise({required this.sliver});
 
-  final Widget child;
+  final Widget sliver;
 
   @override
   Widget build(BuildContext context) {
-    // Bậc hiệu năng thấp: hiện ngay (mỗi mục hiện dần = một lớp vẽ mờ).
+    // Bậc hiệu năng thấp: hiện ngay (mỗi nhóm hiện dần = một lớp vẽ mờ).
     if (!OmniMotion.enabled(context) ||
         !OmniPerformance.riseOnScroll(context)) {
-      return child;
+      return sliver;
     }
 
+    // Nhóm là sliver (lười) nên chỉ mờ dần, không dời lên như bản Column cũ.
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
       duration: const Duration(milliseconds: 450),
       curve: OmniCurves.standard,
-      child: child,
-      builder: (context, t, child) => Opacity(
-        opacity: t,
-        child: Transform.translate(
-          offset: Offset(0, 10 * (1 - t)),
-          child: child,
-        ),
-      ),
+      child: sliver,
+      builder: (context, t, child) => SliverOpacity(opacity: t, sliver: child),
     );
   }
 }

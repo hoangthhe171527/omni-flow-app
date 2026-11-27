@@ -42,3 +42,4 @@ export 'omni_top_bar.dart';
 /// test/architecture/platform_boundary_test.dart.
 export '../platform/omni_dialogs.dart';
 export '../platform/omni_performance.dart';
+export 'omni_sliver_group.dart';

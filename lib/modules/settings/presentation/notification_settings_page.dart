@@ -6,7 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/error/app_exception.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
-import '../../notifications/data/push_api.dart';
+import '../../notifications/notifications.dart';
 
 /// Tuỳ chọn thông báo của chính người đang đăng nhập.
 ///

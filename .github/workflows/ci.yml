@@ -1,5 +1,9 @@
 name: CI
 
+# ĐANG TẮT trên GitHub (gh workflow disable, 22/11/2026) — quyết định giữ tắt
+# 27/11/2026: kiểm chạy tại máy bằng `tool/ci_local.ps1` (format + analyze +
+# test trong phạm vi thay đổi, 2 tiến trình). Giữ file để bật lại khi cần.
+
 # Nothing ran automatically before this. Both checks below are green today
 # (`flutter analyze` reports no issues, `flutter test` passes 103 tests), so both
 # gate: a red build here means something actually broke.

@@ -16,7 +16,6 @@ import '../../../../design/components/omni_task_chip.dart';
 import '../../../../design/platform/omni_motion_scope.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../../tasks/application/tasks_providers.dart';
-import '../../../tasks/data/tasks_api.dart';
 import '../../../tasks/domain/progress_level.dart';
 import '../../../tasks/domain/task.dart';
 import '../../../tasks/tasks.dart';

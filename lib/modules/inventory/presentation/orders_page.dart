@@ -48,43 +48,55 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
     ).subtract(Duration(days: now.weekday - 1));
 
     final rows = res.valueOrNull;
+    // Mỗi phần tử là một SLIVER: nhóm đơn dựng lười (rà soát kiến trúc
+    // 27/11/2026) — tới 100 đơn không còn dựng cùng lúc trong một Column.
     final List<Widget> list = [
-      OmniSegmented(
-        labels: const ['Cần thu', 'Đang xử lý', 'Tất cả'],
-        counts: [
-          if (due == null || due.awaiting == 0) null else due.awaiting,
-          null,
-          null,
-        ],
-        index: OrderListFilter.values.indexOf(_filter),
-        onChanged: (i) => setState(() => _filter = OrderListFilter.values[i]),
+      SliverToBoxAdapter(
+        child: OmniSegmented(
+          labels: const ['Cần thu', 'Đang xử lý', 'Tất cả'],
+          counts: [
+            if (due == null || due.awaiting == 0) null else due.awaiting,
+            null,
+            null,
+          ],
+          index: OrderListFilter.values.indexOf(_filter),
+          onChanged: (i) => setState(() => _filter = OrderListFilter.values[i]),
+        ),
       ),
       // Khối tổng (spec phong cách iOS §3.1): số tiền là số lớn nhất màn.
       if (due != null && due.outstanding > 0)
-        OmniTotalCard(
-          key: const ValueKey('orders-due'),
-          label: 'Còn phải thu',
-          trailingLabel: due.awaiting > 0 ? '${due.awaiting} đơn' : null,
-          amount: Formatters.vnd(due.outstanding),
-          // Lớp premium (duyệt 25/11): vòng tỉ lệ cạnh số — thu một phần /
-          // chưa thu, màu khớp nhãn trạng thái của dòng, không chú thích.
-          aside: _filter == OrderListFilter.due && rows != null
-              ? _DueRing(rows: rows)
-              : null,
+        SliverToBoxAdapter(
+          child: OmniTotalCard(
+            key: const ValueKey('orders-due'),
+            label: 'Còn phải thu',
+            trailingLabel: due.awaiting > 0 ? '${due.awaiting} đơn' : null,
+            amount: Formatters.vnd(due.outstanding),
+            // Lớp premium (duyệt 25/11): vòng tỉ lệ cạnh số — thu một phần /
+            // chưa thu, màu khớp nhãn trạng thái của dòng, không chú thích.
+            aside: _filter == OrderListFilter.due && rows != null
+                ? _DueRing(rows: rows)
+                : null,
+          ),
         ),
       ...switch (res) {
         AsyncValue(:final error?) when rows == null => [
-          OmniErrorView(
-            error: InvUi.error(error),
-            onRetry: () => ref.invalidate(ordersListProvider(query)),
+          SliverToBoxAdapter(
+            child: OmniErrorView(
+              error: InvUi.error(error),
+              onRetry: () => ref.invalidate(ordersListProvider(query)),
+            ),
           ),
         ],
-        _ when rows == null => [const InvSkeleton(count: 5, height: 64)],
+        _ when rows == null => [
+          const SliverToBoxAdapter(child: InvSkeleton(count: 5, height: 64)),
+        ],
         _ when rows.isEmpty => [
-          const OmniEmptyState(
-            compact: true,
-            icon: LucideIcons.fileText,
-            title: 'Không có đơn nào',
+          const SliverToBoxAdapter(
+            child: OmniEmptyState(
+              compact: true,
+              icon: LucideIcons.fileText,
+              title: 'Không có đơn nào',
+            ),
           ),
         ],
         _ => [
@@ -107,7 +119,7 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
             ),
           ])
             if (group.isNotEmpty)
-              OmniGroupSection(
+              OmniSliverGroup(
                 key: ValueKey('orders-group-$title'),
                 title: title,
                 // Tổng tiền đầu nhóm (lớp premium): liếc là biết nhóm bao nhiêu.
@@ -120,7 +132,8 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
                   ),
                 ),
                 dividerIndent: 16,
-                children: [for (final o in group) _OrderRowTile(order: o)],
+                itemCount: group.length,
+                itemBuilder: (context, i) => _OrderRowTile(order: group[i]),
               ),
         ],
       },
@@ -161,22 +174,31 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
                       .read(ordersListProvider(query).future)
                       .catchError((_) => const <OrderRow>[]);
                 },
-                child: ListView(
+                child: CustomScrollView(
                   key: const ValueKey('orders-scroll'),
                   physics: const AlwaysScrollableScrollPhysics(),
                   keyboardDismissBehavior:
                       ScrollViewKeyboardDismissBehavior.onDrag,
-                  padding: EdgeInsets.fromLTRB(
-                    16,
-                    topInset + 4,
-                    16,
-                    OmniFabLayer.listBottom(context, hasFab: perms.sell),
-                  ),
-                  children: [
-                    for (var i = 0; i < list.length; i++) ...[
-                      if (i > 0) const SizedBox(height: OmniGroupSection.gap),
-                      list[i],
-                    ],
+                  slivers: [
+                    SliverPadding(
+                      padding: EdgeInsets.fromLTRB(
+                        16,
+                        topInset + 4,
+                        16,
+                        OmniFabLayer.listBottom(context, hasFab: perms.sell),
+                      ),
+                      sliver: SliverMainAxisGroup(
+                        slivers: [
+                          for (var i = 0; i < list.length; i++) ...[
+                            if (i > 0)
+                              const SliverToBoxAdapter(
+                                child: SizedBox(height: OmniGroupSection.gap),
+                              ),
+                            list[i],
+                          ],
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               );
