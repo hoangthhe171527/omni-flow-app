@@ -22,13 +22,21 @@ class ShellBarInset extends InheritedWidget {
 
   /// Phần đáy màn bị che THẬT: trong shell là viên kính + đáy của nó (vùng an
   /// toàn, tối thiểu 12 — đúng như `_ShellNavBar` vẽ); ngoài shell chỉ là vùng
-  /// an toàn. Đừng cộng [of] với `viewPadding` bằng tay: [barHeight] đã gồm khe
-  /// 12, cộng thêm vùng an toàn là tính hai lần ở máy có tai thỏ và thiếu ở
-  /// máy không có (lỗi nút "Kết nối kênh" bị kính đè, 12/11).
+  /// an toàn.
+  ///
+  /// Lưu ý: `Scaffold(extendBody: true)` của `AppShell` tiêu thụ
+  /// `viewPadding.bottom` khi bọc `body`, nên bên trong màn con
+  /// `MediaQuery.viewPaddingOf(context).bottom` bằng 0. Vì vậy `AppShell` đo
+  /// vùng an toàn bên ngoài `Scaffold` và truyền tổng chiều cao bị che qua
+  /// [height]; hàm này lấy `max(inset, pillHeight + max(safe, 12))` để vừa đúng
+  /// trong app thật vừa giữ nguyên hành vi cho các test dựng `ShellBarInset`
+  /// trực tiếp với [barHeight].
   static double coveredBottom(BuildContext context) {
+    final inset = of(context);
     final safe = MediaQuery.viewPaddingOf(context).bottom;
-    if (of(context) <= 0) return safe;
-    return pillHeight + (safe > 12 ? safe : 12);
+    if (inset <= 0) return safe;
+    final fromSafe = pillHeight + (safe > 12 ? safe : 12);
+    return inset > fromSafe ? inset : fromSafe;
   }
 
   /// Mép dưới của nút nổi / khay đáy: trên phần bị che một khe [gap].

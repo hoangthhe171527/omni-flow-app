@@ -166,8 +166,10 @@ class AppShell extends ConsumerWidget {
           );
         }
 
+        final bottomSafe = MediaQuery.viewPaddingOf(context).bottom;
         return ShellBarInset(
-          height: ShellBarInset.barHeight,
+          height:
+              ShellBarInset.pillHeight + (bottomSafe > 12 ? bottomSafe : 12),
           child: Scaffold(
             // Body vẽ dưới thanh kính mờ; màn danh sách tự chừa chỗ ở đáy.
             extendBody: true,
