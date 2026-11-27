@@ -112,69 +112,102 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
               data: (state) {
                 final groups = _groupByPlan(state.items);
                 final scheme = Theme.of(context).colorScheme;
-                return ListView.separated(
+                // Nhóm LƯỜI (rà soát kiến trúc 27/11/2026): một dự án có thể
+                // có hàng trăm việc qua nhiều trang; chỉ dựng thẻ trong tầm
+                // nhìn thay vì cả nhóm trong một Column.
+                return CustomScrollView(
                   controller: _scrollController,
-                  padding: EdgeInsets.fromLTRB(
-                    OmniSpacing.lg,
-                    OmniSpacing.lg + OmniTopBarOverlap.of(context),
-                    OmniSpacing.lg,
-                    OmniSpacing.bottomSafe,
-                  ),
-                  itemCount: groups.length + (state.hasMore ? 1 : 0),
-                  separatorBuilder: (_, _) =>
-                      const SizedBox(height: OmniGroupSection.gap),
-                  itemBuilder: (context, index) {
-                    if (index >= groups.length) {
-                      return const Padding(
-                        padding: EdgeInsets.all(OmniSpacing.lg),
-                        child: Center(
-                          child: SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator.adaptive(
-                              strokeWidth: 2,
-                            ),
-                          ),
-                        ),
-                      );
-                    }
-
-                    final group = groups[index];
-                    return OmniGroupSection(
-                      title: group.title,
-                      trailingTitle: Text(
-                        '${group.tasks.length} việc',
-                        style: OmniType.caption.copyWith(
-                          color: scheme.onSurfaceVariant,
-                          fontFeatures: OmniType.tabular,
-                        ),
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  slivers: [
+                    SliverPadding(
+                      padding: EdgeInsets.fromLTRB(
+                        OmniSpacing.lg,
+                        OmniSpacing.lg + OmniTopBarOverlap.of(context),
+                        OmniSpacing.lg,
+                        state.hasMore ? 0 : OmniSpacing.bottomSafe,
                       ),
-                      dividerIndent: 14,
-                      children: [
-                        for (final task in group.tasks)
-                          _TickOnSwipe(
-                            task: task,
-                            currentUserId: currentUserId,
-                            canManage: canManageAll,
-                            onTick: (next) => _tick(task, next, done: true),
-                            child: TaskCard(
-                              task: task,
-                              showPlanName: false,
-                              onTap: () => context.pushNamed(
-                                TasksModule.detail,
-                                pathParameters: {'id': task.id},
+                      sliver: SliverMainAxisGroup(
+                        slivers: [
+                          for (var g = 0; g < groups.length; g++) ...[
+                            if (g > 0)
+                              const SliverToBoxAdapter(
+                                child: SizedBox(height: OmniGroupSection.gap),
+                              ),
+                            _taskGroup(
+                              groups[g],
+                              scheme: scheme,
+                              currentUserId: currentUserId,
+                              canManageAll: canManageAll,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    if (state.hasMore)
+                      const SliverPadding(
+                        padding: EdgeInsets.only(
+                          bottom: OmniSpacing.bottomSafe,
+                        ),
+                        sliver: SliverToBoxAdapter(
+                          child: Padding(
+                            padding: EdgeInsets.all(OmniSpacing.lg),
+                            child: Center(
+                              child: SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator.adaptive(
+                                  strokeWidth: 2,
+                                ),
                               ),
                             ),
                           ),
-                      ],
-                    );
-                  },
+                        ),
+                      ),
+                  ],
                 );
               },
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _taskGroup(
+    ({String title, List<Task> tasks}) group, {
+    required ColorScheme scheme,
+    required String? currentUserId,
+    required bool canManageAll,
+  }) {
+    final tasks = group.tasks;
+    return OmniSliverGroup(
+      title: group.title,
+      trailingTitle: Text(
+        '${tasks.length} việc',
+        style: OmniType.caption.copyWith(
+          color: scheme.onSurfaceVariant,
+          fontFeatures: OmniType.tabular,
+        ),
+      ),
+      dividerIndent: 14,
+      itemCount: tasks.length,
+      itemBuilder: (context, i) {
+        final task = tasks[i];
+        return _TickOnSwipe(
+          task: task,
+          currentUserId: currentUserId,
+          canManage: canManageAll,
+          onTick: (next) => _tick(task, next, done: true),
+          child: TaskCard(
+            task: task,
+            showPlanName: false,
+            onTap: () => context.pushNamed(
+              TasksModule.detail,
+              pathParameters: {'id': task.id},
+            ),
+          ),
+        );
+      },
     );
   }
 

@@ -90,48 +90,57 @@ class TeamPage extends ConsumerWidget {
                     title: 'Chưa có nhân viên',
                   ),
                   // Nền xám; cả danh sách là MỘT nhóm lồng, vạch chia thụt sau avatar.
-                  data: (list) => ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: EdgeInsets.fromLTRB(
-                      16,
-                      topInset,
-                      16,
-                      OmniFabLayer.listBottom(context, hasFab: canAdd),
-                    ),
-                    children: [
-                      if (!list.any(matches))
-                        OmniEmptyState.filtered(
-                          title: 'Không có nhân viên khớp "$q"',
-                        )
-                      else
-                        OmniGroupSection(
-                          dividerIndent: 70,
-                          children: [
-                            for (final member in list.where(matches))
-                              _MemberTile(
-                                member: member,
-                                canLink: canLink,
-                                // Chạm vào một người là mở TẢI VIỆC của họ — câu hỏi
-                                // quản đốc hỏi nhiều nhất khi đứng giữa xưởng. Liên kết
-                                // Zalo lùi về một nút riêng bên phải.
-                                onTap: canSeeLoad
-                                    ? () {
-                                        HapticFeedback.selectionClick();
-                                        context.pushNamed(
-                                          TaskRoutes.workload,
-                                          pathParameters: {
-                                            'userId': member.userId,
-                                          },
-                                        );
-                                      }
-                                    : null,
-                                onLinkZalo: () =>
-                                    _linkZalo(context, ref, member),
-                              ),
-                          ],
+                  // Nhóm LƯỜI (rà soát kiến trúc 27/11/2026): gõ tìm là dựng
+                  // lại danh sách — chỉ dựng người trong tầm nhìn.
+                  data: (list) {
+                    final shown = list.where(matches).toList();
+                    return CustomScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      slivers: [
+                        SliverPadding(
+                          padding: EdgeInsets.fromLTRB(
+                            16,
+                            topInset,
+                            16,
+                            OmniFabLayer.listBottom(context, hasFab: canAdd),
+                          ),
+                          sliver: shown.isEmpty
+                              ? SliverToBoxAdapter(
+                                  child: OmniEmptyState.filtered(
+                                    title: 'Không có nhân viên khớp "$q"',
+                                  ),
+                                )
+                              : OmniSliverGroup(
+                                  dividerIndent: 70,
+                                  itemCount: shown.length,
+                                  itemBuilder: (context, i) {
+                                    final member = shown[i];
+                                    return _MemberTile(
+                                      member: member,
+                                      canLink: canLink,
+                                      // Chạm vào một người là mở TẢI VIỆC của họ — câu hỏi
+                                      // quản đốc hỏi nhiều nhất khi đứng giữa xưởng. Liên kết
+                                      // Zalo lùi về một nút riêng bên phải.
+                                      onTap: canSeeLoad
+                                          ? () {
+                                              HapticFeedback.selectionClick();
+                                              context.pushNamed(
+                                                TaskRoutes.workload,
+                                                pathParameters: {
+                                                  'userId': member.userId,
+                                                },
+                                              );
+                                            }
+                                          : null,
+                                      onLinkZalo: () =>
+                                          _linkZalo(context, ref, member),
+                                    );
+                                  },
+                                ),
                         ),
-                    ],
-                  ),
+                      ],
+                    );
+                  },
                 ),
               );
             },

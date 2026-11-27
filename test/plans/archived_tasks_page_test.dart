@@ -69,12 +69,12 @@ void main() {
   }
 
   testWidgets(
-    'liệt kê việc lưu trữ trong OmniGroupSection, gọi list(archived)',
+    'liệt kê việc lưu trữ trong nhóm lười OmniSliverGroup, gọi list(archived)',
     (tester) async {
       await pump(tester);
 
       expect(find.text('Việc đã lưu trữ'), findsOneWidget);
-      expect(find.byType(OmniGroupSection), findsOneWidget);
+      expect(find.byType(OmniSliverGroup), findsOneWidget);
       expect(find.byType(OmniGroupRow), findsNWidgets(2));
       expect(find.text('Đàn A'), findsOneWidget);
       expect(api.lists.first, (planId, TaskArchiveScope.archived, 1));
@@ -194,85 +194,81 @@ void main() {
     );
   });
 
-  testWidgets('mở từ menu Vận hành (không planId): xem tất cả và lọc theo kế hoạch', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(390, 844);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
+  testWidgets(
+    'mở từ menu Vận hành (không planId): xem tất cả và lọc theo kế hoạch',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
 
-    final allArchived = [
-      Task.fromJson({
-        'id': 't1',
-        'title': 'Đàn A',
-        'project_id': 'p1',
-        'section_name': 'Sơn',
-        'archived': true,
-      }),
-      Task.fromJson({
-        'id': 't2',
-        'title': 'Đàn B',
-        'project_id': 'p2',
-        'archived': true,
-      }),
-    ];
-    final fakeApi = _ArchiveApi(allArchived);
-    final p1 = Plan.fromJson({'id': 'p1', 'name': 'Kế hoạch 1'});
-    final p2 = Plan.fromJson({'id': 'p2', 'name': 'Kế hoạch 2'});
+      final allArchived = [
+        Task.fromJson({
+          'id': 't1',
+          'title': 'Đàn A',
+          'project_id': 'p1',
+          'section_name': 'Sơn',
+          'archived': true,
+        }),
+        Task.fromJson({
+          'id': 't2',
+          'title': 'Đàn B',
+          'project_id': 'p2',
+          'archived': true,
+        }),
+      ];
+      final fakeApi = _ArchiveApi(allArchived);
+      final p1 = Plan.fromJson({'id': 'p1', 'name': 'Kế hoạch 1'});
+      final p2 = Plan.fromJson({'id': 'p2', 'name': 'Kế hoạch 2'});
 
-    final router = GoRouter(
-      routes: [
-        GoRoute(
-          path: '/',
-          builder: (_, _) => const ArchivedTasksPage(),
-        ),
-        GoRoute(
-          path: '/tasks/:id',
-          name: TasksModule.detail,
-          builder: (_, state) =>
-              Scaffold(body: Text('chi tiet ${state.pathParameters['id']}')),
-        ),
-      ],
-    );
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          tasksApiProvider.overrideWithValue(fakeApi),
-          taskAccessProvider.overrideWithValue(
-            TaskAccess.of(
-              const AccessPolicy({'tasks.read', 'tasks.write'}),
-            ),
-          ),
-          teamsWithPlansProvider.overrideWith(
-            (ref) async => [
-              TeamWithPlans(
-                team: Team.fromJson({'id': 'tm1', 'name': 'Xưởng'}),
-                plans: [p1, p2],
-              ),
-            ],
+      final router = GoRouter(
+        routes: [
+          GoRoute(path: '/', builder: (_, _) => const ArchivedTasksPage()),
+          GoRoute(
+            path: '/tasks/:id',
+            name: TasksModule.detail,
+            builder: (_, state) =>
+                Scaffold(body: Text('chi tiet ${state.pathParameters['id']}')),
           ),
         ],
-        child: MaterialApp.router(
-          theme: OmniTheme.light(TargetPlatform.android),
-          routerConfig: router,
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            tasksApiProvider.overrideWithValue(fakeApi),
+            taskAccessProvider.overrideWithValue(
+              TaskAccess.of(const AccessPolicy({'tasks.read', 'tasks.write'})),
+            ),
+            teamsWithPlansProvider.overrideWith(
+              (ref) async => [
+                TeamWithPlans(
+                  team: Team.fromJson({'id': 'tm1', 'name': 'Xưởng'}),
+                  plans: [p1, p2],
+                ),
+              ],
+            ),
+          ],
+          child: MaterialApp.router(
+            theme: OmniTheme.light(TargetPlatform.android),
+            routerConfig: router,
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.text('Tất cả kế hoạch'), findsOneWidget);
-    expect(find.text('Đàn A'), findsOneWidget);
-    expect(find.text('Kế hoạch 1 · Sơn'), findsOneWidget);
-    expect(find.text('Đàn B'), findsOneWidget);
+      expect(find.text('Tất cả kế hoạch'), findsOneWidget);
+      expect(find.text('Đàn A'), findsOneWidget);
+      expect(find.text('Kế hoạch 1 · Sơn'), findsOneWidget);
+      expect(find.text('Đàn B'), findsOneWidget);
 
-    await tester.tap(find.text('Kế hoạch'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Kế hoạch 1').last);
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Kế hoạch'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Kế hoạch 1').last);
+      await tester.pumpAndSettle();
 
-    expect(fakeApi.lists.any((c) => c.$1 == 'p1'), isTrue);
-  });
+      expect(fakeApi.lists.any((c) => c.$1 == 'p1'), isTrue);
+    },
+  );
 }
 
 class _ArchiveApi implements TasksApi {
@@ -314,14 +310,19 @@ class _ArchiveApi implements TasksApi {
     final filtered = [
       for (final t in _archived)
         if (!archives.any((a) => a.$1 == t.id) &&
-            (projectId == null || projectId.isEmpty || t.projectId == projectId))
+            (projectId == null ||
+                projectId.isEmpty ||
+                t.projectId == projectId))
           t,
     ];
     final start = (page - 1) * perPage;
     return Paged(
       items: start >= filtered.length
           ? const []
-          : filtered.sublist(start, (start + perPage).clamp(0, filtered.length)),
+          : filtered.sublist(
+              start,
+              (start + perPage).clamp(0, filtered.length),
+            ),
       pagination: const ApiPagination.empty(),
     );
   }

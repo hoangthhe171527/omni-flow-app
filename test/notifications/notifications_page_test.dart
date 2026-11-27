@@ -164,7 +164,7 @@ void main() {
 
     for (final label in ['Hôm nay', 'Trước đó']) {
       final group = find.byKey(ValueKey('notification-group-$label'));
-      expect(t.widget<OmniGroupSection>(group).title, label);
+      expect(t.widget<OmniSliverGroup>(group).title, label);
       final material = t.widget<Material>(
         find.descendant(of: group, matching: find.byType(Material)).first,
       );
@@ -226,7 +226,9 @@ void main() {
 
   testWidgets('danh sách ngắn vẫn kéo-để-tải-lại được', (t) async {
     await pump(t);
-    final list = t.widget<ListView>(find.byType(ListView).first);
+    final list = t.widget<CustomScrollView>(
+      find.byType(CustomScrollView).first,
+    );
     expect(list.physics, isA<AlwaysScrollableScrollPhysics>());
   });
 
