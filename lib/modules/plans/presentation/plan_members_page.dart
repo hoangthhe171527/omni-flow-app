@@ -248,7 +248,7 @@ class _RoleSheet extends StatelessWidget {
       header: OmniSheetHeader(
         title: name,
         subtitle: 'Chọn quyền truy cập trong kế hoạch',
-        trailing: OmniSheetCloseButton(
+        closeButton: OmniSheetCloseButton(
           onPressed: () => Navigator.of(context).maybePop(),
         ),
       ),

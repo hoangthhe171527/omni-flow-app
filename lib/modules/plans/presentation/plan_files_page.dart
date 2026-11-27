@@ -165,7 +165,7 @@ class PlanFilesPage extends ConsumerWidget {
         header: OmniSheetHeader(
           title: file.name,
           subtitle: task.title,
-          trailing: OmniSheetCloseButton(
+          closeButton: OmniSheetCloseButton(
             onPressed: () => Navigator.of(sheet).maybePop(),
           ),
         ),

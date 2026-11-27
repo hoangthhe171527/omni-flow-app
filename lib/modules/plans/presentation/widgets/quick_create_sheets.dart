@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -48,6 +50,7 @@ Future<QuickCreated?> showQuickCreatePlan(
   ProjectCoverImagePicker pickImage = pickProjectCoverImage,
 }) => showOmniSheet<QuickCreated>(
   context: context,
+  guardInput: true,
   builder: (_) => QuickCreatePlanForm(pickImage: pickImage),
 );
 
@@ -59,8 +62,12 @@ Future<QuickCreated?> showQuickCreateTeam(
   ProjectCoverImagePicker pickImage = pickProjectCoverImage,
 }) => showOmniSheet<QuickCreated>(
   context: context,
+  guardInput: true,
   builder: (_) => _QuickCreateTeamSheet(pickImage: pickImage),
 );
+
+/// Loại nháp của sheet "Team mới" (D17).
+const _teamDraftKind = 'plans.team.create';
 
 // ---------------------------------------------------------------------------
 // Phần dùng chung
@@ -68,7 +75,7 @@ Future<QuickCreated?> showQuickCreateTeam(
 OmniSheetHeader _sheetHeader(BuildContext context, String title) =>
     OmniSheetHeader(
       title: title,
-      trailing: OmniSheetCloseButton(
+      closeButton: OmniSheetCloseButton(
         onPressed: () => Navigator.of(context).maybePop(),
       ),
     );
@@ -280,6 +287,51 @@ class _QuickCreatePlanFormState extends ConsumerState<QuickCreatePlanForm> {
 
   @override
   Widget build(BuildContext context) {
+    final body = _body(context);
+    // Bước nối sau "Team mới" nằm trong sheet team — không gác riêng (team đã
+    // tạo, không còn gì phải giữ ngoài tên kế hoạch).
+    if (_chained) return body;
+    // Sheet dài (D16): tên, team, nhóm việc, ảnh nền (tệp).
+    return OmniSheetGuard(
+      draftKind: 'plans.plan.create',
+      listenable: _name,
+      isDirty: () =>
+          _name.text.trim().isNotEmpty ||
+          _teamId != null ||
+          _coverPath != null ||
+          !_sameSections,
+      toDraft: () => {
+        'name': _name.text,
+        'teamId': _teamId,
+        'sections': [..._sections],
+        'coverPath': _coverPath,
+      },
+      onRestore: (d) => setState(() {
+        _name.text = d['name'] as String? ?? '';
+        _teamId = d['teamId'] as String?;
+        final sections = [
+          for (final s in d['sections'] as List? ?? const []) '$s',
+        ];
+        if (sections.isNotEmpty) {
+          _sections
+            ..clear()
+            ..addAll(sections);
+        }
+        _coverPath = d['coverPath'] as String?;
+      }),
+      summary: () => _name.text.trim(),
+      child: body,
+    );
+  }
+
+  bool get _sameSections =>
+      _sections.length == kDefaultSections.length &&
+      [
+        for (var i = 0; i < _sections.length; i++)
+          _sections[i] == kDefaultSections[i],
+      ].every((same) => same);
+
+  Widget _body(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final teams = [
       for (final g in ref.watch(teamsWithPlansProvider).valueOrNull ?? const [])
@@ -550,6 +602,8 @@ class _QuickCreateTeamSheetState extends ConsumerState<_QuickCreateTeamSheet> {
       ref.invalidate(teamsWithPlansProvider);
       if (!mounted) return;
       HapticFeedback.lightImpact();
+      // Team đã tạo: nháp "Team mới" hết việc (gác rời cây cùng form).
+      unawaited(OmniDraftStore.delete(_teamDraftKind));
       setState(() => _created = (id: team.id, name: team.name));
     } on AppException catch (e) {
       if (!mounted) return;
@@ -577,6 +631,37 @@ class _QuickCreateTeamSheetState extends ConsumerState<_QuickCreateTeamSheet> {
   }
 
   Widget _form(BuildContext context) {
+    // Sheet ngắn (D16): tên, mô tả, thành viên.
+    return OmniSheetGuard(
+      draftKind: _teamDraftKind,
+      length: OmniSheetLength.short,
+      listenable: Listenable.merge([_name, _description]),
+      isDirty: () =>
+          _name.text.trim().isNotEmpty ||
+          _description.text.trim().isNotEmpty ||
+          _memberIds.isNotEmpty,
+      toDraft: () => {
+        'name': _name.text,
+        'description': _description.text,
+        'memberIds': [..._memberIds],
+      },
+      onRestore: (d) => setState(() {
+        _name.text = d['name'] as String? ?? '';
+        _description.text = d['description'] as String? ?? '';
+        _descOpen = _description.text.trim().isNotEmpty;
+        _memberIds
+          ..clear()
+          ..addAll([
+            for (final id in d['memberIds'] as List? ?? const []) '$id',
+          ]);
+      }),
+      summary: () => _name.text.trim(),
+      discardPrompt: 'Bỏ team đang nhập?',
+      child: _formBody(context),
+    );
+  }
+
+  Widget _formBody(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final iconBg = scheme.primary.withValues(alpha: .10);
     final members = ref.watch(teamMembersProvider);

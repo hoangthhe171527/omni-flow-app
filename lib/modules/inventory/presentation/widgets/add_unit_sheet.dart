@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -22,6 +25,7 @@ Future<void> openAddUnitSheet(
 }) {
   return showOmniSheet<void>(
     context: context,
+    guardInput: true,
     builder: (_) => AddUnitSheet(lot: lot, known: known),
   );
 }
@@ -55,6 +59,49 @@ class _AddUnitSheetState extends ConsumerState<AddUnitSheet> {
   String _picked = '';
   bool _saving = false;
   int _added = 0;
+
+  // ---- Nháp (D16): sheet dài — nhiều trường + tiền ----
+  late String _initial;
+  final _guard = GlobalKey<OmniSheetGuardState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _initial = jsonEncode(_draft());
+  }
+
+  bool _dirty() => jsonEncode(_draft()) != _initial;
+
+  Map<String, Object?> _draft() => {
+    'maker': _maker.text,
+    'model': _model.text,
+    'color': _color.text,
+    'serial': _serial.text,
+    'category': _category,
+    'qty': _qty,
+    'yen': _yen,
+    'price': _price,
+  };
+
+  void _restore(Map<String, Object?> d) {
+    _maker.text = d['maker'] as String? ?? '';
+    _model.text = d['model'] as String? ?? '';
+    _color.text = d['color'] as String? ?? '';
+    _serial.text = d['serial'] as String? ?? '';
+    setState(() {
+      _category = d['category'] as String?;
+      _qty = (d['qty'] as num?)?.toInt() ?? 1;
+      _yen = (d['yen'] as num?)?.round() ?? 0;
+      _price = (d['price'] as num?)?.round() ?? 0;
+      _picked = '';
+    });
+  }
+
+  String _summary() => [
+    '${_maker.text} ${_model.text}'.trim(),
+    if (_qty > 1) '$_qty cây',
+    if (_price > 0) InvUi.vnd(_price),
+  ].where((s) => s.isNotEmpty).join(' · ');
 
   @override
   void dispose() {
@@ -165,7 +212,11 @@ class _AddUnitSheetState extends ConsumerState<AddUnitSheet> {
           _qty = 1;
           _saving = false;
         });
+        // Đã lưu: mốc "chưa đổi" là form hiện tại, nháp cũ hết giá trị.
+        _initial = jsonEncode(_draft());
+        unawaited(OmniDraftStore.delete('inventory.add_unit'));
       } else {
+        _guard.currentState?.release();
         Navigator.of(context).pop();
       }
     } catch (e) {
@@ -188,143 +239,153 @@ class _AddUnitSheetState extends ConsumerState<AddUnitSheet> {
     final dup = _dupSerial;
     final ok = _valid && !_saving;
 
-    return OmniSheetBody(
-      header: OmniSheetHeader(
-        title: 'Thêm cây',
-        subtitle: [
-          widget.lot.title,
-          if (_added > 0) 'vừa thêm $_added',
-        ].join(' · '),
-      ),
-      footer: OmniTintedButtons(
-        child: Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                key: const ValueKey('inv-add-more'),
-                onPressed: ok ? () => _save(more: true) : null,
-                child: const Text('Thêm & nhập tiếp'),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: FilledButton(
-                key: const ValueKey('inv-add-one'),
-                onPressed: ok ? () => _save(more: false) : null,
-                child: const Text('Thêm'),
-              ),
-            ),
-          ],
+    return OmniSheetGuard(
+      key: _guard,
+      draftKind: 'inventory.add_unit',
+      draftScope: widget.lot.id,
+      listenable: Listenable.merge([_maker, _model, _color, _serial]),
+      isDirty: _dirty,
+      toDraft: _draft,
+      onRestore: _restore,
+      summary: _summary,
+      child: OmniSheetBody(
+        header: OmniSheetHeader(
+          title: 'Thêm cây',
+          subtitle: [
+            widget.lot.title,
+            if (_added > 0) 'vừa thêm $_added',
+          ].join(' · '),
         ),
-      ),
-      children: [
-        OmniGroupSection(
-          children: [
-            InvInputRow(
-              key: const ValueKey('inv-add-maker'),
-              label: 'Hãng',
-              controller: _maker,
-              fieldKey: const ValueKey('inv-add-maker-field'),
-              hint: 'YAMAHA',
-              caps: true,
-              onChanged: (_) => setState(() => _picked = ''),
-            ),
-            InvInputRow(
-              key: const ValueKey('inv-add-model'),
-              label: 'Model',
-              controller: _model,
-              fieldKey: const ValueKey('inv-add-model-field'),
-              hint: 'U3H',
-              caps: true,
-              onChanged: (_) => setState(() => _picked = ''),
-            ),
-            for (final s in sugg)
-              OmniGroupRow(
-                key: ValueKey('inv-add-sugg-${s.key}'),
-                icon: LucideIcons.search,
-                title: '${s.maker} ${s.model}',
-                subtitle: [
-                  if (s.category != null) InvUi.shortCategory(s.category),
-                  if (perms.cost && (s.yenPrice ?? 0) > 0)
-                    InventoryFormat.yen(s.yenPrice),
-                ].join(' · '),
-                value: (s.listPrice ?? 0) > 0 ? InvUi.vnd(s.listPrice) : null,
-                chevron: false,
-                onTap: () => _pick(s),
+        footer: OmniTintedButtons(
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  key: const ValueKey('inv-add-more'),
+                  onPressed: ok ? () => _save(more: true) : null,
+                  child: const Text('Thêm & nhập tiếp'),
+                ),
               ),
-          ],
+              const SizedBox(width: 10),
+              Expanded(
+                child: FilledButton(
+                  key: const ValueKey('inv-add-one'),
+                  onPressed: ok ? () => _save(more: false) : null,
+                  child: const Text('Thêm'),
+                ),
+              ),
+            ],
+          ),
         ),
-        OmniGroupSection(
-          children: [
-            OmniGroupRow(
-              key: const ValueKey('inv-add-category'),
-              title: 'Loại',
-              value: _category ?? 'Chọn',
-              onTap: _pickCategory,
-            ),
-            InvInputRow(
-              label: 'Màu',
-              controller: _color,
-              fieldKey: const ValueKey('inv-add-color-field'),
-              hint: 'Đen, BLK…',
-              caps: true,
-            ),
-            if (_qty == 1)
+        children: [
+          OmniGroupSection(
+            children: [
               InvInputRow(
-                label: 'Serial',
-                controller: _serial,
-                fieldKey: const ValueKey('inv-add-serial-field'),
-                hint: 'Để trống nếu chưa có',
+                key: const ValueKey('inv-add-maker'),
+                label: 'Hãng',
+                controller: _maker,
+                fieldKey: const ValueKey('inv-add-maker-field'),
+                hint: 'YAMAHA',
                 caps: true,
-                onChanged: (_) => setState(() {}),
+                onChanged: (_) => setState(() => _picked = ''),
               ),
-            OmniGroupRow(
-              title: 'Số lượng',
-              subtitle: _qty > 1 ? 'cây giống nhau, chưa serial' : null,
-              trailing: InvStepper(
-                value: _qty,
-                min: 1,
-                max: 50,
-                onChanged: (v) => setState(() {
-                  _qty = v;
-                  if (v > 1) _serial.clear();
-                }),
+              InvInputRow(
+                key: const ValueKey('inv-add-model'),
+                label: 'Model',
+                controller: _model,
+                fieldKey: const ValueKey('inv-add-model-field'),
+                hint: 'U3H',
+                caps: true,
+                onChanged: (_) => setState(() => _picked = ''),
               ),
-            ),
-          ],
-        ),
-        OmniGroupSection(
-          children: [
-            if (perms.cost)
+              for (final s in sugg)
+                OmniGroupRow(
+                  key: ValueKey('inv-add-sugg-${s.key}'),
+                  icon: LucideIcons.search,
+                  title: '${s.maker} ${s.model}',
+                  subtitle: [
+                    if (s.category != null) InvUi.shortCategory(s.category),
+                    if (perms.cost && (s.yenPrice ?? 0) > 0)
+                      InventoryFormat.yen(s.yenPrice),
+                  ].join(' · '),
+                  value: (s.listPrice ?? 0) > 0 ? InvUi.vnd(s.listPrice) : null,
+                  chevron: false,
+                  onTap: () => _pick(s),
+                ),
+            ],
+          ),
+          OmniGroupSection(
+            children: [
               OmniGroupRow(
-                key: const ValueKey('inv-add-yen'),
-                title: 'Giá nhập ¥',
-                value: InventoryFormat.yen(_yen),
-                onTap: () => _money(true),
+                key: const ValueKey('inv-add-category'),
+                title: 'Loại',
+                value: _category ?? 'Chọn',
+                onTap: _pickCategory,
               ),
-            OmniGroupRow(
-              key: const ValueKey('inv-add-price'),
-              title: 'Niêm yết',
-              value: InvUi.vnd(_price),
-              onTap: () => _money(false),
-            ),
-            if (perms.cost && _yen > 0 && rate != null)
+              InvInputRow(
+                label: 'Màu',
+                controller: _color,
+                fieldKey: const ValueKey('inv-add-color-field'),
+                hint: 'Đen, BLK…',
+                caps: true,
+              ),
+              if (_qty == 1)
+                InvInputRow(
+                  label: 'Serial',
+                  controller: _serial,
+                  fieldKey: const ValueKey('inv-add-serial-field'),
+                  hint: 'Để trống nếu chưa có',
+                  caps: true,
+                  onChanged: (_) => setState(() {}),
+                ),
               OmniGroupRow(
-                title: 'Giá vốn tạm',
-                subtitle:
-                    '${InventoryFormat.yen(_yen)} × ${InventoryFormat.rate(rate)}',
-                value: InvUi.vnd(_yen * rate * _qty),
+                title: 'Số lượng',
+                subtitle: _qty > 1 ? 'cây giống nhau, chưa serial' : null,
+                trailing: InvStepper(
+                  value: _qty,
+                  min: 1,
+                  max: 50,
+                  onChanged: (v) => setState(() {
+                    _qty = v;
+                    if (v > 1) _serial.clear();
+                  }),
+                ),
               ),
-            if (dup != null)
+            ],
+          ),
+          OmniGroupSection(
+            children: [
+              if (perms.cost)
+                OmniGroupRow(
+                  key: const ValueKey('inv-add-yen'),
+                  title: 'Giá nhập ¥',
+                  value: InventoryFormat.yen(_yen),
+                  onTap: () => _money(true),
+                ),
               OmniGroupRow(
-                title:
-                    'Serial $dup đã có ở cây ${_maker.text.trim().toUpperCase()} khác',
-                destructive: true,
-                chevron: false,
+                key: const ValueKey('inv-add-price'),
+                title: 'Niêm yết',
+                value: InvUi.vnd(_price),
+                onTap: () => _money(false),
               ),
-          ],
-        ),
-      ],
+              if (perms.cost && _yen > 0 && rate != null)
+                OmniGroupRow(
+                  title: 'Giá vốn tạm',
+                  subtitle:
+                      '${InventoryFormat.yen(_yen)} × ${InventoryFormat.rate(rate)}',
+                  value: InvUi.vnd(_yen * rate * _qty),
+                ),
+              if (dup != null)
+                OmniGroupRow(
+                  title:
+                      'Serial $dup đã có ở cây ${_maker.text.trim().toUpperCase()} khác',
+                  destructive: true,
+                  chevron: false,
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

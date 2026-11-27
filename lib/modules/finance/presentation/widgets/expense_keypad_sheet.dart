@@ -276,9 +276,6 @@ class _ExpenseKeypadSheetState extends State<_ExpenseKeypadSheet> {
                 ),
               ),
             ],
-            const SizedBox(width: 6),
-            // ✕ tròn 32 nền xám (spec §3.4).
-            const OmniSheetCloseButton(),
           ],
         ),
       ),

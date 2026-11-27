@@ -42,7 +42,7 @@ class _TransferOwnerSheetState extends ConsumerState<_TransferOwnerSheet> {
       header: OmniSheetHeader(
         title: 'Chuyển chủ kế hoạch',
         subtitle: 'Chọn thành viên đang làm việc để nhận quyền chủ',
-        trailing: OmniSheetCloseButton(
+        closeButton: OmniSheetCloseButton(
           onPressed: () => Navigator.of(context).maybePop(),
         ),
       ),

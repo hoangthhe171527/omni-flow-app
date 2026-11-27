@@ -221,6 +221,7 @@ Future<InvProduct?> openStockActionSheet(
 }) async {
   final out = await showOmniSheet<(InvProduct, String)>(
     context: context,
+    guardInput: true,
     builder: (_) => StockActionSheet(product: product, action: action),
   );
   if (out == null) return null;
@@ -257,6 +258,35 @@ class _StockActionSheetState extends ConsumerState<StockActionSheet> {
   void dispose() {
     _note.dispose();
     super.dispose();
+  }
+
+  // ---- Nháp (D16): Nhập hàng có tiền → dài; Chuyển / Đặt số thật → ngắn ----
+  bool _dirty() =>
+      _qty != null ||
+      _cost != null ||
+      _from != null ||
+      _to != null ||
+      _at != null ||
+      _note.text.trim().isNotEmpty;
+
+  Map<String, Object?> _draft() => {
+    'qty': _qty,
+    'cost': _cost,
+    'from': _from,
+    'to': _to,
+    'at': _at,
+    'note': _note.text,
+  };
+
+  void _restore(Map<String, Object?> d) {
+    _note.text = d['note'] as String? ?? '';
+    setState(() {
+      _qty = (d['qty'] as num?)?.toInt();
+      _cost = (d['cost'] as num?)?.round();
+      _from = d['from'] as String?;
+      _to = d['to'] as String?;
+      _at = d['at'] as String?;
+    });
   }
 
   Future<void> _pickQty({int? initial}) async {
@@ -456,18 +486,34 @@ class _StockActionSheetState extends ConsumerState<StockActionSheet> {
         ),
     ];
 
-    return OmniSheetBody(
-      header: OmniSheetHeader(title: title, subtitle: _p.name),
-      footer: FilledButton(
-        key: const ValueKey('inv-stock-save'),
-        onPressed: ready ? () => _save(defaultLoc) : null,
-        child: Text(switch (action) {
-          StockAction.receive => 'Nhập',
-          StockAction.transfer => 'Chuyển',
-          StockAction.adjust => 'Lưu',
-        }),
+    return OmniSheetGuard(
+      draftKind: 'inventory.stock.${action.name}',
+      draftScope: _p.id,
+      length: action == StockAction.receive
+          ? OmniSheetLength.long
+          : OmniSheetLength.short,
+      listenable: _note,
+      isDirty: _dirty,
+      toDraft: _draft,
+      onRestore: _restore,
+      summary: () => [
+        if (_qty != null) '${InventoryFormat.number(_qty)} $unit',
+        if (_cost != null) InvUi.vnd(_cost),
+      ].join(' · '),
+      discardPrompt: 'Bỏ ${title.toLowerCase()} đang nhập?',
+      child: OmniSheetBody(
+        header: OmniSheetHeader(title: title, subtitle: _p.name),
+        footer: FilledButton(
+          key: const ValueKey('inv-stock-save'),
+          onPressed: ready ? () => _save(defaultLoc) : null,
+          child: Text(switch (action) {
+            StockAction.receive => 'Nhập',
+            StockAction.transfer => 'Chuyển',
+            StockAction.adjust => 'Lưu',
+          }),
+        ),
+        children: [OmniGroupSection(children: rows)],
       ),
-      children: [OmniGroupSection(children: rows)],
     );
   }
 }

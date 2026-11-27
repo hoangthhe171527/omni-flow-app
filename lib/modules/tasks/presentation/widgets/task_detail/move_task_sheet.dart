@@ -56,8 +56,11 @@ class _MoveTaskSheetState extends ConsumerState<MoveTaskSheet> {
       child: OmniSheetBody(
         header: OmniSheetHeader(
           title: plan == null ? 'Chuyển sang kế hoạch' : plan.name,
-          leading: plan == null
-              ? null
+          // Bước hai (chọn nhóm): ‹ quay lại giữ chỗ bên trái thay ✕ (D18).
+          closeButton: plan == null
+              ? OmniSheetCloseButton(
+                  onPressed: () => Navigator.of(context).maybePop(),
+                )
               : OmniGlassCircle(
                   child: IconButton(
                     tooltip: 'Chọn kế hoạch khác',
@@ -68,9 +71,6 @@ class _MoveTaskSheetState extends ConsumerState<MoveTaskSheet> {
                     ),
                   ),
                 ),
-          trailing: OmniSheetCloseButton(
-            onPressed: () => Navigator.of(context).maybePop(),
-          ),
         ),
         children: [
           if (plan == null) _planList(context) else _sectionList(plan),

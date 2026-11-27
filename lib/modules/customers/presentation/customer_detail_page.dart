@@ -177,7 +177,11 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
     required bool opps,
   }) async {
     setState(() => _editing = null);
-    final picked = await showTagPicker(context, current: c.tags);
+    final picked = await showTagPicker(
+      context,
+      current: c.tags,
+      draftScope: c.id,
+    );
     if (picked == null || !mounted) return;
     await _savePicked(
       c,

@@ -65,7 +65,7 @@ Future<DueDateChoice?> showDueDateSheet({
       semanticsLabel: 'Hạn',
       header: OmniSheetHeader(
         title: 'Hạn hoàn thành',
-        trailing: OmniSheetCloseButton(
+        closeButton: OmniSheetCloseButton(
           onPressed: () => Navigator.of(context).maybePop(),
         ),
       ),
@@ -113,6 +113,7 @@ Future<String?> showTextEditSheet({
   int? maxLength,
 }) => showOmniSheet<String>(
   context: context,
+  guardInput: true,
   builder: (context) => _TextEditSheet(
     title: title,
     initial: initial,
@@ -170,9 +171,43 @@ class _TextEditSheetState extends State<_TextEditSheet> {
     return widget.allowEmpty || value.isNotEmpty;
   }
 
+  bool get _dirty => _controller.text.trim() != widget.initial.trim();
+
   @override
   Widget build(BuildContext context) {
+    // Sheet ngắn (một ô, D16): đóng khi đã sửa → hỏi ngay trong sheet. Nháp
+    // gắn với đúng tiêu đề + nội dung gốc, mở lại chỗ khác không bị mời.
+    return OmniSheetGuard(
+      draftKind: 'tasks.text_edit',
+      draftScope: '${widget.title}#${widget.initial.hashCode}',
+      length: OmniSheetLength.short,
+      listenable: _controller,
+      isDirty: () => _dirty,
+      toDraft: () => {'text': _controller.text},
+      onRestore: (d) => setState(() => _controller.text = '${d['text'] ?? ''}'),
+      summary: () => _controller.text.trim(),
+      discardPrompt: 'Bỏ thay đổi đang nhập?',
+      child: Builder(builder: _buildBody),
+    );
+  }
+
+  Widget _buildBody(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final guard = OmniSheetGuard.maybeOf(context);
+    final header = OmniSheetHeader(title: widget.title);
+    if (guard != null && guard.confirming) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(10, 0, 10, OmniSpacing.md),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            header,
+            OmniDraftChoices(guard: guard),
+          ],
+        ),
+      );
+    }
     // KHÔNG tự đệm phần bàn phím: `showOmniSheet` đã đệm rồi. Đệm hai lần
     // thì nội dung bị ép, tràn xuống dưới, và nút "Lưu" vẽ ra mà bấm không ăn
     // (`text_edit_sheet_keyboard_test.dart`).
@@ -182,12 +217,12 @@ class _TextEditSheetState extends State<_TextEditSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          OmniSheetHeader(
-            title: widget.title,
-            trailing: OmniSheetCloseButton(
-              onPressed: () => Navigator.of(context).maybePop(),
+          header,
+          if (guard?.pendingDraft != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+              child: OmniDraftBanner(guard: guard!),
             ),
-          ),
           // Màn nhỏ + bàn phím: mô tả tám dòng cao hơn chỗ còn lại. Ô nhập co
           // lại và tự cuộn, còn tiêu đề và nút "Lưu" luôn trong tầm chạm.
           Flexible(

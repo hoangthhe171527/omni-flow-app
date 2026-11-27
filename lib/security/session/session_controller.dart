@@ -276,6 +276,7 @@ class SessionController extends Notifier<Session> {
     await _prefs.removeByPrefixes(const [
       StorageKeys.threadOutbox,
       '${StorageKeys.subtaskOutbox}.',
+      '${StorageKeys.sheetDraft}.',
     ]);
     ref.read(activeTenantIdProvider.notifier).state = null;
     // Detach the identity too. A shared demo phone would otherwise keep

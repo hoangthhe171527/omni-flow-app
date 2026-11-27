@@ -1312,7 +1312,7 @@ Future<void> _reportIssue(
   BuildContext context,
   TaskController controller,
 ) async {
-  final draft = await showReportIssueSheet(context);
+  final draft = await showReportIssueSheet(context, taskId: controller.arg);
   if (draft == null || !context.mounted) return;
   final messenger = ScaffoldMessenger.of(context);
   final container = ProviderScope.containerOf(context);

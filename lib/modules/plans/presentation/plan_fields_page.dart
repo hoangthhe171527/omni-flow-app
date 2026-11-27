@@ -63,8 +63,11 @@ class _PlanFieldsPageState extends ConsumerState<PlanFieldsPage> {
     final fields = _fields!;
     final result = await showOmniSheet<_FieldResult>(
       context: context,
-      builder: (_) =>
-          _FieldSheet(initial: index == null ? null : fields[index]),
+      guardInput: true,
+      builder: (_) => _FieldSheet(
+        initial: index == null ? null : fields[index],
+        planId: widget.planId,
+      ),
     );
     if (result == null || !mounted) return;
     if (result.remove) {
@@ -159,9 +162,12 @@ class _PlanFieldsPageState extends ConsumerState<PlanFieldsPage> {
 /// Sheet thêm / sửa một trường: tên (≤128), kiểu, lựa chọn (mỗi dòng một,
 /// ≤128) khi kiểu là "Chọn". Sửa thì có thêm nhóm đỏ "Xoá trường".
 class _FieldSheet extends StatefulWidget {
-  const _FieldSheet({this.initial});
+  const _FieldSheet({this.initial, required this.planId});
 
   final CustomFieldDef? initial;
+
+  /// Kế hoạch — ngữ cảnh của nháp (D17).
+  final String planId;
 
   @override
   State<_FieldSheet> createState() => _FieldSheetState();
@@ -223,12 +229,44 @@ class _FieldSheetState extends State<_FieldSheet> {
     final scheme = Theme.of(context).colorScheme;
     const types = CustomFieldType.values;
 
+    final initial = widget.initial;
+    // Sheet ngắn (D16): tên, kiểu, lựa chọn.
+    return OmniSheetGuard(
+      draftKind: 'plans.field.edit',
+      draftScope: '${widget.planId}/${initial?.id ?? 'new'}',
+      length: OmniSheetLength.short,
+      listenable: Listenable.merge([_name, _options]),
+      isDirty: () =>
+          _name.text != (initial?.name ?? '') ||
+          _options.text != (initial?.options.join('\n') ?? '') ||
+          _type != (initial?.type ?? CustomFieldType.text),
+      toDraft: () => {
+        'name': _name.text,
+        'options': _options.text,
+        'type': _type.name,
+      },
+      onRestore: (d) => setState(() {
+        _name.text = d['name'] as String? ?? '';
+        _options.text = d['options'] as String? ?? '';
+        _type = CustomFieldType.values.firstWhere(
+          (t) => t.name == d['type'],
+          orElse: () => _type,
+        );
+      }),
+      summary: () => _name.text.trim(),
+      discardPrompt: 'Bỏ thay đổi trường này?',
+      child: _body(context, scheme, types),
+    );
+  }
+
+  Widget _body(
+    BuildContext context,
+    ColorScheme scheme,
+    List<CustomFieldType> types,
+  ) {
     return OmniSheetBody(
       header: OmniSheetHeader(
         title: widget.initial == null ? 'Thêm trường' : 'Sửa trường',
-        trailing: OmniSheetCloseButton(
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
       ),
       footer: FilledButton(
         onPressed: _valid ? _submit : null,

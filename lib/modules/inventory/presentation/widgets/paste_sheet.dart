@@ -17,6 +17,7 @@ Future<void> openPasteSheet(BuildContext context, {required Lot lot}) {
   return showOmniSheet<void>(
     context: context,
     expand: true,
+    guardInput: true,
     builder: (_) => PasteSheet(lot: lot),
   );
 }
@@ -74,6 +75,7 @@ class _PasteSheetState extends ConsumerState<PasteSheet> {
         'Đã thêm $n cây vào ${widget.lot.code}'
         '${dup > 0 ? ' · $dup serial trùng cây khác, nhờ kiểm lại' : ''}',
       );
+      _guard.currentState?.release();
       Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {
@@ -83,10 +85,45 @@ class _PasteSheetState extends ConsumerState<PasteSheet> {
     }
   }
 
+  // ---- Nháp (D16): sheet dài — cả packing list dán vào ----
+  final _guard = GlobalKey<OmniSheetGuardState>();
+
+  Map<String, Object?> _draft() => {
+    'text': _text.text,
+    'preview': _preview != null,
+  };
+
+  void _restore(Map<String, Object?> d) {
+    _text.text = d['text'] as String? ?? '';
+    setState(() {
+      _preview = d['preview'] == true && _text.text.trim().isNotEmpty
+          ? parsePackingList(_text.text)
+          : null;
+    });
+  }
+
+  String _summary() {
+    final lines = _text.text
+        .split('\n')
+        .where((l) => l.trim().isNotEmpty)
+        .length;
+    return '$lines dòng';
+  }
+
   @override
   Widget build(BuildContext context) {
     final pl = _preview;
-    return pl == null ? _input(context) : _review(context, pl);
+    return OmniSheetGuard(
+      key: _guard,
+      draftKind: 'inventory.paste',
+      draftScope: widget.lot.id,
+      listenable: _text,
+      isDirty: () => _text.text.trim().isNotEmpty,
+      toDraft: _draft,
+      onRestore: _restore,
+      summary: _summary,
+      child: pl == null ? _input(context) : _review(context, pl),
+    );
   }
 
   Widget _input(BuildContext context) {

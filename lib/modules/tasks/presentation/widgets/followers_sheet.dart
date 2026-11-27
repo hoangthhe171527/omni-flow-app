@@ -121,7 +121,7 @@ class _FollowersSheetState extends ConsumerState<FollowersSheet> {
       child: OmniSheetBody(
         header: OmniSheetHeader(
           title: 'Người theo dõi (${followers.length})',
-          trailing: OmniSheetCloseButton(
+          closeButton: OmniSheetCloseButton(
             onPressed: () => Navigator.of(context).maybePop(),
           ),
         ),

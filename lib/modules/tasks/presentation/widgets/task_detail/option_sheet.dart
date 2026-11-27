@@ -37,7 +37,7 @@ Future<int?> showOptionSheet(
     semanticsLabel: title,
     header: OmniSheetHeader(
       title: title,
-      trailing: OmniSheetCloseButton(
+      closeButton: OmniSheetCloseButton(
         onPressed: () => Navigator.of(ctx).maybePop(),
       ),
     ),

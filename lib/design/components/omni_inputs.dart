@@ -9,6 +9,7 @@ import '../platform/omni_platform.dart';
 import '../tokens/tokens.dart';
 import 'omni_tinted_buttons.dart';
 import 'omni_glass.dart';
+import 'omni_sheet_draft.dart';
 
 /// Debounced search field. Debouncing lives here rather than in each screen so
 /// no list ever fires a request per keystroke.
@@ -942,6 +943,10 @@ Future<T?> showOmniSheet<T>({
   // thanh tab kính vẽ bên ngoài nó — sheet mở trong tab bị thanh tab đè lên
   // đáy. Chỉ truyền `false` khi sheet thật sự phải nằm dưới thanh tab.
   bool useRootNavigator = true,
+  // Sheet có ô nhập bọc thân bằng [OmniSheetGuard]: kéo xuống đi qua gác
+  // (`maybePop`) thay cho kéo của Flutter (gọi thẳng `Navigator.pop`, bỏ qua
+  // `PopScope`) — đang nhập thì sheet nảy lại hoặc lưu nháp, không mất chữ.
+  bool guardInput = false,
 }) {
   final apple = isApple(context);
   final fill = backgroundColor ?? Theme.of(context).colorScheme.surface;
@@ -965,6 +970,7 @@ Future<T?> showOmniSheet<T>({
         ? animationStyle
         : AnimationStyle.noAnimation,
     showDragHandle: false,
+    enableDrag: !guardInput,
     builder: (context) => Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: OmniGlassSheet(
@@ -974,6 +980,7 @@ Future<T?> showOmniSheet<T>({
         // kéo xuống đóng được. Trên Android nút back đã nói điều đó.
         handle: showDragHandle ?? apple,
         expand: expand,
+        dragToClose: guardInput,
         child: builder(context),
       ),
     ),
@@ -994,6 +1001,7 @@ class OmniGlassSheet extends StatelessWidget {
     this.radius = defaultRadius,
     this.handle = false,
     this.expand = false,
+    this.dragToClose = false,
   });
 
   /// Bo trên của sheet (thang bo góc: sheet 32).
@@ -1003,6 +1011,9 @@ class OmniGlassSheet extends StatelessWidget {
   final double radius;
   final bool handle;
   final bool expand;
+
+  /// Kéo xuống đi qua gác nhập ([OmniSheetDragToClose]) — `guardInput`.
+  final bool dragToClose;
   final Widget child;
 
   @override
@@ -1056,9 +1067,8 @@ class OmniGlassSheet extends StatelessWidget {
       ),
     );
 
-    return expand
-        ? FractionallySizedBox(heightFactor: 0.9, child: sheet)
-        : sheet;
+    final body = dragToClose ? OmniSheetDragToClose(child: sheet) : sheet;
+    return expand ? FractionallySizedBox(heightFactor: 0.9, child: body) : body;
   }
 }
 
@@ -1070,10 +1080,12 @@ Future<T?> showOmniViecSheet<T>({
   required BuildContext context,
   required Widget Function(BuildContext context) builder,
   Color? backgroundColor,
+  bool guardInput = false,
 }) => showOmniSheet<T>(
   context: context,
   builder: builder,
   backgroundColor: backgroundColor,
+  guardInput: guardInput,
   barrierColor: OmniColors.ink.withValues(alpha: 0.28),
   maxHeight: 740,
   showDragHandle: false,

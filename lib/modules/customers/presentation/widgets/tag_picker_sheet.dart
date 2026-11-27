@@ -12,18 +12,23 @@ const kStandardCustomerTags = ['Đặt lịch', 'Báo giá', 'Hợp đồng', 'K
 Future<List<String>?> showTagPicker(
   BuildContext context, {
   required List<String> current,
+  String? draftScope,
 }) {
   return showOmniSheet<List<String>>(
     context: context,
     showDragHandle: true,
-    builder: (_) => _TagPickerSheet(current: current),
+    guardInput: true,
+    builder: (_) => _TagPickerSheet(current: current, draftScope: draftScope),
   );
 }
 
 class _TagPickerSheet extends StatefulWidget {
-  const _TagPickerSheet({required this.current});
+  const _TagPickerSheet({required this.current, this.draftScope});
 
   final List<String> current;
+
+  /// Id khách — nháp chỉ mời lại đúng khách đó.
+  final String? draftScope;
 
   @override
   State<_TagPickerSheet> createState() => _TagPickerSheetState();
@@ -93,8 +98,53 @@ class _TagPickerSheetState extends State<_TagPickerSheet> {
     });
   }
 
+  // Tính lại từ widget (không từ _selected — `late` chỉ chạy khi đọc lần đầu,
+  // lúc đó _selected có thể đã đổi).
+  late final List<String> _initial = _dedupe(widget.current.map(_canon));
+
+  bool get _isDirty =>
+      _input.text.trim().isNotEmpty ||
+      _selected.length != _initial.length ||
+      !_selected.every(_initial.contains);
+
   @override
   Widget build(BuildContext context) {
+    // Sheet ngắn: đóng khi đã đổi nhãn / đang gõ nhãn mới → hỏi trong sheet.
+    // "Xong" trả danh sách (khác null) nên nháp tự xoá.
+    return OmniSheetGuard(
+      draftKind: 'customers.tags.pick',
+      draftScope: widget.draftScope,
+      length: OmniSheetLength.short,
+      listenable: _input,
+      isDirty: () => _isDirty,
+      toDraft: () => {
+        'selected': List<String>.of(_selected),
+        'options': List<String>.of(_options),
+        'input': _input.text,
+      },
+      onRestore: (d) => setState(() {
+        final options = [
+          for (final o in (d['options'] as List?) ?? const []) '$o',
+        ];
+        for (final o in options) {
+          if (!_options.any((x) => x.toLowerCase() == o.toLowerCase())) {
+            _options.add(o);
+          }
+        }
+        _selected
+          ..clear()
+          ..addAll([
+            for (final s in (d['selected'] as List?) ?? const []) '$s',
+          ]);
+        _input.text = d['input'] as String? ?? '';
+      }),
+      summary: () => _selected.join(', '),
+      discardPrompt: 'Bỏ thay đổi nhãn?',
+      child: _buildBody(context),
+    );
+  }
+
+  Widget _buildBody(BuildContext context) {
     return OmniSheetBody(
       // Đầu sheet tự có nút ✕ tròn xám (spec phong cách iOS §3.4).
       header: const OmniSheetHeader(title: 'Chọn nhãn'),

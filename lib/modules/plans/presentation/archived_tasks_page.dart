@@ -91,7 +91,7 @@ class _ArchivedTasksPageState extends ConsumerState<ArchivedTasksPage> {
       builder: (sheetContext) => OmniSheetBody(
         header: OmniSheetHeader(
           title: 'Chọn kế hoạch',
-          trailing: OmniSheetCloseButton(
+          closeButton: OmniSheetCloseButton(
             onPressed: () => Navigator.of(sheetContext).pop(_selectedPlanId),
           ),
         ),

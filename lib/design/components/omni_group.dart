@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../tokens/tokens.dart';
 import 'omni_tinted_buttons.dart';
 import 'omni_glass.dart';
+import 'omni_sheet_draft.dart';
 
 /// Nhóm lồng liquid (viomni-apple-uiux.html `.group`, đợt 1–3 duyệt
 /// 08/11/2026): nhãn nhóm chữ phụ ngoài thẻ, thẻ trắng bo 18 không viền, các
@@ -360,9 +362,11 @@ class OmniGroupRow extends StatelessWidget {
   }
 }
 
-/// Đầu sheet liquid: [leading] (ô màu / avatar), tiêu đề 17 đậm, dòng phụ,
-/// nút bên phải. Đệm 18 ngang, 12 dưới — dùng cho MỌI sheet để các sheet
-/// cùng một dáng.
+/// Đầu sheet (D18, 27/11/2026 — kiểu iOS): ✕ / "Huỷ" bên TRÁI, tiêu đề 17
+/// đậm canh GIỮA (+ dòng phụ), hành động "Xong / Lưu" bên phải chỉ khi sheet
+/// không có nút chính ở đáy. Dùng cho MỌI sheet để các sheet cùng một dáng.
+///
+/// Tiêu đề luôn đúng giữa sheet: hai bên chừa bằng nhau theo bên rộng hơn.
 class OmniSheetHeader extends StatelessWidget {
   const OmniSheetHeader({
     super.key,
@@ -371,74 +375,299 @@ class OmniSheetHeader extends StatelessWidget {
     this.leading,
     this.trailing,
     this.close = true,
-  });
+    this.closeButton,
+    this.closeLabel,
+    this.onClose,
+  }) : assert(
+         trailing is! OmniSheetCloseButton,
+         '✕ nằm bên trái (D18): truyền vào closeButton, không phải trailing.',
+       );
 
   final String title;
   final String? subtitle;
+
+  /// Ô màu / avatar nhỏ đứng trước tiêu đề (cùng canh giữa).
   final Widget? leading;
+
+  /// Hành động bên phải ("Xong", "Lưu", "Xoá lọc"…).
   final Widget? trailing;
 
-  /// Không có [trailing] thì hiện nút ✕ (spec phong cách iOS §3.4) — chỉ khi
-  /// đầu sheet nằm trong sheet thật (`showOmniSheet` → ModalBottomSheetRoute).
-  /// Trong trang thì không (lỡ đóng cả màn), trong menu bật lên (popover) cũng
+  /// Hiện nút đóng bên trái (spec phong cách iOS §3.4) — chỉ khi đầu sheet
+  /// nằm trong sheet thật (`showOmniSheet` → ModalBottomSheetRoute). Trong
+  /// trang thì không (lỡ đóng cả màn), trong menu bật lên (popover) cũng
   /// không — popover đóng bằng chạm ra ngoài như iOS.
   final bool close;
+
+  /// Nút đóng riêng (vd [OmniSheetCloseButton] trả kết quả); thay ✕ mặc định
+  /// và hiện kể cả ngoài sheet.
+  final Widget? closeButton;
+
+  /// "Huỷ" bằng chữ thay cho ✕ — dùng khi bên phải có "Lưu".
+  final String? closeLabel;
+
+  /// Mặc định `Navigator.maybePop` — đi qua gác nhập ([OmniSheetGuard]).
+  final VoidCallback? onClose;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final trailing =
-        this.trailing ??
-        (close && ModalRoute.of(context) is ModalBottomSheetRoute
-            ? const OmniSheetCloseButton()
+    final inSheet = ModalRoute.of(context) is ModalBottomSheetRoute;
+    final Widget? left =
+        closeButton ??
+        (close && inSheet
+            ? (closeLabel == null
+                  ? OmniSheetCloseButton(onPressed: onClose)
+                  : OmniSheetTextAction(
+                      label: closeLabel!,
+                      onPressed:
+                          onClose ?? () => Navigator.of(context).maybePop(),
+                    ))
             : null);
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(22, 10, 14, 12),
-      child: Row(
-        children: [
-          if (leading != null) ...[leading!, const SizedBox(width: 10)],
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Semantics(
-                  header: true,
-                  child: Text(
-                    title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    // Tiêu đề sheet 20/700 (spec phong cách iOS §3.4).
-                    style: OmniType.body.copyWith(
-                      fontSize: 20,
-                      height: 1.3,
-                      fontWeight: FontWeight.w700,
-                      color: scheme.onSurface,
-                    ),
-                  ),
-                ),
-                if (subtitle case final sub? when sub.isNotEmpty)
-                  Text(
-                    sub,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: OmniType.bodySm.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-              ],
+    final titleBlock = Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Semantics(
+          header: true,
+          child: Text(
+            title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            // Tiêu đề sheet 17/600 canh giữa (D18).
+            style: OmniType.body.copyWith(
+              fontSize: 17,
+              height: 1.3,
+              fontWeight: FontWeight.w600,
+              color: scheme.onSurface,
             ),
           ),
-          if (trailing != null) ...[const SizedBox(width: 8), trailing],
-        ],
+        ),
+        if (subtitle case final sub? when sub.isNotEmpty)
+          Text(
+            sub,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: OmniType.bodySm.copyWith(
+              fontSize: 13,
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+      ],
+    );
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(10, 4, 10, 10),
+      child: OmniCenteredBar(
+        left: left,
+        right: trailing,
+        middle: leading == null
+            ? titleBlock
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  leading!,
+                  const SizedBox(width: 8),
+                  Flexible(child: titleBlock),
+                ],
+              ),
       ),
     );
   }
 }
 
-/// Nút ✕ đóng sheet (spec §3.4): tròn 32 nền xám, vùng chạm 44. Đặt ở
-/// `trailing` của [OmniSheetHeader]; đóng bằng `Navigator.pop` không kết quả.
+/// Chữ hành động ở đầu sheet ("Huỷ" trái, "Lưu" / "Xong" phải): 17, màu chính,
+/// vùng chạm 44. [strong] = đậm (hành động chính bên phải).
+class OmniSheetTextAction extends StatelessWidget {
+  const OmniSheetTextAction({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.strong = false,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final bool strong;
+
+  @override
+  Widget build(BuildContext context) => TextButton(
+    onPressed: onPressed,
+    style: TextButton.styleFrom(
+      minimumSize: const Size(44, 44),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      textStyle: OmniType.body.copyWith(
+        fontSize: 17,
+        fontWeight: strong ? FontWeight.w600 : FontWeight.w400,
+      ),
+    ),
+    child: Text(label),
+  );
+}
+
+/// Thanh ba ô: [left] sát trái, [right] sát phải, [middle] ĐÚNG giữa — hai
+/// bên chừa bằng nhau theo bên rộng hơn (kiểu thanh điều hướng iOS), cao tối
+/// thiểu [minHeight]. Mỗi bên rộng tối đa 1/3 thanh.
+class OmniCenteredBar extends MultiChildRenderObjectWidget {
+  OmniCenteredBar({
+    super.key,
+    Widget? left,
+    required Widget middle,
+    Widget? right,
+    this.minHeight = 44,
+    this.gap = 8,
+  }) : super(
+         children: [
+           left ?? const SizedBox.shrink(),
+           middle,
+           right ?? const SizedBox.shrink(),
+         ],
+       );
+
+  final double minHeight;
+  final double gap;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderCenteredBar(minHeight: minHeight, gap: gap);
+
+  @override
+  void updateRenderObject(BuildContext context, RenderObject renderObject) {
+    (renderObject as _RenderCenteredBar)
+      ..minHeight = minHeight
+      ..gap = gap;
+  }
+}
+
+class _CenteredBarParentData extends ContainerBoxParentData<RenderBox> {}
+
+class _RenderCenteredBar extends RenderBox
+    with
+        ContainerRenderObjectMixin<RenderBox, _CenteredBarParentData>,
+        RenderBoxContainerDefaultsMixin<RenderBox, _CenteredBarParentData> {
+  _RenderCenteredBar({required double minHeight, required double gap})
+    : _minHeight = minHeight,
+      _gap = gap;
+
+  double _minHeight;
+  set minHeight(double v) {
+    if (v == _minHeight) return;
+    _minHeight = v;
+    markNeedsLayout();
+  }
+
+  double _gap;
+  set gap(double v) {
+    if (v == _gap) return;
+    _gap = v;
+    markNeedsLayout();
+  }
+
+  @override
+  void setupParentData(RenderBox child) {
+    if (child.parentData is! _CenteredBarParentData) {
+      child.parentData = _CenteredBarParentData();
+    }
+  }
+
+  List<RenderBox> get _kids => getChildrenAsList();
+
+  Size _layout(BoxConstraints c, {required bool dry}) {
+    final kids = _kids;
+    final left = kids[0], middle = kids[1], right = kids[2];
+    final sideMax = c.hasBoundedWidth ? c.maxWidth / 3 : double.infinity;
+    final side = BoxConstraints(maxWidth: sideMax, maxHeight: c.maxHeight);
+    Size lay(RenderBox box, BoxConstraints bc) {
+      if (dry) return box.getDryLayout(bc);
+      box.layout(bc, parentUsesSize: true);
+      return box.size;
+    }
+
+    final ls = lay(left, side);
+    final rs = lay(right, side);
+    final sideW = ls.width > rs.width ? ls.width : rs.width;
+    final pad = sideW > 0 ? sideW + _gap : 0.0;
+    final midMax = c.hasBoundedWidth
+        ? (c.maxWidth - 2 * pad).clamp(0.0, double.infinity)
+        : double.infinity;
+    final ms = lay(
+      middle,
+      BoxConstraints(maxWidth: midMax, maxHeight: c.maxHeight),
+    );
+    var height = _minHeight;
+    for (final s in [ls, ms, rs]) {
+      if (s.height > height) height = s.height;
+    }
+    final width = c.hasBoundedWidth ? c.maxWidth : 2 * pad + ms.width;
+    final size = c.constrain(Size(width, height));
+    if (!dry) {
+      Offset at(Size s, double x) => Offset(x, (size.height - s.height) / 2);
+      (left.parentData! as _CenteredBarParentData).offset = at(ls, 0);
+      (right.parentData! as _CenteredBarParentData).offset = at(
+        rs,
+        size.width - rs.width,
+      );
+      (middle.parentData! as _CenteredBarParentData).offset = at(
+        ms,
+        (size.width - ms.width) / 2,
+      );
+    }
+    return size;
+  }
+
+  @override
+  void performLayout() => size = _layout(constraints, dry: false);
+
+  @override
+  Size computeDryLayout(BoxConstraints constraints) =>
+      _layout(constraints, dry: true);
+
+  double _maxOf(double Function(RenderBox) f) {
+    var v = _minHeight;
+    for (final k in _kids) {
+      final h = f(k);
+      if (h > v) v = h;
+    }
+    return v;
+  }
+
+  @override
+  double computeMinIntrinsicHeight(double width) =>
+      _maxOf((k) => k.getMinIntrinsicHeight(width));
+
+  @override
+  double computeMaxIntrinsicHeight(double width) =>
+      _maxOf((k) => k.getMaxIntrinsicHeight(width));
+
+  double _width(double Function(RenderBox) f) {
+    final kids = _kids;
+    final l = f(kids[0]), m = f(kids[1]), r = f(kids[2]);
+    final s = l > r ? l : r;
+    return m + (s > 0 ? 2 * (s + _gap) : 0);
+  }
+
+  @override
+  double computeMinIntrinsicWidth(double height) =>
+      _width((k) => k.getMinIntrinsicWidth(height));
+
+  @override
+  double computeMaxIntrinsicWidth(double height) =>
+      _width((k) => k.getMaxIntrinsicWidth(height));
+
+  @override
+  void paint(PaintingContext context, Offset offset) =>
+      defaultPaint(context, offset);
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) =>
+      defaultHitTestChildren(result, position: position);
+}
+
+/// Nút ✕ đóng sheet (spec §3.4): tròn 32 nền xám, vùng chạm 44. Đặt BÊN TRÁI
+/// đầu sheet ([OmniSheetHeader.closeButton] / mặc định); đóng bằng
+/// `Navigator.maybePop` — đi qua gác nhập.
 class OmniSheetCloseButton extends StatelessWidget {
   const OmniSheetCloseButton({super.key, this.onPressed});
 
@@ -504,6 +733,28 @@ class OmniSheetBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Gác nhập (D16): sheet ngắn đang hỏi → thân đổi thành ba lựa chọn, đầu
+    // sheet giữ nguyên; còn nháp cũ → dòng "Tiếp tục nháp" đứng đầu thân.
+    final guard = OmniSheetGuard.maybeOf(context);
+    if (guard != null && guard.confirming) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ?header,
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(10, 0, 10, 22),
+              child: OmniDraftChoices(guard: guard),
+            ),
+          ),
+        ],
+      );
+    }
+    final children = [
+      if (guard?.pendingDraft != null) OmniDraftBanner(guard: guard!),
+      ...this.children,
+    ];
     final body = Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,

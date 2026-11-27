@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -22,6 +24,7 @@ Future<String?> openPayCostsSheet(
 }) {
   return showOmniSheet<String>(
     context: context,
+    guardInput: true,
     builder: (_) => PayCostsSheet(lot: lot, costs: costs),
   );
 }
@@ -45,6 +48,36 @@ class _PayCostsSheetState extends ConsumerState<PayCostsSheet> {
   bool _saving = false;
 
   int get _total => _amounts.values.fold(0, (s, v) => s + v);
+
+  // ---- Nháp (D16): sheet dài — tiền ----
+  late final String _initial;
+
+  @override
+  void initState() {
+    super.initState();
+    _initial = jsonEncode(_draft());
+  }
+
+  bool _dirty() => jsonEncode(_draft()) != _initial;
+
+  Map<String, Object?> _draft() => {
+    'amounts': {..._amounts},
+    'date': _date.toIso8601String(),
+    'account': _account,
+  };
+
+  void _restore(Map<String, Object?> d) => setState(() {
+    final amounts = d['amounts'];
+    if (amounts is Map) {
+      for (final e in amounts.entries) {
+        if (_amounts.containsKey(e.key) && e.value is num) {
+          _amounts[e.key as String] = (e.value as num).round();
+        }
+      }
+    }
+    _date = DateTime.tryParse('${d['date']}') ?? _date;
+    _account = d['account'] as String?;
+  });
 
   Future<void> _money(LotCost c) async {
     final v = await showMoneyKeypad(
@@ -122,63 +155,71 @@ class _PayCostsSheetState extends ConsumerState<PayCostsSheet> {
         .firstOrNull;
     final total = _total;
 
-    return OmniSheetBody(
-      header: OmniSheetHeader(
-        title: 'Ghi đã trả',
-        subtitle: '${widget.lot.code} · ${widget.costs.length} khoản',
-      ),
-      footer: FilledButton(
-        key: const ValueKey('inv-pay-many-save'),
-        // Khoản nào cũng phải có số tiền: khoản 0 ₫ không được ghi "đã trả".
-        onPressed: _amounts.values.every((v) => v > 0) && !_saving
-            ? _save
-            : null,
-        child: Text(
-          total > 0 ? 'Ghi đã trả · ${InvUi.vnd(total)}' : 'Ghi đã trả',
+    return OmniSheetGuard(
+      draftKind: 'inventory.pay_costs',
+      draftScope: [widget.lot.id, for (final c in widget.costs) c.id].join(','),
+      isDirty: _dirty,
+      toDraft: _draft,
+      onRestore: _restore,
+      summary: () => '${widget.costs.length} khoản · ${InvUi.vnd(_total)}',
+      child: OmniSheetBody(
+        header: OmniSheetHeader(
+          title: 'Ghi đã trả',
+          subtitle: '${widget.lot.code} · ${widget.costs.length} khoản',
         ),
-      ),
-      children: [
-        OmniGroupSection(
-          title: 'Số tiền',
-          children: [
-            for (final c in widget.costs)
+        footer: FilledButton(
+          key: const ValueKey('inv-pay-many-save'),
+          // Khoản nào cũng phải có số tiền: khoản 0 ₫ không được ghi "đã trả".
+          onPressed: _amounts.values.every((v) => v > 0) && !_saving
+              ? _save
+              : null,
+          child: Text(
+            total > 0 ? 'Ghi đã trả · ${InvUi.vnd(total)}' : 'Ghi đã trả',
+          ),
+        ),
+        children: [
+          OmniGroupSection(
+            title: 'Số tiền',
+            children: [
+              for (final c in widget.costs)
+                OmniGroupRow(
+                  key: ValueKey('inv-pay-many-amount-${c.id}'),
+                  title: c.title,
+                  subtitle: c.isGoods
+                      ? InventoryFormat.yen(c.amountJpy)
+                      : 'Thuế & phí',
+                  value: InvUi.vnd(_amounts[c.id]),
+                  onTap: () => _money(c),
+                ),
+            ],
+          ),
+          OmniGroupSection(
+            children: [
               OmniGroupRow(
-                key: ValueKey('inv-pay-many-amount-${c.id}'),
-                title: c.title,
-                subtitle: c.isGoods
-                    ? InventoryFormat.yen(c.amountJpy)
-                    : 'Thuế & phí',
-                value: InvUi.vnd(_amounts[c.id]),
-                onTap: () => _money(c),
+                key: const ValueKey('inv-pay-many-date'),
+                title: 'Ngày trả',
+                value: InventoryFormat.dmy(InventoryFormat.isoDay(_date)),
+                onTap: _pickDate,
               ),
-          ],
-        ),
-        OmniGroupSection(
-          children: [
-            OmniGroupRow(
-              key: const ValueKey('inv-pay-many-date'),
-              title: 'Ngày trả',
-              value: InventoryFormat.dmy(InventoryFormat.isoDay(_date)),
-              onTap: _pickDate,
-            ),
-            OmniGroupRow(
-              key: const ValueKey('inv-pay-many-account'),
-              title: 'Nguồn tiền',
-              value: accountName ?? 'Chọn',
-              onTap: () => _pickAccount(accounts),
-            ),
-          ],
-        ),
-        OmniGroupSection(
-          children: [
-            OmniGroupRow(
-              key: const ValueKey('inv-pay-many-total'),
-              title: 'Tổng',
-              trailing: InvValue(InvUi.vnd(total)),
-            ),
-          ],
-        ),
-      ],
+              OmniGroupRow(
+                key: const ValueKey('inv-pay-many-account'),
+                title: 'Nguồn tiền',
+                value: accountName ?? 'Chọn',
+                onTap: () => _pickAccount(accounts),
+              ),
+            ],
+          ),
+          OmniGroupSection(
+            children: [
+              OmniGroupRow(
+                key: const ValueKey('inv-pay-many-total'),
+                title: 'Tổng',
+                trailing: InvValue(InvUi.vnd(total)),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

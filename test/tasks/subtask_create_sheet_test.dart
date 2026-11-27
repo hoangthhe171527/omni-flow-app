@@ -16,12 +16,20 @@ import 'package:omni_app/modules/tasks/domain/task_permissions.dart';
 import 'package:omni_app/modules/tasks/presentation/task_detail_page.dart';
 import 'package:omni_app/modules/team/team.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-/// Sheet "Việc con mới" (`SubtaskCreate.dc.html`): Huỷ / Việc con mới / Tạo,
+/// Sheet "Việc con mới" (`SubtaskCreate.dc.html`): ✕ / Việc con mới / Tạo,
 /// ô tên, người làm. Chạy qua controller THẬT và HTTP giả để chốt chuỗi
 /// `POST checklist {title}` rồi `PATCH checklist/{id} {assignee_id}`.
+/// ✕ của sheet (trang dưới cũng có nút Đóng của nó).
+Finder get closeX => find.descendant(
+  of: find.byType(BottomSheet),
+  matching: find.byTooltip('Đóng'),
+);
+
 void main() {
   setUpAll(() => initializeDateFormatting('vi_VN'));
+  setUp(() => SharedPreferences.setMockInitialValues({}));
 
   const assigner = {'tasks.read', 'tasks.write', 'tasks.projects.manage.all'};
 
@@ -92,7 +100,8 @@ void main() {
     t,
   ) async {
     await openSheet(t, host());
-    expect(find.byTooltip('Huỷ'), findsOneWidget);
+    // ✕ chung bên trái (D18) thay nút Huỷ riêng.
+    expect(closeX, findsOneWidget);
     expect(find.text('Việc con mới'), findsOneWidget);
     expect(t.widget<FilledButton>(createButton()).onPressed, isNull);
     expect(t.getSize(createButton()).height, greaterThanOrEqualTo(44));
@@ -164,10 +173,18 @@ void main() {
     }
   });
 
-  testWidgets('Huỷ đóng sheet, không gửi gì', (t) async {
+  testWidgets('✕ khi đã gõ: hỏi trong sheet; Xoá nháp đóng, không gửi gì', (
+    t,
+  ) async {
     await openSheet(t, host());
     await t.enterText(nameField, 'Bỏ');
-    await t.tap(find.byTooltip('Huỷ'));
+    await t.pump();
+    await t.tap(closeX);
+    await t.pumpAndSettle();
+    // Sheet ngắn (D16): không đóng, hiện ba lựa chọn ngay trong sheet.
+    expect(find.text('Việc con mới'), findsOneWidget);
+    expect(find.text('Bỏ việc con đang nhập?'), findsOneWidget);
+    await t.tap(find.text('Xoá nháp'));
     await t.pumpAndSettle();
     expect(find.text('Việc con mới'), findsNothing);
     expect(adapter.requests.where((r) => r.method != 'GET'), isEmpty);

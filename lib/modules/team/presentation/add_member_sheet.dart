@@ -14,6 +14,7 @@ import '../domain/new_member.dart';
 Future<void> showAddMemberSheet(BuildContext context) => showOmniSheet<void>(
   context: context,
   useRootNavigator: true,
+  guardInput: true,
   builder: (_) => const AddMemberSheet(),
 );
 
@@ -34,6 +35,7 @@ class _AddMemberSheetState extends ConsumerState<AddMemberSheet> {
   final _phone = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController(text: generateTempPassword());
+  final _guard = GlobalKey<OmniSheetGuardState>();
 
   _Mode _mode = _Mode.create;
   String _role = defaultRoleSlug;
@@ -97,6 +99,8 @@ class _AddMemberSheetState extends ConsumerState<AddMemberSheet> {
         _done = (email: email, password: null, role: 'Thợ', invited: true);
       }
       HapticFeedback.mediumImpact();
+      // Đã thêm: xoá nháp, màn "Hoàn tất" đóng không hỏi.
+      _guard.currentState?.release();
       ref.invalidate(teamDirectoryProvider);
     } on ValidationException catch (error) {
       _emailError = error.firstFor('email');
@@ -121,6 +125,45 @@ class _AddMemberSheetState extends ConsumerState<AddMemberSheet> {
     final done = _done;
     final create = _mode == _Mode.create;
 
+    // Sheet dài (4 ô): đóng khi đang nhập → tự lưu nháp. Mật khẩu tạm KHÔNG
+    // vào nháp (tiếp tục nháp thì giữ mật khẩu vừa sinh).
+    return OmniSheetGuard(
+      key: _guard,
+      draftKind: 'team.member.add',
+      listenable: Listenable.merge([_name, _phone, _email]),
+      isDirty: () =>
+          done == null &&
+          (_name.text.trim().isNotEmpty ||
+              _phone.text.trim().isNotEmpty ||
+              _email.text.trim().isNotEmpty),
+      toDraft: () => {
+        'mode': _mode.name,
+        'name': _name.text,
+        'phone': _phone.text,
+        'email': _email.text,
+        'role': _role,
+      },
+      onRestore: (d) => setState(() {
+        _mode = d['mode'] == _Mode.invite.name ? _Mode.invite : _Mode.create;
+        _name.text = d['name'] as String? ?? '';
+        _phone.text = d['phone'] as String? ?? '';
+        _email.text = d['email'] as String? ?? '';
+        _role = d['role'] as String? ?? _role;
+      }),
+      summary: () => [
+        _name.text.trim(),
+        _email.text.trim(),
+      ].where((s) => s.isNotEmpty).join(' · '),
+      child: _buildBody(context, roles, done, create),
+    );
+  }
+
+  Widget _buildBody(
+    BuildContext context,
+    List<RoleOption> roles,
+    ({String email, String? password, String role, bool invited})? done,
+    bool create,
+  ) {
     return OmniSheetBody(
       // Đầu sheet tự có nút ✕ tròn xám (spec phong cách iOS §3.4).
       header: OmniSheetHeader(

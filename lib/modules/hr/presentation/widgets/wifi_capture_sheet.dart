@@ -12,8 +12,11 @@ import 'hr_ui.dart';
 
 /// **Thêm WiFi đang kết nối** (quản đốc, spec 03 §5.2): đọc SSID + BSSID của
 /// WiFi máy đang bắt, lưu thành WiFi xưởng để thợ chấm 1 chạm.
-Future<void> showWifiCaptureSheet(BuildContext context) =>
-    showOmniSheet<void>(context: context, builder: (_) => const _WifiSheet());
+Future<void> showWifiCaptureSheet(BuildContext context) => showOmniSheet<void>(
+  context: context,
+  guardInput: true,
+  builder: (_) => const _WifiSheet(),
+);
 
 class _WifiSheet extends ConsumerStatefulWidget {
   const _WifiSheet();
@@ -26,6 +29,7 @@ class _WifiSheetState extends ConsumerState<_WifiSheet> {
   SensorReading? _reading;
   final _name = TextEditingController();
   bool _saving = false;
+  final _guard = GlobalKey<OmniSheetGuardState>();
   String? _error;
 
   @override
@@ -75,6 +79,7 @@ class _WifiSheetState extends ConsumerState<_WifiSheet> {
           );
       if (!mounted) return;
       final messenger = ScaffoldMessenger.maybeOf(context);
+      _guard.currentState?.release();
       Navigator.of(context).pop();
       showOmniToast(null, 'Đã lưu WiFi xưởng', messenger: messenger);
     } on AppException catch (e) {
@@ -91,6 +96,22 @@ class _WifiSheetState extends ConsumerState<_WifiSheet> {
   Widget build(BuildContext context) {
     final r = _reading;
     final ssid = cleanSsid(r?.ssid);
+    // Sheet ngắn (1 ô tên, tự điền theo tên mạng): chỉ bẩn khi đã tự sửa tên.
+    return OmniSheetGuard(
+      key: _guard,
+      draftKind: 'hr.wifi.capture',
+      length: OmniSheetLength.short,
+      listenable: _name,
+      isDirty: () => _name.text.trim() != (ssid ?? ''),
+      toDraft: () => {'name': _name.text},
+      onRestore: (d) => setState(() => _name.text = d['name'] as String? ?? ''),
+      summary: () => _name.text.trim(),
+      discardPrompt: 'Bỏ tên WiFi đang nhập?',
+      child: _buildBody(context, r, ssid),
+    );
+  }
+
+  Widget _buildBody(BuildContext context, SensorReading? r, String? ssid) {
     return OmniSheetBody(
       semanticsLabel: 'Thêm WiFi đang kết nối',
       header: const OmniSheetHeader(title: 'Thêm WiFi đang kết nối'),
