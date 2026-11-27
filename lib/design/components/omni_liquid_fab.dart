@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons_500.dart';
-import '../tokens/tokens.dart';
 
 /// Nút + tròn nổi ở góc dưới phải, phía trên thanh tab.
 ///
@@ -72,21 +71,49 @@ class _OmniLiquidFabState extends State<OmniLiquidFab>
     final reduce = MediaQuery.disableAnimationsOf(context);
     const size = OmniLiquidFab.size;
 
-    final face = Stack(
+    // Cobalt -> Indigo 3D + viền sáng specular rim (trên-trái) + bóng chiều
+    // sâu: nổi rõ trên nền đen #000 nhưng vẫn mượt, không bị phẳng kiểu
+    // Material cũ. Tương phản cao: nền đặc viền màu chính.
+    final coreDecoration = solid
+        ? BoxDecoration(
+            shape: BoxShape.circle,
+            color: scheme.surface,
+            border: Border.all(color: scheme.primary, width: 1.5),
+          )
+        : const BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF4B8BFF), Color(0xFF2563EB), Color(0xFF1D4ED8)],
+              stops: [0.0, 0.52, 1.0],
+            ),
+          );
+
+    final innerFace = Stack(
       fit: StackFit.expand,
       children: [
-        // Nền đặc màu chính: icon + luôn rõ trên mọi danh sách có ảnh/chữ.
-        DecoratedBox(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: solid ? scheme.surface : OmniColors.primaryFillOf(context),
-          ),
-        ),
-        if (solid)
-          DecoratedBox(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: scheme.primary, width: 1.5),
+        DecoratedBox(decoration: coreDecoration),
+        if (!solid)
+          // Vệt sáng specular nhẹ ở đỉnh nút tạo khối kính lồi 3D.
+          Align(
+            alignment: Alignment.topCenter,
+            child: IgnorePointer(
+              child: Container(
+                margin: const EdgeInsets.only(top: 2, left: 8, right: 8),
+                height: 14,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(999),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.white.withValues(alpha: 0.30),
+                      Colors.white.withValues(alpha: 0),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
         Center(
@@ -107,30 +134,51 @@ class _OmniLiquidFabState extends State<OmniLiquidFab>
       ],
     );
 
+    final face = solid
+        ? ClipOval(child: innerFace)
+        : DecoratedBox(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white.withValues(alpha: 0.55),
+                  const Color(0xFF93C5FD).withValues(alpha: 0.22),
+                  const Color(0xFF1E3A8A).withValues(alpha: 0.40),
+                ],
+                stops: const [0.0, 0.5, 1.0],
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(1.5),
+              child: ClipOval(child: innerFace),
+            ),
+          );
+
     final body = SizedBox.square(
       dimension: size,
       child: DecoratedBox(
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           boxShadow: [
-            // Bóng xám mảnh hai lớp (12/4 + 2/1), không bóng màu chính.
             BoxShadow(
               color: const Color(
-                0xFF0B1A33,
-              ).withValues(alpha: dark ? 0.45 : 0.16),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+                0xFF2563EB,
+              ).withValues(alpha: dark ? 0.48 : 0.28),
+              blurRadius: 20,
+              offset: const Offset(0, 6),
             ),
             BoxShadow(
-              color: const Color(
-                0xFF0B1A33,
-              ).withValues(alpha: dark ? 0.30 : 0.10),
-              blurRadius: 2,
-              offset: const Offset(0, 1),
+              color: (dark ? Colors.black : const Color(0xFF0B1A33)).withValues(
+                alpha: dark ? 0.55 : 0.14,
+              ),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
-        child: ClipOval(child: face),
+        child: face,
       ),
     );
 
