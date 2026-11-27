@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:omni_app/core/network/api_envelope.dart';
 import 'package:omni_app/modules/inventory/application/inventory_providers.dart';
 import 'package:omni_app/modules/inventory/domain/inventory_models.dart';
 import 'package:omni_app/modules/inventory/domain/inventory_permissions.dart';
@@ -24,13 +25,25 @@ class _OrdersApi extends FakeInventoryApi {
   final orderCalls = <Map<String, String?>>[];
 
   @override
-  Future<List<OrderRow>> listOrders({
+  Future<Paged<OrderRow>> listOrders({
     String? search,
     String? status,
-    int perPage = 100,
+    int page = 1,
+    int perPage = 50,
   }) async {
-    orderCalls.add({'search': search, 'status': status});
-    return rows;
+    orderCalls.add({'search': search, 'status': status, 'page': '$page'});
+    final start = (page - 1) * perPage;
+    final slice = rows.skip(start).take(perPage).toList();
+    final last = rows.isEmpty ? 1 : (rows.length + perPage - 1) ~/ perPage;
+    return Paged(
+      items: slice,
+      pagination: ApiPagination(
+        currentPage: page,
+        lastPage: last,
+        perPage: perPage,
+        total: rows.length,
+      ),
+    );
   }
 
   @override
@@ -298,4 +311,104 @@ void main() {
     expect(find.byKey(const ValueKey('order-due')), findsNothing);
     expect(find.byKey(const ValueKey('order-pay-add')), findsNothing);
   });
+
+  group('phân trang (sửa 27/11/2026: trước chỉ có 100 đơn mới nhất)', () {
+    // 120 đơn mới nhất trước; chỉ đơn số 80–90 còn nợ.
+    final many = [
+      for (var i = 1; i <= 120; i++)
+        _row('$i', {
+          'customer_name': 'Khách $i',
+          'value': 1000,
+          'paid': i >= 80 && i <= 90 ? 0 : 1000,
+          'created_at': '2026-11-11T03:00:00Z',
+        }),
+    ];
+
+    ProviderContainer containerFor(InventoryApi api) {
+      final c = ProviderContainer(
+        overrides: [
+          inventoryApiProvider.overrideWithValue(api),
+          inventoryPermsProvider.overrideWithValue(
+            const InventoryPerms(read: true),
+          ),
+          inventoryTodayProvider.overrideWithValue(_today),
+        ],
+      );
+      addTearDown(c.dispose);
+      return c;
+    }
+
+    test('Tất cả: trang 50 đơn, tải thêm tới hết', () async {
+      final api = _OrdersApi(many);
+      final c = containerFor(api);
+      const q = (filter: OrderListFilter.all, q: '');
+      final sub = c.listen(ordersListProvider(q), (_, _) {});
+      addTearDown(sub.close);
+
+      var s = await c.read(ordersListProvider(q).future);
+      expect(s.rows, hasLength(50));
+      expect(s.hasMore, isTrue);
+
+      await c.read(ordersListProvider(q).notifier).loadMore();
+      s = c.read(ordersListProvider(q)).requireValue;
+      expect(s.rows, hasLength(100));
+
+      await c.read(ordersListProvider(q).notifier).loadMore();
+      s = c.read(ordersListProvider(q)).requireValue;
+      expect(s.rows, hasLength(120));
+      expect(s.hasMore, isFalse);
+      expect(s.rows.last.id, '120');
+      expect(api.orderCalls.map((e) => e['page']), ['1', '2', '3']);
+    });
+
+    test('Cần thu: trang không có đơn nợ thì lấy tiếp, tới khi hết', () async {
+      final api = _OrdersApi(many);
+      final c = containerFor(api);
+      const q = (filter: OrderListFilter.due, q: '');
+      final sub = c.listen(ordersListProvider(q), (_, _) {});
+      addTearDown(sub.close);
+
+      final s = await c.read(ordersListProvider(q).future);
+      // Trang 1 không có đơn nợ; trang 2 có 11 (< 20) nên lấy tiếp trang 3.
+      expect(s.rows.map((o) => o.id), [for (var i = 80; i <= 90; i++) '$i']);
+      expect(s.hasMore, isFalse);
+      expect(api.orderCalls.map((e) => e['page']), ['1', '2', '3']);
+    });
+
+    test('tải thêm hỏng: giữ đơn cũ, đánh dấu để không tự gọi lại', () async {
+      final api = _FlakyOrdersApi(many);
+      final c = containerFor(api);
+      const q = (filter: OrderListFilter.all, q: '');
+      final sub = c.listen(ordersListProvider(q), (_, _) {});
+      addTearDown(sub.close);
+
+      await c.read(ordersListProvider(q).future);
+      await c.read(ordersListProvider(q).notifier).loadMore();
+      final s = c.read(ordersListProvider(q)).requireValue;
+      expect(s.rows, hasLength(50));
+      expect(s.loadFailed, isTrue);
+      expect(s.hasMore, isTrue);
+    });
+  });
+}
+
+/// Trang 2 trở đi hỏng mạng.
+class _FlakyOrdersApi extends _OrdersApi {
+  _FlakyOrdersApi(super.rows);
+
+  @override
+  Future<Paged<OrderRow>> listOrders({
+    String? search,
+    String? status,
+    int page = 1,
+    int perPage = 50,
+  }) {
+    if (page > 1) throw Exception('mất mạng');
+    return super.listOrders(
+      search: search,
+      status: status,
+      page: page,
+      perPage: perPage,
+    );
+  }
 }

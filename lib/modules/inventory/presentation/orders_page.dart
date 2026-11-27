@@ -47,7 +47,8 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
       now.day,
     ).subtract(Duration(days: now.weekday - 1));
 
-    final rows = res.valueOrNull;
+    final listState = res.valueOrNull;
+    final rows = listState?.rows;
     // Mỗi phần tử là một SLIVER: nhóm đơn dựng lười (rà soát kiến trúc
     // 27/11/2026) — tới 100 đơn không còn dựng cùng lúc trong một Column.
     final List<Widget> list = [
@@ -90,7 +91,7 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
         _ when rows == null => [
           const SliverToBoxAdapter(child: InvSkeleton(count: 5, height: 64)),
         ],
-        _ when rows.isEmpty => [
+        _ when rows.isEmpty && !listState!.hasMore => [
           const SliverToBoxAdapter(
             child: OmniEmptyState(
               compact: true,
@@ -135,6 +136,14 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
                 itemCount: group.length,
                 itemBuilder: (context, i) => _OrderRowTile(order: group[i]),
               ),
+          if (listState!.hasMore)
+            SliverToBoxAdapter(
+              child: _LoadMoreTail(
+                failed: listState.loadFailed,
+                onLoad: () =>
+                    ref.read(ordersListProvider(query).notifier).loadMore(),
+              ),
+            ),
         ],
       },
     ];
@@ -172,7 +181,7 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
                   bumpOrders(ref);
                   await ref
                       .read(ordersListProvider(query).future)
-                      .catchError((_) => const <OrderRow>[]);
+                      .then((_) {}, onError: (_) {});
                 },
                 child: CustomScrollView(
                   key: const ValueKey('orders-scroll'),
@@ -205,6 +214,57 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
             },
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Cuối danh sách khi server còn đơn: dựng tới đâu (sliver lười — chỉ khi đã
+/// cuộn gần cuối) thì tự tải trang sau. Lượt trước hỏng thì thành nút "Thử
+/// lại" thay vì tự gọi lại mãi.
+class _LoadMoreTail extends StatefulWidget {
+  const _LoadMoreTail({required this.failed, required this.onLoad});
+
+  final bool failed;
+  final VoidCallback onLoad;
+
+  @override
+  State<_LoadMoreTail> createState() => _LoadMoreTailState();
+}
+
+class _LoadMoreTailState extends State<_LoadMoreTail> {
+  @override
+  void initState() {
+    super.initState();
+    _autoLoad();
+  }
+
+  @override
+  void didUpdateWidget(_LoadMoreTail old) {
+    super.didUpdateWidget(old);
+    _autoLoad();
+  }
+
+  void _autoLoad() {
+    if (widget.failed) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onLoad();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      key: const ValueKey('orders-load-more'),
+      padding: const EdgeInsets.symmetric(vertical: OmniSpacing.lg),
+      child: Center(
+        child: widget.failed
+            ? TextButton(onPressed: widget.onLoad, child: const Text('Thử lại'))
+            : const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+              ),
       ),
     );
   }

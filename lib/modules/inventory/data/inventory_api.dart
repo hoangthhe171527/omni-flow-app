@@ -779,16 +779,37 @@ class InventoryApi {
 
   /// Danh sách đơn (`GET /orders`), mới nhất trước. API lọc mỗi khoá một giá
   /// trị nên "Cần thu" (chưa thu + thu một phần) lọc ở app trên trang này.
-  Future<List<OrderRow>> listOrders({
+  /// Một TRANG đơn (`GET /orders`, mới nhất trước; server cắt `per_page`
+  /// ở 100). Trước 27/11/2026 app chỉ gọi trang đầu 100 đơn và không tải
+  /// thêm: đơn thứ 101 trở đi không bao giờ hiện ở "Tất cả".
+  Future<Paged<OrderRow>> listOrders({
     String? search,
     String? status,
-    int perPage = 100,
+    int page = 1,
+    int perPage = 50,
   }) async {
     final res = await _api.get(
       '/orders',
-      query: {'search': search, 'status': status, 'per_page': perPage},
+      query: {
+        'search': search,
+        'status': status,
+        'page': page,
+        'per_page': perPage,
+      },
     );
-    return res.list.map(OrderRow.fromJson).toList();
+    final items = res.list.map(OrderRow.fromJson).toList();
+    return Paged(
+      items: items,
+      // API cũ không gửi `pagination`: coi là trang cuối, không lặp mãi.
+      pagination:
+          res.pagination ??
+          ApiPagination(
+            currentPage: page,
+            lastPage: page,
+            perPage: perPage,
+            total: items.length,
+          ),
+    );
   }
 
   /// Tổng còn phải thu và số đơn chờ thu (`GET /orders/summary`).

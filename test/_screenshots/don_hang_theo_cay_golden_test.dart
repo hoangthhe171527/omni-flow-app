@@ -400,9 +400,7 @@ void main() {
           ordersDueProvider.overrideWith(
             (ref) async => (outstanding: 512000000.0, awaiting: 4),
           ),
-          ordersListProvider.overrideWith(
-            (ref, q) async => [for (final j in _orders) OrderRow.fromJson(j)],
-          ),
+          ordersListProvider.overrideWith(_FixedOrders.new),
         ],
       ),
       'danh-sach-don',
@@ -474,3 +472,13 @@ const _orders = [
     'created_at': '2026-10-28T03:00:00Z',
   },
 ];
+
+/// Danh sách đơn cố định cho ảnh chụp (một trang, không còn trang sau).
+class _FixedOrders extends OrdersListController {
+  @override
+  Future<OrdersListState> build(OrderListQuery arg) async => OrdersListState(
+    rows: [for (final j in _orders) OrderRow.fromJson(j)],
+    page: 1,
+    hasMore: false,
+  );
+}
