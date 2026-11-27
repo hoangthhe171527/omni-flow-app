@@ -20,6 +20,11 @@ abstract final class StorageKeys {
   static const background = 'omni.background';
   static const lastInboxFilter = 'omni.inbox.last_filter';
 
+  /// Tiền tố; khoá thật là `<tiền tố>.<id người dùng>.<id công ty>`. Ứng dụng
+  /// mở lần cuối, để đăng nhập / mở app vào thẳng lại nó (27/11/2026). Không
+  /// xoá khi đăng xuất: khoá đã gắn người dùng, người khác không thừa hưởng.
+  static const lastApp = 'omni.apps.last_app';
+
   /// Tiền tố; khoá thật là `<tiền tố>.<id công việc>`. Hàng chờ tick việc con
   /// chưa được server xác nhận của MỘT công việc — xem `SubtaskOutbox`.
   static const subtaskOutbox = 'omni.tasks.subtask_outbox';

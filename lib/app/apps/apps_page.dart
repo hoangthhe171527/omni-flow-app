@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,7 +30,11 @@ import 'app_shell_layout.dart';
 /// Cũng là điểm rẽ: chỉ MỘT ô thì vào thẳng ô đó; bản khai báo nói tắt (hoặc
 /// tải lỗi, API cũ) thì về màn mở đầu cũ.
 class AppsPage extends ConsumerStatefulWidget {
-  const AppsPage({super.key});
+  const AppsPage({super.key, this.resume = false});
+
+  /// Mở từ luồng đăng nhập ([landingPath]): vào thẳng ứng dụng dùng lần trước
+  /// nếu còn trong lưới. Mở bằng nút lưới thì không — người dùng muốn chọn.
+  final bool resume;
 
   @override
   ConsumerState<AppsPage> createState() => _AppsPageState();
@@ -71,6 +77,7 @@ class _AppsPageState extends ConsumerState<AppsPage>
 
   String _pathOf(ShellApp app, ShellItem item) {
     ref.read(currentAppKeyProvider.notifier).state = app.key;
+    unawaited(ref.read(lastAppStoreProvider).write(app.key));
     final name = appTabRouteName(
       item.entry.routeName,
       ref.read(appTabCloneRoutesProvider),
@@ -79,6 +86,15 @@ class _AppsPageState extends ConsumerState<AppsPage>
   }
 
   String _entryPath(ShellApp app) => _pathOf(app, app.first!);
+
+  /// Ứng dụng dùng lần trước nếu vẫn còn trong lưới và mở được.
+  static ShellApp? _lastApp(List<ShellApp> entries, String? key) {
+    if (key == null) return null;
+    for (final app in entries) {
+      if (app.key == key && app.first != null) return app;
+    }
+    return null;
+  }
 
   void _open(ShellApp app) {
     HapticFeedback.lightImpact();
@@ -97,12 +113,17 @@ class _AppsPageState extends ConsumerState<AppsPage>
     final entries = layout?.entries ?? const <ShellApp>[];
     final ready = manifest.hasValue || manifest.hasError;
 
+    final resumeApp = widget.resume && ready
+        ? _lastApp(entries, ref.read(lastAppStoreProvider).read())
+        : null;
     if (ready && entries.isEmpty) {
       _leave(() => legacyLandingPath(ref.read));
     } else if (ready && entries.length == 1) {
       _leave(() => _entryPath(entries.single));
+    } else if (resumeApp != null) {
+      _leave(() => _entryPath(resumeApp));
     }
-    final showGrid = ready && entries.length > 1;
+    final showGrid = ready && entries.length > 1 && resumeApp == null;
 
     // Bàn làm việc là ô ĐẦU của lưới (bản duyệt giống web).
     final apps = [

@@ -110,7 +110,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: ShellRoutes.appsPath,
         name: ShellRoutes.apps,
-        pageBuilder: (_, state) => _appLaunchPage(state, const AppsPage()),
+        pageBuilder: (_, state) => _appLaunchPage(
+          state,
+          AppsPage(resume: state.uri.queryParameters['resume'] == '1'),
+        ),
       ),
       for (final route in overlayRoutes) _toGoRoute(route, rootKey),
     ],
@@ -244,13 +247,14 @@ String _afterSignIn(Ref ref, _PendingDestination pending) {
 
 /// Landing screen after sign-in (mở app, chọn công ty, đổi công ty).
 ///
-/// Công ty bật khung ứng dụng: LUÔN là màn Chọn ứng dụng — màn đó tự vào thẳng
-/// khi người dùng chỉ có một ô, và tự trả về [legacyLandingPath] nếu bản khai
-/// báo nói tắt. Liên kết sâu không qua đây (`_afterSignIn` dùng đích đã nhớ).
+/// Công ty bật khung ứng dụng: màn Chọn ứng dụng ở chế độ `resume` — màn đó
+/// vào thẳng ứng dụng dùng lần trước (27/11/2026), tự vào khi chỉ có một ô, và
+/// tự trả về [legacyLandingPath] nếu bản khai báo nói tắt. Liên kết sâu không
+/// qua đây (`_afterSignIn` dùng đích đã nhớ).
 @visibleForTesting
 String landingPath(Ref ref) {
   if (sessionWantsAppShell(ref.read(sessionProvider))) {
-    return ShellRoutes.appsPath;
+    return '${ShellRoutes.appsPath}?resume=1';
   }
   return legacyLandingPath(ref.read);
 }
