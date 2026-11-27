@@ -53,11 +53,13 @@ Future<void> showSubtaskCreateSheet(
   required Future<void> Function(SubtaskDraft draft) onCreate,
   bool details = false,
   SubtaskDatePicker pickDate = _pickWithCalendar,
+  String? parentId,
 }) {
   final height = MediaQuery.sizeOf(context).height;
 
   return showOmniSheet<void>(
     context: context,
+    guardInput: true,
     barrierColor: OmniColors.ink.withValues(alpha: 0.4),
     maxHeight: height - 54,
     animationStyle: const AnimationStyle(
@@ -71,6 +73,7 @@ Future<void> showSubtaskCreateSheet(
       onCreate: onCreate,
       details: details,
       pickDate: pickDate,
+      parentId: parentId,
     ),
   );
 }
@@ -83,6 +86,7 @@ class SubtaskCreateSheet extends ConsumerStatefulWidget {
     required this.onCreate,
     this.details = false,
     this.pickDate = _pickWithCalendar,
+    this.parentId,
   });
 
   final String? projectId;
@@ -93,6 +97,9 @@ class SubtaskCreateSheet extends ConsumerStatefulWidget {
   final bool details;
   final SubtaskDatePicker pickDate;
 
+  /// Việc cha — ngữ cảnh của nháp (D17).
+  final String? parentId;
+
   @override
   ConsumerState<SubtaskCreateSheet> createState() => _SubtaskCreateSheetState();
 }
@@ -100,6 +107,7 @@ class SubtaskCreateSheet extends ConsumerStatefulWidget {
 class _SubtaskCreateSheetState extends ConsumerState<SubtaskCreateSheet> {
   final _name = TextEditingController();
   final _description = TextEditingController();
+  final _guard = GlobalKey<OmniSheetGuardState>();
   String? _assigneeId;
   DateTime? _start;
   DateTime? _due;
@@ -136,6 +144,7 @@ class _SubtaskCreateSheetState extends ConsumerState<SubtaskCreateSheet> {
         startDate: widget.details ? start : null,
         dueDate: widget.details ? due : null,
       ));
+      _guard.currentState?.release();
       navigator.pop();
     } on AppException catch (e) {
       showOmniToast(null, e.message, messenger: messenger);
@@ -189,86 +198,75 @@ class _SubtaskCreateSheetState extends ConsumerState<SubtaskCreateSheet> {
     final picked = _assigneeId;
     final member = picked == null ? null : _member(picked);
 
-    return Semantics(
-      scopesRoute: true,
-      explicitChildNodes: true,
-      label: 'Tạo việc con',
-      child: OmniSheetBody(
-        header: OmniSheetHeader(
-          title: 'Việc con mới',
-          trailing: OmniGlassCircle(
-            child: IconButton(
-              tooltip: 'Huỷ',
-              onPressed: () => Navigator.of(context).pop(),
-              icon: const Icon(LucideIcons.x, size: OmniIconSize.lg),
-            ),
-          ),
-        ),
-        footer: ValueListenableBuilder<TextEditingValue>(
-          valueListenable: _name,
-          builder: (context, _, _) => FilledButton(
-            onPressed: _canCreate ? _create : null,
-            style: FilledButton.styleFrom(
-              minimumSize: const Size.fromHeight(50),
-            ),
-            child: _busy
-                ? const SizedBox.square(
-                    dimension: 18,
-                    child: CircularProgressIndicator.adaptive(strokeWidth: 2),
-                  )
-                : const Text('Tạo'),
-          ),
-        ),
-        children: [
-          OmniGroupSection(
-            dividerIndent: 14,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 12,
-                ),
-                child: TextField(
-                  controller: _name,
-                  autofocus: true,
-                  enabled: !_busy,
-                  textCapitalization: TextCapitalization.sentences,
-                  textInputAction: TextInputAction.done,
-                  onSubmitted: (_) => _create(),
-                  style: OmniType.body.copyWith(color: scheme.onSurface),
-                  decoration: InputDecoration(
-                    hintText: 'Tên việc con',
-                    hintStyle: OmniType.body.copyWith(color: secondary),
-                    isDense: true,
-                    filled: false,
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    disabledBorder: InputBorder.none,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
+    return OmniSheetGuard(
+      key: _guard,
+      draftKind: 'tasks.subtask.create',
+      draftScope: widget.parentId ?? widget.projectId,
+      length: OmniSheetLength.short,
+      listenable: Listenable.merge([_name, _description]),
+      isDirty: () =>
+          _name.text.trim().isNotEmpty ||
+          _description.text.trim().isNotEmpty ||
+          _assigneeId != null ||
+          _start != null ||
+          _due != null,
+      toDraft: () => {
+        'name': _name.text,
+        'description': _description.text,
+        'assigneeId': _assigneeId,
+        'start': _start?.toIso8601String(),
+        'due': _due?.toIso8601String(),
+      },
+      onRestore: (d) => setState(() {
+        _name.text = d['name'] as String? ?? '';
+        _description.text = d['description'] as String? ?? '';
+        _assigneeId = d['assigneeId'] as String?;
+        _start = DateTime.tryParse('${d['start']}');
+        _due = DateTime.tryParse('${d['due']}');
+      }),
+      summary: () => _name.text.trim(),
+      discardPrompt: 'Bỏ việc con đang nhập?',
+      child: Semantics(
+        scopesRoute: true,
+        explicitChildNodes: true,
+        label: 'Tạo việc con',
+        child: OmniSheetBody(
+          header: OmniSheetHeader(title: 'Việc con mới'),
+          footer: ValueListenableBuilder<TextEditingValue>(
+            valueListenable: _name,
+            builder: (context, _, _) => FilledButton(
+              onPressed: _canCreate ? _create : null,
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(50),
               ),
-              if (widget.details)
+              child: _busy
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+                    )
+                  : const Text('Tạo'),
+            ),
+          ),
+          children: [
+            OmniGroupSection(
+              dividerIndent: 14,
+              children: [
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 14,
                     vertical: 12,
                   ),
                   child: TextField(
-                    key: const ValueKey('subtask-create-description'),
-                    controller: _description,
+                    controller: _name,
+                    autofocus: true,
                     enabled: !_busy,
-                    minLines: 3,
-                    maxLines: 6,
-                    // `CreateChecklistItemRequest` `description` `max:2000`.
-                    maxLength: 2000,
                     textCapitalization: TextCapitalization.sentences,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) => _create(),
                     style: OmniType.body.copyWith(color: scheme.onSurface),
                     decoration: InputDecoration(
-                      hintText: 'Mô tả (không bắt buộc)',
+                      hintText: 'Tên việc con',
                       hintStyle: OmniType.body.copyWith(color: secondary),
-                      counterText: '',
                       isDense: true,
                       filled: false,
                       border: InputBorder.none,
@@ -279,115 +277,149 @@ class _SubtaskCreateSheetState extends ConsumerState<SubtaskCreateSheet> {
                     ),
                   ),
                 ),
-            ],
-          ),
-          if (widget.canAssign)
-            OmniGroupSection(
-              dividerIndent: 14,
-              children: [
-                ConstrainedBox(
-                  constraints: const BoxConstraints(minHeight: 48),
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 14, right: 6),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Người làm',
-                            style: OmniType.body.copyWith(
-                              fontWeight: FontWeight.w500,
-                              color: scheme.onSurface,
+                if (widget.details)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    child: TextField(
+                      key: const ValueKey('subtask-create-description'),
+                      controller: _description,
+                      enabled: !_busy,
+                      minLines: 3,
+                      maxLines: 6,
+                      // `CreateChecklistItemRequest` `description` `max:2000`.
+                      maxLength: 2000,
+                      textCapitalization: TextCapitalization.sentences,
+                      style: OmniType.body.copyWith(color: scheme.onSurface),
+                      decoration: InputDecoration(
+                        hintText: 'Mô tả (không bắt buộc)',
+                        hintStyle: OmniType.body.copyWith(color: secondary),
+                        counterText: '',
+                        isDense: true,
+                        filled: false,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        disabledBorder: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            if (widget.canAssign)
+              OmniGroupSection(
+                dividerIndent: 14,
+                children: [
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 48),
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 14, right: 6),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Người làm',
+                              style: OmniType.body.copyWith(
+                                fontWeight: FontWeight.w500,
+                                color: scheme.onSurface,
+                              ),
                             ),
                           ),
-                        ),
-                        if (picked != null)
+                          if (picked != null)
+                            Semantics(
+                              label: 'Người làm: ${member?.name ?? 'đã chọn'}',
+                              excludeSemantics: true,
+                              child: OmniAvatar(
+                                name: member?.name ?? '?',
+                                imageUrl: member?.avatarUrl,
+                                size: 30,
+                              ),
+                            ),
                           Semantics(
-                            label: 'Người làm: ${member?.name ?? 'đã chọn'}',
+                            button: true,
+                            label: 'Chọn người làm',
                             excludeSemantics: true,
-                            child: OmniAvatar(
-                              name: member?.name ?? '?',
-                              imageUrl: member?.avatarUrl,
-                              size: 30,
-                            ),
-                          ),
-                        Semantics(
-                          button: true,
-                          label: 'Chọn người làm',
-                          excludeSemantics: true,
-                          child: InkWell(
-                            onTap: _busy ? null : _pickAssignee,
-                            customBorder: const CircleBorder(),
-                            child: SizedBox.square(
-                              dimension: 44,
-                              child: Center(
-                                child: OmniDashedCircle(
-                                  size: 30,
-                                  color: scheme.primary,
+                            child: InkWell(
+                              onTap: _busy ? null : _pickAssignee,
+                              customBorder: const CircleBorder(),
+                              child: SizedBox.square(
+                                dimension: 44,
+                                child: Center(
+                                  child: OmniDashedCircle(
+                                    size: 30,
+                                    color: scheme.primary,
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          if (widget.details)
-            Row(
-              children: [
-                Expanded(
-                  child: _DateBox(
-                    key: const ValueKey('subtask-create-start'),
-                    empty: 'Ngày bắt đầu',
-                    prefix: 'Bắt đầu',
-                    value: _start,
-                    clearLabel: 'Xoá ngày bắt đầu',
-                    onTap: _busy ? null : () => _pick(start: true),
-                    onClear: _busy ? null : () => setState(() => _start = null),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _DateBox(
-                    key: const ValueKey('subtask-create-due'),
-                    empty: 'Hạn',
-                    prefix: 'Hạn',
-                    value: _due,
-                    clearLabel: 'Xoá hạn',
-                    onTap: _busy ? null : () => _pick(start: false),
-                    onClear: _busy ? null : () => setState(() => _due = null),
-                  ),
-                ),
-              ],
-            ),
-          if (widget.details)
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  for (final (label, days) in const [
-                    ('Hôm nay', 0),
-                    ('Ngày mai', 1),
-                    ('Tuần sau', 7),
-                  ])
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: _QuickChip(
-                        label: label,
-                        on: _due == _today().add(Duration(days: days)),
-                        onTap: _busy
-                            ? null
-                            : () => setState(
-                                () => _due = _today().add(Duration(days: days)),
-                              ),
+                        ],
                       ),
                     ),
+                  ),
                 ],
               ),
-            ),
-        ],
+            if (widget.details)
+              Row(
+                children: [
+                  Expanded(
+                    child: _DateBox(
+                      key: const ValueKey('subtask-create-start'),
+                      empty: 'Ngày bắt đầu',
+                      prefix: 'Bắt đầu',
+                      value: _start,
+                      clearLabel: 'Xoá ngày bắt đầu',
+                      onTap: _busy ? null : () => _pick(start: true),
+                      onClear: _busy
+                          ? null
+                          : () => setState(() => _start = null),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _DateBox(
+                      key: const ValueKey('subtask-create-due'),
+                      empty: 'Hạn',
+                      prefix: 'Hạn',
+                      value: _due,
+                      clearLabel: 'Xoá hạn',
+                      onTap: _busy ? null : () => _pick(start: false),
+                      onClear: _busy ? null : () => setState(() => _due = null),
+                    ),
+                  ),
+                ],
+              ),
+            if (widget.details)
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    for (final (label, days) in const [
+                      ('Hôm nay', 0),
+                      ('Ngày mai', 1),
+                      ('Tuần sau', 7),
+                    ])
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: _QuickChip(
+                          label: label,
+                          on: _due == _today().add(Duration(days: days)),
+                          onTap: _busy
+                              ? null
+                              : () => setState(
+                                  () =>
+                                      _due = _today().add(Duration(days: days)),
+                                ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

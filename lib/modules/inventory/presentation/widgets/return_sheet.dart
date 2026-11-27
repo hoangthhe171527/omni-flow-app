@@ -14,6 +14,7 @@ Future<InventoryUnit?> openReturnSheet(
   InventoryUnit unit,
 ) => showOmniSheet<InventoryUnit>(
   context: context,
+  guardInput: true,
   builder: (_) => ReturnSheet(unit: unit),
 );
 
@@ -25,6 +26,7 @@ Future<InventoryUnit?> openFoundSheet(
   InventoryUnit unit,
 ) => showOmniSheet<InventoryUnit>(
   context: context,
+  guardInput: true,
   builder: (_) => ReturnSheet(unit: unit, found: true),
 );
 
@@ -58,6 +60,26 @@ class _ReturnSheetState extends ConsumerState<ReturnSheet> {
   void dispose() {
     _note.dispose();
     super.dispose();
+  }
+
+  // ---- Nháp (D16): sheet ngắn — 3 trường ----
+  bool _dirty() =>
+      _location != null || _condition != null || _note.text.trim().isNotEmpty;
+
+  Map<String, Object?> _draft() => {
+    'location': _location,
+    'condition': _condition?.wire,
+    'note': _note.text,
+  };
+
+  void _restore(Map<String, Object?> d) {
+    _note.text = d['note'] as String? ?? '';
+    setState(() {
+      _location = d['location'] as String?;
+      _condition = returnConditions
+          .where((c) => c.wire == d['condition'])
+          .firstOrNull;
+    });
   }
 
   Future<void> _pickLocation(List<StockLocation> locations, String? at) async {
@@ -120,44 +142,60 @@ class _ReturnSheetState extends ConsumerState<ReturnSheet> {
     final atName = locations.where((l) => l.id == at).firstOrNull?.name;
 
     final action = widget.found ? 'Tìm thấy' : 'Nhập lại kho';
-    return OmniSheetBody(
-      header: OmniSheetHeader(
-        title: action,
-        subtitle: [
-          widget.unit.name,
-          if (widget.unit.serial != null) widget.unit.serial!,
-        ].join(' · '),
-      ),
-      footer: FilledButton(
-        key: const ValueKey('inv-return-save'),
-        onPressed: _saving ? null : _save,
-        child: Text(action),
-      ),
-      children: [
-        OmniGroupSection(
-          children: [
-            if (multi && locations.isNotEmpty)
-              OmniGroupRow(
-                key: const ValueKey('inv-return-location'),
-                title: 'Vị trí',
-                value: atName ?? 'Chọn',
-                onTap: () => _pickLocation(locations, at),
-              ),
-            OmniGroupRow(
-              key: const ValueKey('inv-return-condition'),
-              title: 'Tình trạng',
-              value: UnitCondition.labelOf(_condition),
-              onTap: _pickCondition,
-            ),
-            InvInputRow(
-              label: 'Ghi chú',
-              controller: _note,
-              fieldKey: const ValueKey('inv-return-note'),
-              keyboardType: TextInputType.text,
-            ),
-          ],
+    return OmniSheetGuard(
+      draftKind: widget.found ? 'inventory.found' : 'inventory.return',
+      draftScope: widget.unit.id,
+      length: OmniSheetLength.short,
+      listenable: _note,
+      isDirty: _dirty,
+      toDraft: _draft,
+      onRestore: _restore,
+      summary: () => [
+        UnitCondition.labelOf(_condition),
+        if (_note.text.trim().isNotEmpty) _note.text.trim(),
+      ].join(' · '),
+      discardPrompt: widget.found
+          ? 'Bỏ thông tin tìm thấy đang nhập?'
+          : 'Bỏ thông tin nhập lại đang nhập?',
+      child: OmniSheetBody(
+        header: OmniSheetHeader(
+          title: action,
+          subtitle: [
+            widget.unit.name,
+            if (widget.unit.serial != null) widget.unit.serial!,
+          ].join(' · '),
         ),
-      ],
+        footer: FilledButton(
+          key: const ValueKey('inv-return-save'),
+          onPressed: _saving ? null : _save,
+          child: Text(action),
+        ),
+        children: [
+          OmniGroupSection(
+            children: [
+              if (multi && locations.isNotEmpty)
+                OmniGroupRow(
+                  key: const ValueKey('inv-return-location'),
+                  title: 'Vị trí',
+                  value: atName ?? 'Chọn',
+                  onTap: () => _pickLocation(locations, at),
+                ),
+              OmniGroupRow(
+                key: const ValueKey('inv-return-condition'),
+                title: 'Tình trạng',
+                value: UnitCondition.labelOf(_condition),
+                onTap: _pickCondition,
+              ),
+              InvInputRow(
+                label: 'Ghi chú',
+                controller: _note,
+                fieldKey: const ValueKey('inv-return-note'),
+                keyboardType: TextInputType.text,
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

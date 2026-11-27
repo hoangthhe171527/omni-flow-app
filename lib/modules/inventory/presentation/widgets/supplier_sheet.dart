@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,6 +17,7 @@ Future<SupplierDetail?> openSupplierSheet(
   required SupplierDetail supplier,
 }) => showOmniSheet<SupplierDetail>(
   context: context,
+  guardInput: true,
   builder: (_) => SupplierSheet(supplier: supplier),
 );
 
@@ -71,6 +74,77 @@ class _SupplierSheetState extends ConsumerState<SupplierSheet> {
       b.holder.dispose();
     }
     super.dispose();
+  }
+
+  // ---- Nháp (D16): sheet dài — nhiều trường ----
+  late final String _initial;
+
+  @override
+  void initState() {
+    super.initState();
+    _initial = jsonEncode(_draft());
+  }
+
+  bool _dirty() => jsonEncode(_draft()) != _initial;
+
+  Map<String, Object?> _draft() => {
+    'name': _name.text,
+    'tax': _tax.text,
+    'phone': _phone.text,
+    'address': _address.text,
+    'note': _note.text,
+    'days': _days.text,
+    'foreign': _foreign,
+    'person': _person,
+    'currency': _currency,
+    'term': _term.name,
+    'banks': [
+      for (final b in _banks)
+        {'bank': b.bank.text, 'number': b.number.text, 'holder': b.holder.text},
+    ],
+  };
+
+  void _restore(Map<String, Object?> d) {
+    _name.text = d['name'] as String? ?? '';
+    _tax.text = d['tax'] as String? ?? '';
+    _phone.text = d['phone'] as String? ?? '';
+    _address.text = d['address'] as String? ?? '';
+    _note.text = d['note'] as String? ?? '';
+    _days.text = d['days'] as String? ?? '';
+    final old = [..._banks];
+    setState(() {
+      _foreign = d['foreign'] == true;
+      _person = d['person'] == true;
+      _currency = d['currency'] as String? ?? _currency;
+      _term =
+          PaymentTermKind.values
+              .where((t) => t.name == d['term'])
+              .firstOrNull ??
+          _term;
+      _banks
+        ..clear()
+        ..addAll([
+          for (final b
+              in (d['banks'] as List? ?? const [])
+                  .whereType<Map<String, dynamic>>()
+                  .take(_maxBanks))
+            _bank(
+              BankAccount(
+                bank: b['bank'] as String? ?? '',
+                number: b['number'] as String? ?? '',
+                holder: b['holder'] as String? ?? '',
+              ),
+            ),
+        ]);
+    });
+    // Huỷ sau khung hình: ô nhập còn đang gỡ khỏi cây widget.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      for (final b in old) {
+        b.bank.dispose();
+        b.number.dispose();
+        b.holder.dispose();
+      }
+    });
   }
 
   SupplierInput _input() => SupplierInput(
@@ -132,150 +206,167 @@ class _SupplierSheetState extends ConsumerState<SupplierSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return OmniSheetBody(
-      header: OmniSheetHeader(title: 'Sửa hồ sơ', subtitle: _s.code),
-      footer: FilledButton(
-        key: const ValueKey('inv-sup-save'),
-        onPressed: _saving ? null : _save,
-        child: const Text('Lưu'),
-      ),
-      children: [
-        OmniGroupSection(
-          dividerIndent: 14,
-          children: [
-            InvInputRow(
-              label: 'Tên',
-              controller: _name,
-              fieldKey: const ValueKey('inv-sup-name'),
-            ),
-            InvInputRow(
-              label: 'Điện thoại',
-              controller: _phone,
-              phone: true,
-              fieldKey: const ValueKey('inv-sup-phone'),
-            ),
-            InvInputRow(
-              label: 'Địa chỉ',
-              controller: _address,
-              fieldKey: const ValueKey('inv-sup-address'),
-            ),
-            InvInputRow(
-              label: 'Mã số thuế / CCCD',
-              controller: _tax,
-              keyboardType: TextInputType.text,
-              fieldKey: const ValueKey('inv-sup-tax'),
-            ),
-          ],
+    return OmniSheetGuard(
+      draftKind: 'inventory.supplier',
+      draftScope: _s.id,
+      listenable: Listenable.merge([
+        _name,
+        _tax,
+        _phone,
+        _address,
+        _note,
+        _days,
+        for (final b in _banks) ...[b.bank, b.number, b.holder],
+      ]),
+      isDirty: _dirty,
+      toDraft: _draft,
+      onRestore: _restore,
+      summary: () => _name.text.trim(),
+      child: OmniSheetBody(
+        header: OmniSheetHeader(title: 'Sửa hồ sơ', subtitle: _s.code),
+        footer: FilledButton(
+          key: const ValueKey('inv-sup-save'),
+          onPressed: _saving ? null : _save,
+          child: const Text('Lưu'),
         ),
-        OmniGroupSection(
-          dividerIndent: 14,
-          children: [
-            OmniGroupRow(
-              key: const ValueKey('inv-sup-origin'),
-              title: 'Nguồn',
-              value: _foreign ? 'Nước ngoài' : 'Trong nước',
-              onTap: () => _pick<bool>(
-                'Nguồn',
-                const [(true, 'Nước ngoài'), (false, 'Trong nước')],
-                _foreign,
-                (v) => _foreign = v,
-              ),
-            ),
-            OmniGroupRow(
-              key: const ValueKey('inv-sup-party'),
-              title: 'Loại',
-              value: _person ? 'Cá nhân' : 'Tổ chức',
-              onTap: () => _pick<bool>(
-                'Loại',
-                const [(false, 'Tổ chức'), (true, 'Cá nhân')],
-                _person,
-                (v) => _person = v,
-              ),
-            ),
-            OmniGroupRow(
-              key: const ValueKey('inv-sup-currency'),
-              title: 'Tiền tệ',
-              value: _currency,
-              onTap: () => _pick<String>(
-                'Tiền tệ',
-                const [('JPY', 'JPY'), ('VND', 'VND')],
-                _currency,
-                (v) => _currency = v,
-              ),
-            ),
-            OmniGroupRow(
-              key: const ValueKey('inv-sup-term'),
-              title: 'Hạn trả',
-              value: _term.label,
-              onTap: () => _pick<PaymentTermKind>(
-                'Hạn trả',
-                [for (final t in PaymentTermKind.values) (t, t.label)],
-                _term,
-                (v) => _term = v,
-              ),
-            ),
-            if (_term == PaymentTermKind.days) _DaysRow(controller: _days),
-          ],
-        ),
-        for (var i = 0; i < _banks.length; i++)
+        children: [
           OmniGroupSection(
-            key: ValueKey('inv-sup-bank-$i'),
-            title: i == 0 ? 'Tài khoản' : null,
             dividerIndent: 14,
             children: [
               InvInputRow(
-                label: 'Ngân hàng',
-                controller: _banks[i].bank,
-                fieldKey: ValueKey('inv-sup-bank-name-$i'),
+                label: 'Tên',
+                controller: _name,
+                fieldKey: const ValueKey('inv-sup-name'),
               ),
               InvInputRow(
-                label: 'Số tài khoản',
-                controller: _banks[i].number,
+                label: 'Điện thoại',
+                controller: _phone,
+                phone: true,
+                fieldKey: const ValueKey('inv-sup-phone'),
+              ),
+              InvInputRow(
+                label: 'Địa chỉ',
+                controller: _address,
+                fieldKey: const ValueKey('inv-sup-address'),
+              ),
+              InvInputRow(
+                label: 'Mã số thuế / CCCD',
+                controller: _tax,
                 keyboardType: TextInputType.text,
-                fieldKey: ValueKey('inv-sup-bank-number-$i'),
+                fieldKey: const ValueKey('inv-sup-tax'),
               ),
-              InvInputRow(
-                label: 'Chủ tài khoản',
-                controller: _banks[i].holder,
-                fieldKey: ValueKey('inv-sup-bank-holder-$i'),
+            ],
+          ),
+          OmniGroupSection(
+            dividerIndent: 14,
+            children: [
+              OmniGroupRow(
+                key: const ValueKey('inv-sup-origin'),
+                title: 'Nguồn',
+                value: _foreign ? 'Nước ngoài' : 'Trong nước',
+                onTap: () => _pick<bool>(
+                  'Nguồn',
+                  const [(true, 'Nước ngoài'), (false, 'Trong nước')],
+                  _foreign,
+                  (v) => _foreign = v,
+                ),
               ),
               OmniGroupRow(
-                key: ValueKey('inv-sup-bank-remove-$i'),
-                title: 'Bỏ tài khoản',
-                destructive: true,
-                onTap: () => setState(() {
-                  final b = _banks.removeAt(i);
-                  // Huỷ sau khung hình: ô nhập còn đang gỡ khỏi cây widget.
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    b.bank.dispose();
-                    b.number.dispose();
-                    b.holder.dispose();
-                  });
-                }),
+                key: const ValueKey('inv-sup-party'),
+                title: 'Loại',
+                value: _person ? 'Cá nhân' : 'Tổ chức',
+                onTap: () => _pick<bool>(
+                  'Loại',
+                  const [(false, 'Tổ chức'), (true, 'Cá nhân')],
+                  _person,
+                  (v) => _person = v,
+                ),
               ),
+              OmniGroupRow(
+                key: const ValueKey('inv-sup-currency'),
+                title: 'Tiền tệ',
+                value: _currency,
+                onTap: () => _pick<String>(
+                  'Tiền tệ',
+                  const [('JPY', 'JPY'), ('VND', 'VND')],
+                  _currency,
+                  (v) => _currency = v,
+                ),
+              ),
+              OmniGroupRow(
+                key: const ValueKey('inv-sup-term'),
+                title: 'Hạn trả',
+                value: _term.label,
+                onTap: () => _pick<PaymentTermKind>(
+                  'Hạn trả',
+                  [for (final t in PaymentTermKind.values) (t, t.label)],
+                  _term,
+                  (v) => _term = v,
+                ),
+              ),
+              if (_term == PaymentTermKind.days) _DaysRow(controller: _days),
             ],
           ),
-        if (_banks.length < _maxBanks)
+          for (var i = 0; i < _banks.length; i++)
+            OmniGroupSection(
+              key: ValueKey('inv-sup-bank-$i'),
+              title: i == 0 ? 'Tài khoản' : null,
+              dividerIndent: 14,
+              children: [
+                InvInputRow(
+                  label: 'Ngân hàng',
+                  controller: _banks[i].bank,
+                  fieldKey: ValueKey('inv-sup-bank-name-$i'),
+                ),
+                InvInputRow(
+                  label: 'Số tài khoản',
+                  controller: _banks[i].number,
+                  keyboardType: TextInputType.text,
+                  fieldKey: ValueKey('inv-sup-bank-number-$i'),
+                ),
+                InvInputRow(
+                  label: 'Chủ tài khoản',
+                  controller: _banks[i].holder,
+                  fieldKey: ValueKey('inv-sup-bank-holder-$i'),
+                ),
+                OmniGroupRow(
+                  key: ValueKey('inv-sup-bank-remove-$i'),
+                  title: 'Bỏ tài khoản',
+                  destructive: true,
+                  onTap: () => setState(() {
+                    final b = _banks.removeAt(i);
+                    // Huỷ sau khung hình: ô nhập còn đang gỡ khỏi cây widget.
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      b.bank.dispose();
+                      b.number.dispose();
+                      b.holder.dispose();
+                    });
+                  }),
+                ),
+              ],
+            ),
+          if (_banks.length < _maxBanks)
+            OmniGroupSection(
+              children: [
+                OmniGroupRow.add(
+                  key: const ValueKey('inv-sup-bank-add'),
+                  title: 'Thêm tài khoản',
+                  onTap: () => setState(() => _banks.add(_bank())),
+                ),
+              ],
+            ),
           OmniGroupSection(
             children: [
-              OmniGroupRow.add(
-                key: const ValueKey('inv-sup-bank-add'),
-                title: 'Thêm tài khoản',
-                onTap: () => setState(() => _banks.add(_bank())),
+              InvInputRow(
+                label: 'Ghi chú',
+                controller: _note,
+                keyboardType: TextInputType.multiline,
+                fieldKey: const ValueKey('inv-sup-note'),
               ),
             ],
           ),
-        OmniGroupSection(
-          children: [
-            InvInputRow(
-              label: 'Ghi chú',
-              controller: _note,
-              keyboardType: TextInputType.multiline,
-              fieldKey: const ValueKey('inv-sup-note'),
-            ),
-          ],
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

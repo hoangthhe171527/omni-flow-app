@@ -14,6 +14,7 @@ typedef PlanCopyChoice = ({String name, bool copyTasks, bool asTemplate});
 Future<PlanCopyChoice?> showCopyPlanSheet(BuildContext context, Plan plan) =>
     showOmniSheet<PlanCopyChoice>(
       context: context,
+      guardInput: true,
       builder: (_) => _CopyPlanSheet(plan: plan),
     );
 
@@ -51,13 +52,33 @@ class _CopyPlanSheetState extends State<_CopyPlanSheet> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final nameLen = _name.text.characters.length;
+    final initialName = 'Bản sao của ${widget.plan.name}';
+    // Sheet ngắn (D16): tên + hai công tắc.
+    return OmniSheetGuard(
+      draftKind: 'plans.plan.copy',
+      draftScope: widget.plan.id,
+      length: OmniSheetLength.short,
+      listenable: _name,
+      isDirty: () => _name.text != initialName || !_copyTasks || _asTemplate,
+      toDraft: () => {
+        'name': _name.text,
+        'copyTasks': _copyTasks,
+        'asTemplate': _asTemplate,
+      },
+      onRestore: (d) => setState(() {
+        _name.text = d['name'] as String? ?? initialName;
+        _copyTasks = d['copyTasks'] as bool? ?? true;
+        _asTemplate = d['asTemplate'] as bool? ?? false;
+      }),
+      summary: () => _name.text.trim(),
+      discardPrompt: 'Bỏ bản sao đang soạn?',
+      child: _body(context, scheme, nameLen),
+    );
+  }
+
+  Widget _body(BuildContext context, ColorScheme scheme, int nameLen) {
     return OmniSheetBody(
-      header: OmniSheetHeader(
-        title: 'Sao chép kế hoạch',
-        trailing: OmniSheetCloseButton(
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-      ),
+      header: const OmniSheetHeader(title: 'Sao chép kế hoạch'),
       footer: FilledButton(
         onPressed: _name.text.trim().isEmpty ? null : _submit,
         child: const Text('Sao chép'),
@@ -189,7 +210,7 @@ Future<PlanTeamTarget?> showMoveTeamSheet(
     return OmniSheetBody(
       header: OmniSheetHeader(
         title: 'Chuyển sang team khác',
-        trailing: OmniSheetCloseButton(
+        closeButton: OmniSheetCloseButton(
           onPressed: () => Navigator.of(ctx).maybePop(),
         ),
       ),

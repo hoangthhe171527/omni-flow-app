@@ -21,6 +21,7 @@ Future<void> showLabelsSheet(
   ValueChanged<String>? onToggle,
 }) => showOmniViecSheet<void>(
   context: context,
+  guardInput: true,
   builder: (_) => LabelsSheet(selected: selected, onToggle: onToggle),
 );
 
@@ -98,7 +99,7 @@ class _LabelsSheetState extends ConsumerState<LabelsSheet> {
       child: OmniSheetBody(
         header: OmniSheetHeader(
           title: 'Nhãn màu',
-          trailing: OmniSheetCloseButton(
+          closeButton: OmniSheetCloseButton(
             onPressed: () => Navigator.of(context).maybePop(),
           ),
         ),
@@ -298,8 +299,20 @@ class _EditLabelPaneState extends State<_EditLabelPane> {
     if (_busy) return;
     setState(() => _busy = true);
     await widget.onSave(name, _color);
-    if (mounted) setState(() => _busy = false);
+    // Lưu xong thì khung sửa đóng (về danh sách) — nháp hết việc.
+    if (!mounted) {
+      await OmniDraftStore.delete(_draftKind);
+      return;
+    }
+    setState(() => _busy = false);
   }
+
+  static const _draftKind = 'tasks.label.edit';
+
+  String get _initialName => widget.label?.label ?? '';
+  Color get _initialColor => widget.label == null
+      ? OmniLabelColors.quickPicks.first
+      : OmniLabelColors.parseHex(widget.label!.color);
 
   @override
   Widget build(BuildContext context) {
@@ -313,100 +326,127 @@ class _EditLabelPaneState extends State<_EditLabelPane> {
     ];
     final name = _name.text.trim();
 
-    return Semantics(
-      scopesRoute: true,
-      explicitChildNodes: true,
-      label: widget.label == null ? 'Nhãn mới' : 'Sửa nhãn',
-      child: OmniSheetBody(
-        header: OmniSheetHeader(
-          title: widget.label == null ? 'Nhãn mới' : 'Sửa nhãn',
-          leading: OmniGlassCircle(
-            child: IconButton(
-              tooltip: 'Quay lại',
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-              onPressed: widget.onBack,
-              icon: Icon(
-                LucideIcons.chevronLeft,
-                color: scheme.onSurface,
-                size: 24,
+    // Sheet ngắn (D16): tên + màu.
+    return OmniSheetGuard(
+      draftKind: _draftKind,
+      draftScope: widget.label?.id ?? 'new',
+      length: OmniSheetLength.short,
+      listenable: _name,
+      isDirty: () => _name.text != _initialName || _color != _initialColor,
+      toDraft: () => {
+        'name': _name.text,
+        'color': OmniLabelColors.toHex(_color),
+      },
+      onRestore: (d) => setState(() {
+        _name.text = d['name'] as String? ?? '';
+        if (d['color'] case final String hex) {
+          _color = OmniLabelColors.parseHex(hex);
+        }
+      }),
+      summary: () => _name.text.trim(),
+      discardPrompt: 'Bỏ nhãn đang sửa?',
+      child: Semantics(
+        scopesRoute: true,
+        explicitChildNodes: true,
+        label: widget.label == null ? 'Nhãn mới' : 'Sửa nhãn',
+        child: OmniSheetBody(
+          header: OmniSheetHeader(
+            title: widget.label == null ? 'Nhãn mới' : 'Sửa nhãn',
+            // Ô con của sheet: ‹ Quay lại giữ chỗ bên trái (D18); vuốt / chạm
+            // ngoài vẫn đóng cả sheet qua gác nhập.
+            closeButton: OmniGlassCircle(
+              child: IconButton(
+                tooltip: 'Quay lại',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints.tightFor(
+                  width: 44,
+                  height: 44,
+                ),
+                onPressed: widget.onBack,
+                icon: Icon(
+                  LucideIcons.chevronLeft,
+                  color: scheme.onSurface,
+                  size: 24,
+                ),
               ),
             ),
           ),
-          trailing: OmniSheetCloseButton(
-            onPressed: () => Navigator.of(context).maybePop(),
+          footer: FilledButton(
+            onPressed: name.isEmpty || _busy ? null : () => _submit(name),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(50),
+            ),
+            child: const Text('Lưu'),
           ),
-        ),
-        footer: FilledButton(
-          onPressed: name.isEmpty || _busy ? null : () => _submit(name),
-          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(50)),
-          child: const Text('Lưu'),
-        ),
-        children: [
-          OmniGroupSection(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 12,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Tên nhãn',
-                      style: OmniType.micro.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    TextField(
-                      key: const Key('label-name'),
-                      controller: _name,
-                      maxLength: 255,
-                      style: OmniType.body.copyWith(color: scheme.onSurface),
-                      decoration: InputDecoration(
-                        hintText: 'Nhập tên nhãn',
-                        hintStyle: OmniType.body.copyWith(
+          children: [
+            OmniGroupSection(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Tên nhãn',
+                        style: OmniType.micro.copyWith(
+                          fontWeight: FontWeight.w600,
                           color: scheme.onSurfaceVariant,
                         ),
-                        counterText: '',
-                        isDense: true,
-                        filled: false,
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        disabledBorder: InputBorder.none,
-                        contentPadding: EdgeInsets.zero,
                       ),
-                      onChanged: (_) => setState(() {}),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          OmniGroupSection(
-            dividerIndent: 14,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                child: Wrap(
-                  children: [
-                    for (final color in colors)
-                      _ColorDot(
-                        color: color,
-                        selected: color == _color,
-                        onTap: () => setState(() => _color = color),
+                      const SizedBox(height: 4),
+                      TextField(
+                        key: const Key('label-name'),
+                        controller: _name,
+                        maxLength: 255,
+                        style: OmniType.body.copyWith(color: scheme.onSurface),
+                        decoration: InputDecoration(
+                          hintText: 'Nhập tên nhãn',
+                          hintStyle: OmniType.body.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                          counterText: '',
+                          isDense: true,
+                          filled: false,
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          disabledBorder: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        onChanged: (_) => setState(() {}),
                       ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+            OmniGroupSection(
+              dividerIndent: 14,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 4,
+                  ),
+                  child: Wrap(
+                    children: [
+                      for (final color in colors)
+                        _ColorDot(
+                          color: color,
+                          selected: color == _color,
+                          onTap: () => setState(() => _color = color),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

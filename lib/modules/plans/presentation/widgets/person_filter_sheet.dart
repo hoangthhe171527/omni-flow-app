@@ -65,8 +65,9 @@ class _PersonFilterSheetState extends ConsumerState<_PersonFilterSheet> {
       children: [
         OmniSheetHeader(
           title: 'Lọc theo người',
-          // ✕ chung của sheet (spec §3.4); trong menu bật lên thì không có.
-          trailing: widget.inMenu ? null : const OmniSheetCloseButton(),
+          // ✕ chung của sheet (spec §3.4, bên trái — D18); trong menu bật lên
+          // thì không có.
+          close: !widget.inMenu,
         ),
         Flexible(
           child: ListView(

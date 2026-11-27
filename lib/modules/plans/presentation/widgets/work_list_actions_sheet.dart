@@ -70,7 +70,7 @@ class WorkListActionsSheet extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-        trailing: OmniSheetCloseButton(
+        closeButton: OmniSheetCloseButton(
           onPressed: () => Navigator.of(context).maybePop(),
         ),
       ),

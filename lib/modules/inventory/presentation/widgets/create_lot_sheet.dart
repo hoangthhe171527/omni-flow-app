@@ -19,6 +19,7 @@ Future<Lot?> openCreateLotSheet(
 }) {
   return showOmniSheet<Lot>(
     context: context,
+    guardInput: true,
     builder: (_) => CreateLotSheet(lots: lots),
   );
 }
@@ -49,6 +50,32 @@ class _CreateLotSheetState extends ConsumerState<CreateLotSheet> {
     _newName.dispose();
     _rate.dispose();
     super.dispose();
+  }
+
+  // ---- Nháp (D16): sheet dài — 5 trường ----
+  bool _dirty() =>
+      _code.text.trim().isNotEmpty ||
+      _newName.text.trim().isNotEmpty ||
+      _rate.text.trim().isNotEmpty ||
+      _supplier != null ||
+      _eta != null;
+
+  Map<String, Object?> _draft() => {
+    'code': _code.text,
+    'supplier': _supplier,
+    'newName': _newName.text,
+    'eta': _eta?.toIso8601String(),
+    'rate': _rate.text,
+  };
+
+  void _restore(Map<String, Object?> d) {
+    _code.text = d['code'] as String? ?? '';
+    _newName.text = d['newName'] as String? ?? '';
+    _rate.text = d['rate'] as String? ?? '';
+    setState(() {
+      _supplier = d['supplier'] as String?;
+      _eta = DateTime.tryParse('${d['eta']}');
+    });
   }
 
   String? get _dupCode {
@@ -158,83 +185,94 @@ class _CreateLotSheetState extends ConsumerState<CreateLotSheet> {
     final copiesFees = perms.pay && _copiesFees;
     final ok = _code.text.trim().isNotEmpty && dup == null && !_saving;
 
-    return OmniSheetBody(
-      header: const OmniSheetHeader(title: 'Tạo lô'),
-      footer: FilledButton(
-        key: const ValueKey('inv-nl-save'),
-        onPressed: ok ? () => _save(today) : null,
-        child: const Text('Tạo lô'),
-      ),
-      children: [
-        OmniGroupSection(
-          children: [
-            InvInputRow(
-              label: 'Mã lô',
-              controller: _code,
-              fieldKey: const ValueKey('inv-nl-code'),
-              hint: 'Ep 67',
-              caps: true,
-              onChanged: (_) => setState(() {}),
-            ),
-            if (dup != null)
-              OmniGroupRow(
-                key: const ValueKey('inv-nl-dup'),
-                title: 'Đã có lô $dup',
-                destructive: true,
-                chevron: false,
-              ),
-            OmniGroupRow(
-              key: const ValueKey('inv-nl-supplier'),
-              title: 'Nhà cung cấp',
-              value: supplierName ?? 'Chọn',
-              onTap: () => _pickSupplier(suppliers),
-            ),
-            if (_supplier == _newSupplier)
-              InvInputRow(
-                label: 'Tên nhà cung cấp',
-                controller: _newName,
-                fieldKey: const ValueKey('inv-nl-new-supplier'),
-                hint: 'Hamana',
-              ),
-          ],
+    return OmniSheetGuard(
+      draftKind: 'inventory.create_lot',
+      listenable: Listenable.merge([_code, _newName, _rate]),
+      isDirty: _dirty,
+      toDraft: _draft,
+      onRestore: _restore,
+      summary: () => [
+        _code.text.trim(),
+        ?supplierName,
+      ].where((s) => s.isNotEmpty).join(' · '),
+      child: OmniSheetBody(
+        header: const OmniSheetHeader(title: 'Tạo lô'),
+        footer: FilledButton(
+          key: const ValueKey('inv-nl-save'),
+          onPressed: ok ? () => _save(today) : null,
+          child: const Text('Tạo lô'),
         ),
-        OmniGroupSection(
-          children: [
-            OmniGroupRow(
-              title: 'Ngày đặt',
-              value: InventoryFormat.dmy(InventoryFormat.isoDay(today)),
-            ),
-            OmniGroupRow(
-              key: const ValueKey('inv-nl-eta'),
-              title: 'Dự kiến về',
-              value: _eta == null
-                  ? 'Chọn'
-                  : InventoryFormat.dmy(InventoryFormat.isoDay(_eta!)),
-              onTap: () => _pickEta(today),
-            ),
-            if (perms.pay)
+        children: [
+          OmniGroupSection(
+            children: [
               InvInputRow(
-                label: 'Tỷ lệ tạm',
-                controller: _rate,
-                fieldKey: const ValueKey('inv-nl-rate'),
-                hint: 'Tự tính',
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
+                label: 'Mã lô',
+                controller: _code,
+                fieldKey: const ValueKey('inv-nl-code'),
+                hint: 'Ep 67',
+                caps: true,
+                onChanged: (_) => setState(() {}),
+              ),
+              if (dup != null)
+                OmniGroupRow(
+                  key: const ValueKey('inv-nl-dup'),
+                  title: 'Đã có lô $dup',
+                  destructive: true,
+                  chevron: false,
                 ),
+              OmniGroupRow(
+                key: const ValueKey('inv-nl-supplier'),
+                title: 'Nhà cung cấp',
+                value: supplierName ?? 'Chọn',
+                onTap: () => _pickSupplier(suppliers),
               ),
-          ],
-        ),
-        if (copiesFees)
+              if (_supplier == _newSupplier)
+                InvInputRow(
+                  label: 'Tên nhà cung cấp',
+                  controller: _newName,
+                  fieldKey: const ValueKey('inv-nl-new-supplier'),
+                  hint: 'Hamana',
+                ),
+            ],
+          ),
           OmniGroupSection(
             children: [
               OmniGroupRow(
-                key: const ValueKey('inv-nl-prev-fees'),
-                title: 'Thuế phí dự kiến',
-                value: 'Chép từ lô trước',
+                title: 'Ngày đặt',
+                value: InventoryFormat.dmy(InventoryFormat.isoDay(today)),
               ),
+              OmniGroupRow(
+                key: const ValueKey('inv-nl-eta'),
+                title: 'Dự kiến về',
+                value: _eta == null
+                    ? 'Chọn'
+                    : InventoryFormat.dmy(InventoryFormat.isoDay(_eta!)),
+                onTap: () => _pickEta(today),
+              ),
+              if (perms.pay)
+                InvInputRow(
+                  label: 'Tỷ lệ tạm',
+                  controller: _rate,
+                  fieldKey: const ValueKey('inv-nl-rate'),
+                  hint: 'Tự tính',
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                ),
             ],
           ),
-      ],
+          if (copiesFees)
+            OmniGroupSection(
+              children: [
+                OmniGroupRow(
+                  key: const ValueKey('inv-nl-prev-fees'),
+                  title: 'Thuế phí dự kiến',
+                  value: 'Chép từ lô trước',
+                ),
+              ],
+            ),
+        ],
+      ),
     );
   }
 }

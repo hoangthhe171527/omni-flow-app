@@ -258,6 +258,7 @@ class SubtasksCard extends ConsumerWidget {
       projectId: task.projectId,
       canAssign: canTick,
       details: details,
+      parentId: task.id,
       onCreate: (draft) async {
         // API Nhóm 2: MỘT lượt POST mang đủ trường, kể cả người làm — không
         // còn ca "đã tạo nhưng chưa giao được".

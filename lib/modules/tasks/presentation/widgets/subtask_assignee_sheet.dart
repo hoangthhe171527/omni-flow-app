@@ -174,12 +174,8 @@ class _SheetState extends ConsumerState<_Sheet> {
           OmniSheetHeader(
             title: 'Ai làm việc này',
             subtitle: 'Việc con: ${widget.subtask.title}',
-            trailing: OmniGlassCircle(
-              child: IconButton(
-                tooltip: 'Đóng chọn người làm',
-                onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(LucideIcons.x, size: OmniIconSize.lg),
-              ),
+            closeButton: OmniSheetCloseButton(
+              onPressed: () => Navigator.of(context).pop(),
             ),
           ),
         Padding(

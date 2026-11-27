@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -17,6 +19,7 @@ Future<bool> openCostSheet(
 }) async {
   final msg = await showOmniSheet<String>(
     context: context,
+    guardInput: true,
     builder: (_) => CostSheet(lot: lot, cost: cost),
   );
   if (msg == null) return false;
@@ -48,6 +51,47 @@ class _CostSheetState extends ConsumerState<CostSheet> {
   late DateTime _date = _parse(widget.cost?.paidAt) ?? DateTime.now();
   late String? _account = widget.cost?.moneyAccountId;
   bool _saving = false;
+
+  // ---- Nháp (D16): sheet dài — tiền ----
+  late final String _initial;
+
+  @override
+  void initState() {
+    super.initState();
+    _initial = jsonEncode(_draft());
+  }
+
+  bool _dirty() => jsonEncode(_draft()) != _initial;
+
+  Map<String, Object?> _draft() => {
+    'goods': _goods,
+    'invoice': _invoice,
+    'fee': _fee.wire,
+    'jpy': _jpy,
+    'vnd': _vnd,
+    'status': _status.wire,
+    'date': InventoryFormat.isoDay(_date),
+    'account': _account,
+  };
+
+  void _restore(Map<String, Object?> d) => setState(() {
+    if (widget.cost == null) _goods = d['goods'] == true;
+    _invoice = d['invoice'] == true;
+    _fee = CostKind.fees.where((k) => k.wire == d['fee']).firstOrNull ?? _fee;
+    _jpy = (d['jpy'] as num?)?.round() ?? 0;
+    _vnd = (d['vnd'] as num?)?.round() ?? 0;
+    _status = d['status'] == CostStatus.planned.wire
+        ? CostStatus.planned
+        : CostStatus.paid;
+    _date = _parse(d['date'] as String?) ?? _date;
+    _account = d['account'] as String?;
+  });
+
+  String _summary() => [
+    _label,
+    if (_goods && _jpy > 0) InventoryFormat.yen(_jpy),
+    if (_vnd > 0) InvUi.vnd(_vnd),
+  ].join(' · ');
 
   double _suggestVnd() {
     final c = widget.cost;
@@ -185,99 +229,109 @@ class _CostSheetState extends ConsumerState<CostSheet> {
         .firstOrNull;
     final editing = widget.cost != null;
 
-    return OmniSheetBody(
-      header: OmniSheetHeader(
-        title: editing ? 'Khoản trả' : 'Thêm khoản',
-        subtitle: widget.lot.code,
-      ),
-      footer: FilledButton(
-        key: const ValueKey('inv-cost-save'),
-        onPressed: _valid && !_saving ? _save : null,
-        child: const Text('Lưu'),
-      ),
-      children: [
-        OmniSegmented(
-          labels: const ['Trả tiền hàng', 'Thuế & phí'],
-          index: _goods ? 0 : 1,
-          onChanged: editing ? (_) {} : (i) => setState(() => _goods = i == 0),
+    return OmniSheetGuard(
+      draftKind: 'inventory.cost',
+      draftScope: widget.cost?.id ?? 'lot:${widget.lot.id}',
+      isDirty: _dirty,
+      toDraft: _draft,
+      onRestore: _restore,
+      summary: _summary,
+      child: OmniSheetBody(
+        header: OmniSheetHeader(
+          title: editing ? 'Khoản trả' : 'Thêm khoản',
+          subtitle: widget.lot.code,
         ),
-        OmniGroupSection(
-          children: _goods
-              ? [
-                  OmniGroupRow(
-                    key: const ValueKey('inv-cost-jpy'),
-                    title: 'Số ¥',
-                    value: InventoryFormat.yen(_jpy),
-                    onTap: () => _money(true),
-                  ),
-                  OmniGroupRow(
-                    key: const ValueKey('inv-cost-vnd'),
-                    title: 'Số ₫',
-                    value: InvUi.vnd(_vnd),
-                    onTap: () => _money(false),
-                  ),
-                  OmniGroupRow(
-                    title: 'Tỷ giá',
-                    value: _jpy > 0 && _vnd > 0
-                        ? InventoryFormat.rate(_vnd / _jpy)
-                        : '—',
-                  ),
-                  OmniGroupRow(
-                    title: 'Theo invoice',
-                    trailing: Switch.adaptive(
-                      value: _invoice,
-                      onChanged: (v) => setState(() => _invoice = v),
-                    ),
-                  ),
-                ]
-              : [
-                  OmniGroupRow(
-                    key: const ValueKey('inv-cost-fee'),
-                    title: 'Khoản',
-                    value: _fee.label,
-                    onTap: _pickFee,
-                  ),
-                  OmniGroupRow(
-                    key: const ValueKey('inv-cost-vnd'),
-                    title: 'Số ₫',
-                    value: InvUi.vnd(_vnd),
-                    onTap: () => _money(false),
-                  ),
-                ],
+        footer: FilledButton(
+          key: const ValueKey('inv-cost-save'),
+          onPressed: _valid && !_saving ? _save : null,
+          child: const Text('Lưu'),
         ),
-        OmniSegmented(
-          labels: const ['Đã trả', 'Dự kiến'],
-          index: _status == CostStatus.paid ? 0 : 1,
-          onChanged: (i) => setState(
-            () => _status = i == 0 ? CostStatus.paid : CostStatus.planned,
+        children: [
+          OmniSegmented(
+            labels: const ['Trả tiền hàng', 'Thuế & phí'],
+            index: _goods ? 0 : 1,
+            onChanged: editing
+                ? (_) {}
+                : (i) => setState(() => _goods = i == 0),
           ),
-        ),
-        OmniGroupSection(
-          children: [
-            if (_status == CostStatus.paid)
-              OmniGroupRow(
-                title: 'Ngày',
-                value: InventoryFormat.dmy(InventoryFormat.isoDay(_date)),
-                onTap: _pickDate,
-              ),
-            OmniGroupRow(
-              title: 'Nguồn tiền',
-              value: accountName ?? 'Chọn',
-              onTap: () => _pickAccount(accounts),
+          OmniGroupSection(
+            children: _goods
+                ? [
+                    OmniGroupRow(
+                      key: const ValueKey('inv-cost-jpy'),
+                      title: 'Số ¥',
+                      value: InventoryFormat.yen(_jpy),
+                      onTap: () => _money(true),
+                    ),
+                    OmniGroupRow(
+                      key: const ValueKey('inv-cost-vnd'),
+                      title: 'Số ₫',
+                      value: InvUi.vnd(_vnd),
+                      onTap: () => _money(false),
+                    ),
+                    OmniGroupRow(
+                      title: 'Tỷ giá',
+                      value: _jpy > 0 && _vnd > 0
+                          ? InventoryFormat.rate(_vnd / _jpy)
+                          : '—',
+                    ),
+                    OmniGroupRow(
+                      title: 'Theo invoice',
+                      trailing: Switch.adaptive(
+                        value: _invoice,
+                        onChanged: (v) => setState(() => _invoice = v),
+                      ),
+                    ),
+                  ]
+                : [
+                    OmniGroupRow(
+                      key: const ValueKey('inv-cost-fee'),
+                      title: 'Khoản',
+                      value: _fee.label,
+                      onTap: _pickFee,
+                    ),
+                    OmniGroupRow(
+                      key: const ValueKey('inv-cost-vnd'),
+                      title: 'Số ₫',
+                      value: InvUi.vnd(_vnd),
+                      onTap: () => _money(false),
+                    ),
+                  ],
+          ),
+          OmniSegmented(
+            labels: const ['Đã trả', 'Dự kiến'],
+            index: _status == CostStatus.paid ? 0 : 1,
+            onChanged: (i) => setState(
+              () => _status = i == 0 ? CostStatus.paid : CostStatus.planned,
             ),
-          ],
-        ),
-        if (editing)
+          ),
           OmniGroupSection(
             children: [
+              if (_status == CostStatus.paid)
+                OmniGroupRow(
+                  title: 'Ngày',
+                  value: InventoryFormat.dmy(InventoryFormat.isoDay(_date)),
+                  onTap: _pickDate,
+                ),
               OmniGroupRow(
-                title: 'Xoá khoản',
-                destructive: true,
-                onTap: _saving ? null : _delete,
+                title: 'Nguồn tiền',
+                value: accountName ?? 'Chọn',
+                onTap: () => _pickAccount(accounts),
               ),
             ],
           ),
-      ],
+          if (editing)
+            OmniGroupSection(
+              children: [
+                OmniGroupRow(
+                  title: 'Xoá khoản',
+                  destructive: true,
+                  onTap: _saving ? null : _delete,
+                ),
+              ],
+            ),
+        ],
+      ),
     );
   }
 }

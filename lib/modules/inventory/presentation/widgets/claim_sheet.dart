@@ -16,6 +16,7 @@ Future<String?> openClaimSheet(
   required String unitName,
 }) => showOmniSheet<String>(
   context: context,
+  guardInput: true,
   builder: (_) => ClaimSheet(claim: claim, unitName: unitName),
 );
 
@@ -34,6 +35,26 @@ class _ClaimSheetState extends ConsumerState<ClaimSheet> {
   late int? _amount = widget.claim.amountJpy?.round();
   late bool _settled = widget.claim.settled;
   bool _saving = false;
+
+  // ---- Nháp (D16): sheet dài — tiền (¥) ----
+  bool _dirty() =>
+      _resolution != widget.claim.resolution ||
+      _amount != widget.claim.amountJpy?.round() ||
+      _settled != widget.claim.settled;
+
+  Map<String, Object?> _draft() => {
+    'resolution': _resolution?.wire,
+    'amount': _amount,
+    'settled': _settled,
+  };
+
+  void _restore(Map<String, Object?> d) => setState(() {
+    _resolution = ClaimResolution.values
+        .where((r) => r.wire == d['resolution'])
+        .firstOrNull;
+    _amount = (d['amount'] as num?)?.round();
+    _settled = d['settled'] == true;
+  });
 
   bool get _needsAmount => LotClaim.needsAmount(
     missing: widget.claim.missing,
@@ -83,67 +104,79 @@ class _ClaimSheetState extends ConsumerState<ClaimSheet> {
   @override
   Widget build(BuildContext context) {
     final c = widget.claim;
-    return OmniSheetBody(
-      header: OmniSheetHeader(
-        title: widget.unitName,
-        subtitle: c.missing ? 'Cây thiếu' : 'Cây lỗi',
-      ),
-      footer: FilledButton(
-        key: const ValueKey('inv-claim-save'),
-        onPressed: _saving ? null : _save,
-        child: const Text('Lưu'),
-      ),
-      children: [
-        OmniGroupSection(
-          title: 'Cách xử lý',
-          dividerIndent: 14,
-          children: [
-            if (!c.missing)
-              OmniGroupRow(
-                key: const ValueKey('inv-claim-undecided'),
-                title: ClaimResolution.undecidedLabel,
-                selected: _resolution == null,
-                chevron: false,
-                onTap: () => setState(() => _resolution = null),
-              ),
-            for (final r in ClaimResolution.values)
-              OmniGroupRow(
-                key: ValueKey('inv-claim-${r.wire}'),
-                title: r.label,
-                selected: _resolution == r,
-                chevron: false,
-                onTap: () => setState(() => _resolution = r),
-              ),
-          ],
+    return OmniSheetGuard(
+      draftKind: 'inventory.claim',
+      draftScope: c.id,
+      isDirty: _dirty,
+      toDraft: _draft,
+      onRestore: _restore,
+      summary: () => [
+        widget.unitName,
+        _resolution?.label ?? ClaimResolution.undecidedLabel,
+        if (_amount != null) InventoryFormat.yen(_amount),
+      ].join(' · '),
+      child: OmniSheetBody(
+        header: OmniSheetHeader(
+          title: widget.unitName,
+          subtitle: c.missing ? 'Cây thiếu' : 'Cây lỗi',
         ),
-        if (_needsAmount)
+        footer: FilledButton(
+          key: const ValueKey('inv-claim-save'),
+          onPressed: _saving ? null : _save,
+          child: const Text('Lưu'),
+        ),
+        children: [
+          OmniGroupSection(
+            title: 'Cách xử lý',
+            dividerIndent: 14,
+            children: [
+              if (!c.missing)
+                OmniGroupRow(
+                  key: const ValueKey('inv-claim-undecided'),
+                  title: ClaimResolution.undecidedLabel,
+                  selected: _resolution == null,
+                  chevron: false,
+                  onTap: () => setState(() => _resolution = null),
+                ),
+              for (final r in ClaimResolution.values)
+                OmniGroupRow(
+                  key: ValueKey('inv-claim-${r.wire}'),
+                  title: r.label,
+                  selected: _resolution == r,
+                  chevron: false,
+                  onTap: () => setState(() => _resolution = r),
+                ),
+            ],
+          ),
+          if (_needsAmount)
+            OmniGroupSection(
+              children: [
+                OmniGroupRow(
+                  key: const ValueKey('inv-claim-amount'),
+                  title: 'Số ¥ được trừ',
+                  trailing: InvValue(
+                    _amount == null ? 'Nhập' : InventoryFormat.yen(_amount),
+                  ),
+                  chevron: true,
+                  onTap: _pickAmount,
+                ),
+              ],
+            ),
           OmniGroupSection(
             children: [
               OmniGroupRow(
-                key: const ValueKey('inv-claim-amount'),
-                title: 'Số ¥ được trừ',
-                trailing: InvValue(
-                  _amount == null ? 'Nhập' : InventoryFormat.yen(_amount),
+                key: const ValueKey('inv-claim-settled'),
+                title: 'Đã giải quyết',
+                trailing: Switch.adaptive(
+                  value: _settled,
+                  onChanged: (v) => setState(() => _settled = v),
                 ),
-                chevron: true,
-                onTap: _pickAmount,
+                onTap: () => setState(() => _settled = !_settled),
               ),
             ],
           ),
-        OmniGroupSection(
-          children: [
-            OmniGroupRow(
-              key: const ValueKey('inv-claim-settled'),
-              title: 'Đã giải quyết',
-              trailing: Switch.adaptive(
-                value: _settled,
-                onChanged: (v) => setState(() => _settled = v),
-              ),
-              onTap: () => setState(() => _settled = !_settled),
-            ),
-          ],
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

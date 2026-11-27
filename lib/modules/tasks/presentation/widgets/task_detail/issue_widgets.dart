@@ -23,14 +23,19 @@ typedef IssueDraft = ({String note, List<CommentUpload> photos});
 Future<IssueDraft?> showReportIssueSheet(
   BuildContext context, {
   CommentFilePicker pick = pickCommentFiles,
+  String? taskId,
 }) => showOmniSheet<IssueDraft>(
   context: context,
-  builder: (_) => _ReportIssueSheet(pick: pick),
+  guardInput: true,
+  builder: (_) => _ReportIssueSheet(pick: pick, taskId: taskId),
 );
 
 class _ReportIssueSheet extends StatefulWidget {
-  const _ReportIssueSheet({required this.pick});
+  const _ReportIssueSheet({required this.pick, this.taskId});
   final CommentFilePicker pick;
+
+  /// Việc đang báo — ngữ cảnh của nháp (D17).
+  final String? taskId;
 
   @override
   State<_ReportIssueSheet> createState() => _ReportIssueSheetState();
@@ -54,7 +59,7 @@ class _ReportIssueSheetState extends State<_ReportIssueSheet> {
       builder: (sheet) => OmniSheetBody(
         header: OmniSheetHeader(
           title: 'Đính kèm ảnh',
-          trailing: OmniSheetCloseButton(
+          closeButton: OmniSheetCloseButton(
             onPressed: () => Navigator.of(sheet).maybePop(),
           ),
         ),
@@ -94,13 +99,50 @@ class _ReportIssueSheetState extends State<_ReportIssueSheet> {
     final note = _note.text.trim();
     final scheme = Theme.of(context).colorScheme;
 
+    // Sheet dài (D16): có ảnh đính kèm (tệp trên máy).
+    return OmniSheetGuard(
+      draftKind: 'tasks.issue.report',
+      draftScope: widget.taskId,
+      listenable: _note,
+      isDirty: () => _note.text.trim().isNotEmpty || _photos.isNotEmpty,
+      toDraft: () => {
+        'note': _note.text,
+        'photos': [
+          for (final p in _photos)
+            {
+              'path': p.path,
+              'name': p.name,
+              'isImage': p.isImage,
+              'size': p.size,
+            },
+        ],
+      },
+      onRestore: (d) => setState(() {
+        _note.text = d['note'] as String? ?? '';
+        _photos
+          ..clear()
+          ..addAll([
+            for (final p in d['photos'] as List? ?? const [])
+              if (p is Map && p['path'] is String)
+                CommentUpload(
+                  path: p['path'] as String,
+                  name: p['name'] as String? ?? '',
+                  isImage: p['isImage'] as bool? ?? true,
+                  size: p['size'] as int?,
+                ),
+          ]);
+      }),
+      summary: () => [
+        if (_note.text.trim().isNotEmpty) _note.text.trim(),
+        if (_photos.isNotEmpty) '${_photos.length} ảnh',
+      ].join(' · '),
+      child: _body(context, note, scheme),
+    );
+  }
+
+  Widget _body(BuildContext context, String note, ColorScheme scheme) {
     return OmniSheetBody(
-      header: OmniSheetHeader(
-        title: 'Báo vấn đề',
-        trailing: OmniSheetCloseButton(
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-      ),
+      header: const OmniSheetHeader(title: 'Báo vấn đề'),
       footer: FilledButton(
         key: const Key('issue-send'),
         onPressed: note.isEmpty

@@ -32,4 +32,9 @@ abstract final class StorageKeys {
   /// Tiền tố; khoá thật là `<tiền tố>.<id hội thoại>`. Hàng chờ tin nhắn chưa
   /// được server xác nhận của MỘT hội thoại — xem `ThreadOutbox`.
   static const threadOutbox = 'omni.inbox.thread_outbox';
+
+  /// Tiền tố; khoá thật là `<tiền tố>.<id công ty>.<loại sheet>`. Nháp của
+  /// một sheet đang nhập dở (D16/D17, 27/11/2026) — xem `OmniDraftStore`.
+  /// Xoá khi đăng xuất.
+  static const sheetDraft = 'omni.sheet_draft';
 }

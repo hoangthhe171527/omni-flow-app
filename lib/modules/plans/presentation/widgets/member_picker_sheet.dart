@@ -48,7 +48,7 @@ class _MemberPickerSheetState extends ConsumerState<_MemberPickerSheet> {
         subtitle: _selected.isEmpty
             ? 'Chạm để chọn người tham gia'
             : 'Đã chọn ${_selected.length} người',
-        trailing: OmniSheetCloseButton(
+        closeButton: OmniSheetCloseButton(
           onPressed: () => Navigator.of(context).maybePop(),
         ),
       ),

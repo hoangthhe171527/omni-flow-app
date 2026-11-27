@@ -375,7 +375,7 @@ class _NameSheetState extends State<_NameSheet> {
       header: OmniSheetHeader(
         title: widget.title,
         subtitle: 'Áp dụng ngay trên bảng kế hoạch',
-        trailing: OmniSheetCloseButton(
+        closeButton: OmniSheetCloseButton(
           onPressed: () => Navigator.of(context).maybePop(),
         ),
       ),

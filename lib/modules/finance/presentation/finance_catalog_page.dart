@@ -225,7 +225,10 @@ class FinanceCatalogPage extends ConsumerWidget {
   ) async {
     await showOmniSheet<void>(
       context: context,
+      guardInput: true,
       builder: (_) => _CatalogEditSheet(
+        draftKind: 'finance.catalog.group',
+        draftScope: group.id,
         title: group.name,
         expenseCount: group.expenseCount,
         archived: group.archived,
@@ -253,7 +256,10 @@ class FinanceCatalogPage extends ConsumerWidget {
   ) async {
     await showOmniSheet<void>(
       context: context,
+      guardInput: true,
       builder: (_) => _CatalogEditSheet(
+        draftKind: 'finance.catalog.account',
+        draftScope: account.id,
         title: account.name,
         expenseCount: account.expenseCount,
         archived: account.archived,
@@ -345,6 +351,8 @@ class _AccountRow extends StatelessWidget {
 /// (không có công tắc "Tính vào chi phí").
 class _CatalogEditSheet extends StatefulWidget {
   const _CatalogEditSheet({
+    required this.draftKind,
+    required this.draftScope,
     required this.title,
     required this.expenseCount,
     required this.archived,
@@ -358,6 +366,9 @@ class _CatalogEditSheet extends StatefulWidget {
     this.countsAsExpense,
   });
 
+  /// Loại nháp + ngữ cảnh (id nhóm / nguồn tiền) — D16/D17.
+  final String draftKind;
+  final String draftScope;
   final String title;
   final int expenseCount;
   final bool archived;
@@ -379,6 +390,7 @@ class _CatalogEditSheetState extends State<_CatalogEditSheet> {
     text: widget.title,
   );
   late bool _counts = widget.countsAsExpense ?? true;
+  final _guard = GlobalKey<OmniSheetGuardState>();
   bool _busy = false;
   String? _error;
 
@@ -399,7 +411,11 @@ class _CatalogEditSheetState extends State<_CatalogEditSheet> {
     try {
       await action();
       await widget.onDone();
-      if (mounted) Navigator.of(context).pop();
+      if (mounted) {
+        // Đã lưu: xoá nháp, thôi chặn đóng.
+        _guard.currentState?.release();
+        Navigator.of(context).pop();
+      }
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -446,6 +462,28 @@ class _CatalogEditSheetState extends State<_CatalogEditSheet> {
     final scheme = Theme.of(context).colorScheme;
     final isGroup = widget.countsAsExpense != null;
 
+    // Sheet ngắn (1 ô tên + 1 công tắc): đóng khi đang sửa → hỏi trong sheet.
+    return OmniSheetGuard(
+      key: _guard,
+      draftKind: widget.draftKind,
+      draftScope: widget.draftScope,
+      length: OmniSheetLength.short,
+      listenable: _name,
+      isDirty: () =>
+          _name.text.trim() != widget.title ||
+          (widget.countsAsExpense != null && _counts != widget.countsAsExpense),
+      toDraft: () => {'name': _name.text, 'counts': _counts},
+      onRestore: (d) => setState(() {
+        _name.text = d['name'] as String? ?? widget.title;
+        _counts = d['counts'] as bool? ?? _counts;
+      }),
+      summary: () => _name.text.trim(),
+      discardPrompt: 'Bỏ thay đổi đang sửa?',
+      child: _buildBody(context, scheme, isGroup),
+    );
+  }
+
+  Widget _buildBody(BuildContext context, ColorScheme scheme, bool isGroup) {
     return OmniSheetBody(
       header: OmniSheetHeader(
         title: widget.title,

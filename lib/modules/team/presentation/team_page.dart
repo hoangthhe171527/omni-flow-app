@@ -283,6 +283,7 @@ Future<void> _linkZalo(
 
   final saved = await showOmniSheet<String>(
     context: context,
+    guardInput: true,
     builder: (context) => _LinkZaloSheet(member: member),
   );
 
@@ -327,6 +328,25 @@ class _LinkZaloSheetState extends State<_LinkZaloSheet> {
     final text = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
 
+    // Sheet ngắn (1 ô): đóng khi đã sửa → hỏi trong sheet. Lưu trả về chuỗi
+    // (khác null) nên nháp tự xoá.
+    return OmniSheetGuard(
+      draftKind: 'team.zalo.link',
+      draftScope: widget.member.membershipId,
+      length: OmniSheetLength.short,
+      listenable: _controller,
+      isDirty: () =>
+          _controller.text.trim() != (widget.member.zaloUserId ?? '').trim(),
+      toDraft: () => {'zalo': _controller.text},
+      onRestore: (d) =>
+          setState(() => _controller.text = d['zalo'] as String? ?? ''),
+      summary: () => _controller.text.trim(),
+      discardPrompt: 'Bỏ thay đổi Id Zalo?',
+      child: _buildBody(text, scheme),
+    );
+  }
+
+  Widget _buildBody(TextTheme text, ColorScheme scheme) {
     return OmniSheetBody(
       header: OmniSheetHeader(title: 'Liên kết Zalo — ${widget.member.name}'),
       footer: FilledButton(

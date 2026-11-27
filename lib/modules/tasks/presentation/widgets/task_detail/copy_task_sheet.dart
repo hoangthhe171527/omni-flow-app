@@ -51,6 +51,7 @@ Future<TaskCopyResult?> showCopyTaskSheet(
   required Task task,
 }) => showOmniViecSheet<TaskCopyResult>(
   context: context,
+  guardInput: true,
   builder: (_) => CopyTaskSheet(task: task),
 );
 
@@ -391,111 +392,171 @@ class _CopyTaskSheetState extends ConsumerState<CopyTaskSheet> {
         (_personal || plan != null) &&
         !(extended && _datesInvalid);
 
-    return Semantics(
-      scopesRoute: true,
-      explicitChildNodes: true,
-      label: 'Sao chép công việc',
-      child: OmniSheetBody(
-        header: OmniSheetHeader(
-          title: 'Sao chép công việc',
-          trailing: OmniSheetCloseButton(
-            onPressed: () => Navigator.of(context).pop(),
+    // Sheet dài (D16): tên, chỗ đặt, ngày, người, trường, việc con.
+    return OmniSheetGuard(
+      draftKind: 'tasks.task.copy',
+      draftScope: task.id,
+      listenable: _title,
+      isDirty: _copyDirty,
+      toDraft: () => {
+        'title': _title.text,
+        'personal': _personal,
+        'planId': _plan?.id,
+        'sectionId': _sectionId,
+        'start': _start?.toIso8601String(),
+        'due': _due?.toIso8601String(),
+        'pickOthers': _pickOthers,
+        'people': [..._people],
+        'copyFields': _copyFields,
+        'keepAssignees': _keepAssignees,
+        'keepChecklist': _keepChecklist,
+      },
+      onRestore: _restoreDraft,
+      summary: () => _title.text.trim(),
+      child: Semantics(
+        scopesRoute: true,
+        explicitChildNodes: true,
+        label: 'Sao chép công việc',
+        child: OmniSheetBody(
+          header: const OmniSheetHeader(title: 'Sao chép công việc'),
+          footer: FilledButton(
+            onPressed: canSubmit
+                ? () => _submit(extended: extended, people: people)
+                : null,
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(50),
+            ),
+            child: const Text('Sao chép'),
           ),
-        ),
-        footer: FilledButton(
-          onPressed: canSubmit
-              ? () => _submit(extended: extended, people: people)
-              : null,
-          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(50)),
-          child: const Text('Sao chép'),
-        ),
-        children: [
-          OmniGroupSection(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 12,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Tên công việc',
-                      style: OmniType.micro.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    TextField(
-                      controller: _title,
-                      maxLength: kTaskTitleMax,
-                      style: OmniType.body.copyWith(color: scheme.onSurface),
-                      decoration: InputDecoration(
-                        hintText: 'Nhập tên công việc',
-                        hintStyle: OmniType.body.copyWith(
+          children: [
+            OmniGroupSection(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Tên công việc',
+                        style: OmniType.micro.copyWith(
+                          fontWeight: FontWeight.w600,
                           color: scheme.onSurfaceVariant,
                         ),
-                        counterText: '',
-                        isDense: true,
-                        filled: false,
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        disabledBorder: InputBorder.none,
-                        contentPadding: EdgeInsets.zero,
                       ),
+                      const SizedBox(height: 4),
+                      TextField(
+                        controller: _title,
+                        maxLength: kTaskTitleMax,
+                        style: OmniType.body.copyWith(color: scheme.onSurface),
+                        decoration: InputDecoration(
+                          hintText: 'Nhập tên công việc',
+                          hintStyle: OmniType.body.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                          counterText: '',
+                          isDense: true,
+                          filled: false,
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          disabledBorder: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            ..._placeFields(context),
+            if (extended) ...[
+              ..._dates(context),
+              _assignees(context, byId, people, allowed),
+              if (task.customFields.isNotEmpty) _customFields(context, target),
+              if (task.subtasks.isNotEmpty)
+                OmniGroupSection(
+                  dividerIndent: 14,
+                  children: [
+                    _SwitchRow(
+                      label: 'Chép cả việc con',
+                      note:
+                          '${task.subtasks.length} việc con, bỏ đánh dấu đã xong',
+                      value: _keepChecklist,
+                      onChanged: (v) => setState(() => _keepChecklist = v),
                     ),
                   ],
                 ),
-              ),
-            ],
-          ),
-          ..._placeFields(context),
-          if (extended) ...[
-            ..._dates(context),
-            _assignees(context, byId, people, allowed),
-            if (task.customFields.isNotEmpty) _customFields(context, target),
-            if (task.subtasks.isNotEmpty)
+            ] else if (task.assigneeIds.isNotEmpty || task.subtasks.isNotEmpty)
               OmniGroupSection(
                 dividerIndent: 14,
                 children: [
-                  _SwitchRow(
-                    label: 'Chép cả việc con',
-                    note:
-                        '${task.subtasks.length} việc con, bỏ đánh dấu đã xong',
-                    value: _keepChecklist,
-                    onChanged: (v) => setState(() => _keepChecklist = v),
-                  ),
+                  if (task.assigneeIds.isNotEmpty)
+                    _SwitchRow(
+                      label: 'Giữ người thực hiện',
+                      note: _keepNote(byId),
+                      value: _keepAssignees,
+                      onChanged: (v) => setState(() => _keepAssignees = v),
+                    ),
+                  if (task.subtasks.isNotEmpty)
+                    _SwitchRow(
+                      label: 'Chép cả việc con',
+                      note:
+                          '${task.subtasks.length} việc con, bỏ đánh dấu đã xong',
+                      value: _keepChecklist,
+                      onChanged: (v) => setState(() => _keepChecklist = v),
+                    ),
                 ],
               ),
-          ] else if (task.assigneeIds.isNotEmpty || task.subtasks.isNotEmpty)
-            OmniGroupSection(
-              dividerIndent: 14,
-              children: [
-                if (task.assigneeIds.isNotEmpty)
-                  _SwitchRow(
-                    label: 'Giữ người thực hiện',
-                    note: _keepNote(byId),
-                    value: _keepAssignees,
-                    onChanged: (v) => setState(() => _keepAssignees = v),
-                  ),
-                if (task.subtasks.isNotEmpty)
-                  _SwitchRow(
-                    label: 'Chép cả việc con',
-                    note:
-                        '${task.subtasks.length} việc con, bỏ đánh dấu đã xong',
-                    value: _keepChecklist,
-                    onChanged: (v) => setState(() => _keepChecklist = v),
-                  ),
-              ],
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
+
+  /// Có gì khác bản gợi ý ban đầu (D16). Chỗ đặt (team / kế hoạch / nhóm)
+  /// vẫn vào nháp nhưng không tự làm sheet "bẩn": nó được điền sẵn sau khi
+  /// tải danh sách.
+  bool _copyDirty() =>
+      _title.text != copyTitleOf(widget.task.title) ||
+      !sameCopyDay(_start, _origStart) ||
+      !sameCopyDay(_due, _origDue) ||
+      _pickOthers ||
+      !_copyFields ||
+      !_keepAssignees ||
+      !_keepChecklist;
+
+  void _restoreDraft(Map<String, Object?> d) => setState(() {
+    _title.text = d['title'] as String? ?? _title.text;
+    final personal = d['personal'] as bool? ?? false;
+    if (personal && _personalSource) {
+      _personal = true;
+      _plan = null;
+      _team = null;
+      _sectionId = null;
+    } else if (_all?.where((p) => p.id == d['planId']).firstOrNull
+        case final plan?) {
+      _personal = false;
+      _team = _teamOf(plan);
+      _plan = plan;
+      final section = d['sectionId'] as String?;
+      _sectionId = plan.sections.any((s) => s.id == section)
+          ? section
+          : plan.sections.firstOrNull?.id;
+    }
+    _start = DateTime.tryParse('${d['start']}');
+    _due = DateTime.tryParse('${d['due']}');
+    _pickOthers = d['pickOthers'] as bool? ?? false;
+    _people
+      ..clear()
+      ..addAll([for (final id in d['people'] as List? ?? const []) '$id']);
+    _copyFields = d['copyFields'] as bool? ?? true;
+    _keepAssignees = d['keepAssignees'] as bool? ?? true;
+    _keepChecklist = d['keepChecklist'] as bool? ?? true;
+  });
 
   /// Chọn một giá trị trong sheet con (dòng chọn ✓), như "Chuyển sang kế
   /// hoạch". Trả khoá đã chọn; null khi đóng.
@@ -509,7 +570,7 @@ class _CopyTaskSheetState extends ConsumerState<CopyTaskSheet> {
       semanticsLabel: title,
       header: OmniSheetHeader(
         title: title,
-        trailing: OmniSheetCloseButton(
+        closeButton: OmniSheetCloseButton(
           onPressed: () => Navigator.of(sheet).maybePop(),
         ),
       ),

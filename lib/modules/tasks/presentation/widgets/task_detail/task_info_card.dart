@@ -529,7 +529,7 @@ class _TimeSheetState extends State<_TimeSheet> {
       child: OmniSheetBody(
         header: OmniSheetHeader(
           title: 'Thời gian',
-          trailing: OmniSheetCloseButton(
+          closeButton: OmniSheetCloseButton(
             onPressed: () => Navigator.of(context).maybePop(),
           ),
         ),

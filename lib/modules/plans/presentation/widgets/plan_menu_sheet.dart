@@ -94,62 +94,48 @@ int planMemberCount(Plan plan) => {
   ...plan.memberRoles.keys,
 }.length;
 
-({IconData icon, String label}) _planMenuMeta(PlanMenuAction action) =>
-    switch (action) {
-      PlanMenuAction.edit => (
-        icon: LucideIcons.pencil,
-        label: 'Sửa tên, mô tả, nền',
-      ),
-      PlanMenuAction.members => (
-        icon: LucideIcons.userPlus,
-        label: 'Thành viên',
-      ),
-      PlanMenuAction.labels => (icon: LucideIcons.tag, label: 'Nhãn màu'),
-      PlanMenuAction.fields => (
-        icon: LucideIcons.clipboardList,
-        label: 'Trường tuỳ chỉnh',
-      ),
-      PlanMenuAction.copy => (
-        icon: LucideIcons.copy,
-        label: 'Sao chép kế hoạch',
-      ),
-      PlanMenuAction.moveTeam => (
-        icon: LucideIcons.arrowRight,
-        label: 'Chuyển sang team khác',
-      ),
-      PlanMenuAction.copyLink => (
-        icon: LucideIcons.link,
-        label: 'Sao chép liên kết',
-      ),
-      PlanMenuAction.archived => (
-        icon: LucideIcons.archive,
-        label: 'Việc đã lưu trữ',
-      ),
-      PlanMenuAction.files => (
-        icon: LucideIcons.paperclip,
-        label: 'Tệp đính kèm',
-      ),
-      PlanMenuAction.report => (
-        icon: LucideIcons.chartColumn,
-        label: 'Báo cáo kế hoạch',
-      ),
-      PlanMenuAction.transferOwner => (
-        icon: LucideIcons.userCheck,
-        label: 'Chuyển chủ kế hoạch',
-      ),
-      PlanMenuAction.close => (
-        icon: LucideIcons.lock,
-        label: 'Đóng kế hoạch',
-      ),
-      PlanMenuAction.reopen => (
-        icon: LucideIcons.lockOpen,
-        label: 'Mở lại kế hoạch',
-      ),
-      PlanMenuAction.delete => (
-        icon: LucideIcons.trash2,
-        label: 'Xoá kế hoạch',
-      ),
-    };
+({IconData icon, String label}) _planMenuMeta(
+  PlanMenuAction action,
+) => switch (action) {
+  PlanMenuAction.edit => (
+    icon: LucideIcons.pencil,
+    label: 'Sửa tên, mô tả, nền',
+  ),
+  PlanMenuAction.members => (icon: LucideIcons.userPlus, label: 'Thành viên'),
+  PlanMenuAction.labels => (icon: LucideIcons.tag, label: 'Nhãn màu'),
+  PlanMenuAction.fields => (
+    icon: LucideIcons.clipboardList,
+    label: 'Trường tuỳ chỉnh',
+  ),
+  PlanMenuAction.copy => (icon: LucideIcons.copy, label: 'Sao chép kế hoạch'),
+  PlanMenuAction.moveTeam => (
+    icon: LucideIcons.arrowRight,
+    label: 'Chuyển sang team khác',
+  ),
+  PlanMenuAction.copyLink => (
+    icon: LucideIcons.link,
+    label: 'Sao chép liên kết',
+  ),
+  PlanMenuAction.archived => (
+    icon: LucideIcons.archive,
+    label: 'Việc đã lưu trữ',
+  ),
+  PlanMenuAction.files => (icon: LucideIcons.paperclip, label: 'Tệp đính kèm'),
+  PlanMenuAction.report => (
+    icon: LucideIcons.chartColumn,
+    label: 'Báo cáo kế hoạch',
+  ),
+  PlanMenuAction.transferOwner => (
+    icon: LucideIcons.userCheck,
+    label: 'Chuyển chủ kế hoạch',
+  ),
+  PlanMenuAction.close => (icon: LucideIcons.lock, label: 'Đóng kế hoạch'),
+  PlanMenuAction.reopen => (
+    icon: LucideIcons.lockOpen,
+    label: 'Mở lại kế hoạch',
+  ),
+  PlanMenuAction.delete => (icon: LucideIcons.trash2, label: 'Xoá kế hoạch'),
+};
 
 /// Mở menu kế hoạch; trả mục đã chọn hoặc null khi đóng.
 Future<PlanMenuAction?> showPlanMenuSheet(
@@ -277,7 +263,7 @@ class PlanMenuSheet extends ConsumerWidget {
           color: plan.color,
           size: 36,
         ),
-        trailing: OmniSheetCloseButton(
+        closeButton: OmniSheetCloseButton(
           onPressed: () => Navigator.of(context).maybePop(),
         ),
       ),

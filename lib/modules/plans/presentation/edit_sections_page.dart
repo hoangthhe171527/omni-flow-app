@@ -249,7 +249,7 @@ class _SectionRowState extends State<_SectionRow> {
           title: widget.section.name.trim().isEmpty
               ? 'Nhóm việc'
               : widget.section.name.trim(),
-          trailing: OmniSheetCloseButton(
+          closeButton: OmniSheetCloseButton(
             onPressed: () => Navigator.of(sheet).maybePop(),
           ),
         ),

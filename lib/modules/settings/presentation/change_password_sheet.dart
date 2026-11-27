@@ -14,6 +14,7 @@ Future<bool?> showChangePasswordSheet(BuildContext context) =>
     showOmniSheet<bool>(
       context: context,
       useRootNavigator: true,
+      guardInput: true,
       builder: (_) => const ChangePasswordSheet(),
     );
 
@@ -177,6 +178,35 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
       );
     }
 
+    // Sheet ngắn: đóng khi đã gõ → hỏi trong sheet. Mật khẩu KHÔNG BAO GIỜ
+    // vào nháp (kho nháp là SharedPreferences, không mã hoá): không có nháp,
+    // chỉ hỏi "Bỏ thay đổi · Tiếp tục sửa".
+    return OmniSheetGuard(
+      draftKind: 'settings.password.change',
+      keepDraft: false,
+      length: OmniSheetLength.short,
+      listenable: Listenable.merge([_current, _next, _again]),
+      isDirty: () =>
+          _current.text.isNotEmpty ||
+          _next.text.isNotEmpty ||
+          _again.text.isNotEmpty,
+      discardPrompt: 'Bỏ mật khẩu đang nhập?',
+      child: _buildBody(scheme, rowField),
+    );
+  }
+
+  Widget _buildBody(
+    ColorScheme scheme,
+    Widget Function({
+      required String label,
+      required TextEditingController controller,
+      required String hintText,
+      List<String>? autofillHints,
+      bool required,
+      String? error,
+    })
+    rowField,
+  ) {
     return OmniSheetBody(
       header: OmniSheetHeader(
         title: 'Đổi mật khẩu',
@@ -199,9 +229,6 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
                 onPressed: () => setState(() => _show = !_show),
               ),
             ),
-            const SizedBox(width: 8),
-            // ✕ tròn 32 nền xám chuẩn của đầu sheet (spec iOS §3.4).
-            const OmniSheetCloseButton(),
           ],
         ),
       ),

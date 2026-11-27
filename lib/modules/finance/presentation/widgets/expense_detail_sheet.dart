@@ -481,10 +481,7 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                       .duplicateToNextMonth(item.id);
                 },
               ),
-              const SizedBox(width: 7),
             ],
-            // ✕ tròn 32 nền xám (spec §3.4).
-            OmniSheetCloseButton(onPressed: () => Navigator.of(context).pop()),
           ],
         ),
       ),

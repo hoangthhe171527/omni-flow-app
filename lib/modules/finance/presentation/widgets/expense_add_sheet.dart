@@ -23,9 +23,14 @@ Future<void> showExpenseAddSheet({required BuildContext context}) {
   // Viên kính nổi chung của app (navigator gốc, thanh kéo, nền, bo 30).
   return showOmniSheet<void>(
     context: context,
+    // Sheet dài có tiền + chứng từ (D16): đóng khi đang nhập → tự lưu nháp.
+    guardInput: true,
     builder: (sheetContext) => const _ExpenseAddSheet(),
   );
 }
+
+/// Loại nháp của sheet Thêm khoản chi (D17: một nháp mỗi loại sheet).
+const _draftKind = 'finance.expense.add';
 
 class _ExpenseAddSheet extends ConsumerStatefulWidget {
   const _ExpenseAddSheet();
@@ -36,6 +41,7 @@ class _ExpenseAddSheet extends ConsumerStatefulWidget {
 
 class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
   final TextEditingController _smartCtrl = TextEditingController();
+  final _guard = GlobalKey<OmniSheetGuardState>();
   final FocusNode _smartFocus = FocusNode();
   final GlobalKey _grpRowKey = GlobalKey();
   final GlobalKey _dateRowKey = GlobalKey();
@@ -339,9 +345,13 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
 
     if (!mounted) return;
     if (!keepOpen) {
+      // Đã lưu: xoá nháp, thôi chặn đóng.
+      _guard.currentState?.release();
       Navigator.of(context).pop();
       return;
     }
+    // Lưu & thêm tiếp: khoản vừa lưu không còn là nháp, sheet vẫn mở.
+    OmniDraftStore.delete(_draftKind);
 
     // Lưu & thêm tiếp: xoá tên + số tiền + chứng từ, giữ nguyên Ngày ghi nhận / Ngày thanh toán / Nhóm / Nguồn tiền
     setState(() {
@@ -353,8 +363,74 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
     _smartFocus.requestFocus();
   }
 
+  bool get _isDirty =>
+      _smartCtrl.text.trim().isNotEmpty ||
+      _amount > 0 ||
+      _attachments.isNotEmpty;
+
+  Map<String, Object?> _toDraft() => {
+    'text': _smartCtrl.text,
+    'title': _title,
+    'amount': _amount,
+    'groupId': _groupId,
+    'spentOn': _spentOn,
+    'paidOn': _paidOn,
+    'paidOnCustomized': _paidOnCustomized,
+    'isPaid': _isPaid,
+    'accountId': _accountId,
+    'accountName': _accountName,
+    'attachments': [for (final a in _attachments) a.toJson()],
+  };
+
+  void _restoreDraft(Map<String, Object?> d) {
+    setState(() {
+      _smartCtrl.text = d['text'] as String? ?? '';
+      _title = d['title'] as String? ?? '';
+      _amount = (d['amount'] as num?)?.toInt() ?? 0;
+      final groupId = d['groupId'] as String?;
+      if (groupId != null && groupId.isNotEmpty) _groupId = groupId;
+      final spentOn = d['spentOn'] as String?;
+      if (spentOn != null && spentOn.isNotEmpty) _spentOn = spentOn;
+      final paidOn = d['paidOn'] as String?;
+      if (paidOn != null && paidOn.isNotEmpty) _paidOn = paidOn;
+      _paidOnCustomized = d['paidOnCustomized'] as bool? ?? false;
+      _isPaid = d['isPaid'] as bool? ?? _isPaid;
+      _accountId = d['accountId'] as String?;
+      _accountName = d['accountName'] as String? ?? '';
+      _attachments
+        ..clear()
+        ..addAll([
+          for (final a in (d['attachments'] as List?) ?? const [])
+            if (a is Map) ExpenseAttachment.fromJson(a.cast<String, dynamic>()),
+        ]);
+    });
+  }
+
+  String _draftSummary() {
+    final parts = <String>[
+      if (_title.trim().isNotEmpty) _title.trim(),
+      if (_amount > 0) FinanceMonthUtils.formatVndSpace(_amount),
+      if (_attachments.isNotEmpty) '${_attachments.length} chứng từ',
+    ];
+    return parts.join(' · ');
+  }
+
   @override
   Widget build(BuildContext context) {
+    return OmniSheetGuard(
+      key: _guard,
+      draftKind: _draftKind,
+      draftScope: ref.read(financeLedgerProvider).activeMonth,
+      listenable: _smartCtrl,
+      isDirty: () => _isDirty,
+      toDraft: _toDraft,
+      onRestore: _restoreDraft,
+      summary: _draftSummary,
+      child: _buildBody(context),
+    );
+  }
+
+  Widget _buildBody(BuildContext context) {
     final state = ref.watch(financeLedgerProvider);
     if (_groupId.isEmpty && state.defaultGroupId.isNotEmpty) {
       _groupId = state.defaultGroupId;

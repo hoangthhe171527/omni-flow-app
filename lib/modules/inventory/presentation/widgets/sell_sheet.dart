@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -33,6 +35,7 @@ Future<bool> openSellSheet(
 }) async {
   final message = await showOmniSheet<String>(
     context: context,
+    guardInput: true,
     builder: (_) => SellSheet(
       units: units,
       title: title,
@@ -114,6 +117,7 @@ class _SellSheetState extends ConsumerState<SellSheet> {
       );
       _deposit = (first.deposit ?? 0).round();
     }
+    _initial = jsonEncode(_draft());
   }
 
   @override
@@ -121,6 +125,109 @@ class _SellSheetState extends ConsumerState<SellSheet> {
     _name.dispose();
     _phone.dispose();
     super.dispose();
+  }
+
+  // ---- Nháp (D16): sheet dài — có tiền ----
+  late final String _initial;
+
+  bool _dirty() => jsonEncode(_draft()) != _initial;
+
+  Map<String, Object?> _draft() => {
+    'prices': {..._prices},
+    'qty': _qty,
+    'customer': _customer == null
+        ? null
+        : {
+            'id': _customer!.id,
+            'name': _customer!.name,
+            'phone': _customer!.phone,
+          },
+    'creating': _creating,
+    'name': _name.text,
+    'phone': _phone.text,
+    'kind': _kind.name,
+    'deposit': _deposit,
+    'retail': _retail,
+    'tier': _tier?.wire,
+    'items': [
+      for (final i in _items)
+        {'product': _productJson(i.product), 'qty': i.qty, 'price': i.price},
+    ],
+    'paidAt': _paidAt?.toIso8601String(),
+    'account': _account,
+    'expires': _expires?.toIso8601String(),
+  };
+
+  static Map<String, Object?> _productJson(InvProduct p) => {
+    'id': p.id,
+    'code': p.code,
+    'name': p.name,
+    'category_id': p.categoryId,
+    'category_name': p.categoryName,
+    'unit': p.unit,
+    'tracking': p.tracking.wire,
+    'prices': {for (final e in p.prices.entries) e.key.wire: e.value},
+    'fixed_cost': p.fixedCost,
+    'on_hand': p.onHand,
+    'available': p.available,
+  };
+
+  void _restore(Map<String, Object?> d) {
+    final prices = d['prices'];
+    final customer = d['customer'];
+    final items = d['items'];
+    _name.text = d['name'] as String? ?? '';
+    _phone.text = d['phone'] as String? ?? '';
+    setState(() {
+      if (prices is Map) {
+        for (final e in prices.entries) {
+          if (_prices.containsKey(e.key) && e.value is num) {
+            _prices[e.key as String] = (e.value as num).round();
+          }
+        }
+      }
+      if (widget.pickCount != null && d['qty'] is num) {
+        _qty = (d['qty'] as num).toInt();
+      }
+      _customer = customer is Map
+          ? InventoryCustomer(
+              id: '${customer['id']}',
+              name: '${customer['name']}',
+              phone: customer['phone'] as String? ?? '',
+            )
+          : null;
+      _creating = d['creating'] == true;
+      _kind =
+          SellKind.values.where((k) => k.name == d['kind']).firstOrNull ??
+          _kind;
+      _deposit = (d['deposit'] as num?)?.round() ?? 0;
+      _retail = d['retail'] == true;
+      _tier = PriceTierKey.parse(d['tier'] as String?);
+      if (items is List) {
+        _items
+          ..clear()
+          ..addAll([
+            for (final i in items.whereType<Map<String, dynamic>>())
+              if (i['product'] case final Map<String, dynamic> p)
+                _Item(InvProduct.fromJson(p), (i['price'] as num?)?.round())
+                  ..qty = (i['qty'] as num?)?.toInt() ?? 1,
+          ]);
+      }
+      _paidAt = DateTime.tryParse('${d['paidAt']}');
+      _account = d['account'] as String?;
+      _expires = DateTime.tryParse('${d['expires']}');
+    });
+  }
+
+  String _summary() {
+    final total =
+        _chosen.fold<int>(0, (s, u) => s + (_prices[u.id] ?? 0)) +
+        _items.fold<int>(0, (s, i) => s + i.qty * (i.price ?? 0));
+    return [
+      ?_customer?.name,
+      if (total > 0) InvUi.vnd(total),
+      if (_deposit > 0) 'cọc ${InvUi.vnd(_deposit)}',
+    ].join(' · ');
   }
 
   List<InventoryUnit> get _chosen => _qty == null
@@ -427,180 +534,194 @@ class _SellSheetState extends ConsumerState<SellSheet> {
       ),
     );
 
-    return OmniSheetBody(
-      header: OmniSheetHeader(
-        title: _onlyItems && widget.title == 'Bán / Đặt trước'
-            ? 'Bán hàng'
-            : widget.title,
-        subtitle: count.isEmpty ? null : count,
-      ),
-      footer: OmniTintedButtons(
-        child: _alreadyHeld && perms.reserve
-            ? Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      key: const ValueKey('inv-sell-release'),
-                      onPressed: _saving ? null : _release,
-                      child: const Text('Bỏ giữ'),
+    return OmniSheetGuard(
+      draftKind: 'inventory.sell',
+      draftScope: [
+        for (final u in widget.units) u.id,
+        for (final p in widget.products) p.id,
+      ].join(','),
+      listenable: Listenable.merge([_name, _phone]),
+      isDirty: _dirty,
+      toDraft: _draft,
+      onRestore: _restore,
+      summary: _summary,
+      child: OmniSheetBody(
+        header: OmniSheetHeader(
+          title: _onlyItems && widget.title == 'Bán / Đặt trước'
+              ? 'Bán hàng'
+              : widget.title,
+          subtitle: count.isEmpty ? null : count,
+        ),
+        footer: OmniTintedButtons(
+          child: _alreadyHeld && perms.reserve
+              ? Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        key: const ValueKey('inv-sell-release'),
+                        onPressed: _saving ? null : _release,
+                        child: const Text('Bỏ giữ'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(child: main),
+                  ],
+                )
+              : main,
+        ),
+        children: [
+          if (_qty != null && widget.units.length > 1)
+            OmniGroupSection(
+              children: [
+                OmniGroupRow(
+                  title: 'Số cây',
+                  trailing: InvStepper(
+                    value: _qty!,
+                    min: 1,
+                    max: widget.units.length,
+                    suffix: '/${widget.units.length}',
+                    onChanged: (v) => setState(() => _qty = v),
+                  ),
+                ),
+              ],
+            ),
+          if (tiers.isNotEmpty && !_retail)
+            Wrap(
+              key: const ValueKey('inv-sell-tiers'),
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final t in tiers)
+                  OmniChoicePill(
+                    key: ValueKey('inv-sell-tier-${t.key.wire}'),
+                    label: t.name!,
+                    selected: _tier == t.key,
+                    onTap: () => _pickTier(t.key),
+                  ),
+              ],
+            ),
+          if (units.isNotEmpty)
+            OmniGroupSection(
+              title: 'Giá chốt',
+              children: [
+                for (final u in units)
+                  OmniGroupRow(
+                    key: ValueKey('inv-sell-price-${u.id}'),
+                    title: u.name,
+                    subtitle:
+                        u.serial ??
+                        (u.lineNo > 0 ? '#${u.lineNo}' : 'chưa có serial'),
+                    value: InvUi.vnd(_prices[u.id]),
+                    onTap: () => _editPrice(u),
+                  ),
+              ],
+            ),
+          if (canItems)
+            OmniGroupSection(
+              key: const ValueKey('inv-sell-items'),
+              title: 'Hàng số lượng',
+              children: [
+                for (final i in _items)
+                  OmniGroupRow(
+                    key: ValueKey('inv-sell-item-${i.product.id}'),
+                    title: i.product.name,
+                    subtitle:
+                        '${InvUi.vnd(i.price)} / ${i.product.unitLabel} · '
+                        'còn ${i.product.onHand}',
+                    chevron: false,
+                    onTap: () => _editItemPrice(i),
+                    trailing: InvStepper(
+                      value: i.qty,
+                      // Về 0 là bỏ dòng.
+                      min: 0,
+                      max: 100000,
+                      onChanged: (v) => setState(() {
+                        if (v <= 0) {
+                          _items.remove(i);
+                        } else {
+                          i.qty = v;
+                        }
+                      }),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(child: main),
-                ],
-              )
-            : main,
-      ),
-      children: [
-        if (_qty != null && widget.units.length > 1)
-          OmniGroupSection(
-            children: [
-              OmniGroupRow(
-                title: 'Số cây',
-                trailing: InvStepper(
-                  value: _qty!,
-                  min: 1,
-                  max: widget.units.length,
-                  suffix: '/${widget.units.length}',
-                  onChanged: (v) => setState(() => _qty = v),
+                OmniGroupRow.add(
+                  key: const ValueKey('inv-sell-add-item'),
+                  title: 'Thêm hàng số lượng',
+                  onTap: _addItem,
                 ),
-              ),
-            ],
-          ),
-        if (tiers.isNotEmpty && !_retail)
-          Wrap(
-            key: const ValueKey('inv-sell-tiers'),
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final t in tiers)
-                OmniChoicePill(
-                  key: ValueKey('inv-sell-tier-${t.key.wire}'),
-                  label: t.name!,
-                  selected: _tier == t.key,
-                  onTap: () => _pickTier(t.key),
-                ),
-            ],
-          ),
-        if (units.isNotEmpty)
-          OmniGroupSection(
-            title: 'Giá chốt',
-            children: [
-              for (final u in units)
-                OmniGroupRow(
-                  key: ValueKey('inv-sell-price-${u.id}'),
-                  title: u.name,
-                  subtitle:
-                      u.serial ??
-                      (u.lineNo > 0 ? '#${u.lineNo}' : 'chưa có serial'),
-                  value: InvUi.vnd(_prices[u.id]),
-                  onTap: () => _editPrice(u),
-                ),
-            ],
-          ),
-        if (canItems)
-          OmniGroupSection(
-            key: const ValueKey('inv-sell-items'),
-            title: 'Hàng số lượng',
-            children: [
-              for (final i in _items)
-                OmniGroupRow(
-                  key: ValueKey('inv-sell-item-${i.product.id}'),
-                  title: i.product.name,
-                  subtitle:
-                      '${InvUi.vnd(i.price)} / ${i.product.unitLabel} · '
-                      'còn ${i.product.onHand}',
-                  chevron: false,
-                  onTap: () => _editItemPrice(i),
-                  trailing: InvStepper(
-                    value: i.qty,
-                    // Về 0 là bỏ dòng.
-                    min: 0,
-                    max: 100000,
-                    onChanged: (v) => setState(() {
-                      if (v <= 0) {
-                        _items.remove(i);
-                      } else {
-                        i.qty = v;
-                      }
-                    }),
-                  ),
-                ),
-              OmniGroupRow.add(
-                key: const ValueKey('inv-sell-add-item'),
-                title: 'Thêm hàng số lượng',
-                onTap: _addItem,
-              ),
-            ],
-          ),
-        if (widget.allowRetail && perms.reserve)
-          OmniGroupSection(
-            children: [
-              OmniGroupRow(
-                title: 'Để bán lẻ',
-                trailing: Switch.adaptive(
-                  key: const ValueKey('inv-sell-retail'),
-                  value: _retail,
-                  onChanged: (v) => setState(() => _retail = v),
-                ),
-              ),
-            ],
-          ),
-        if (!_retail) ..._customerSection(),
-        if (!_retail && kinds.length > 1)
-          OmniSegmented(
-            labels: [for (final k in kinds) k.$2],
-            index: kinds.indexWhere((k) => k.$1 == kind),
-            onChanged: (i) => setState(() => _kind = kinds[i].$1),
-          ),
-        if (!_retail && kind == SellKind.hold)
-          OmniGroupSection(
-            children: [
-              OmniGroupRow(
-                key: const ValueKey('inv-sell-deposit'),
-                title: 'Cọc',
-                value: InvUi.vnd(_deposit),
-                onTap: _editDeposit,
-              ),
-              if (holdExtras && _deposit > 0)
-                OmniGroupRow(
-                  key: const ValueKey('inv-sell-paid-at'),
-                  title: 'Ngày nhận cọc',
-                  value: InventoryFormat.dmy(
-                    InventoryFormat.isoDay(_paidAt ?? _today),
-                  ),
-                  onTap: _pickPaidAt,
-                ),
-              if (holdExtras && _deposit > 0 && perms.pay)
-                OmniGroupRow(
-                  key: const ValueKey('inv-sell-account'),
-                  title: 'Nguồn tiền',
-                  value: accountName ?? 'Chọn',
-                  onTap: () => _pickAccount(accounts),
-                ),
-              if (holdExtras)
-                OmniGroupRow(
-                  key: const ValueKey('inv-sell-expires'),
-                  title: 'Hạn giữ',
-                  value: _expires == null
-                      ? 'Chọn'
-                      : InventoryFormat.dmy(InventoryFormat.isoDay(_expires!)),
-                  onTap: _pickExpires,
-                ),
-            ],
-          ),
-        OmniGroupSection(
-          children: [
-            OmniGroupRow(
-              key: const ValueKey('inv-sell-total'),
-              title: units.isNotEmpty && items.isEmpty
-                  ? 'Tổng ${units.length} cây'
-                  : 'Tổng',
-              trailing: InvValue(InvUi.vnd(total)),
+              ],
             ),
-          ],
-        ),
-      ],
+          if (widget.allowRetail && perms.reserve)
+            OmniGroupSection(
+              children: [
+                OmniGroupRow(
+                  title: 'Để bán lẻ',
+                  trailing: Switch.adaptive(
+                    key: const ValueKey('inv-sell-retail'),
+                    value: _retail,
+                    onChanged: (v) => setState(() => _retail = v),
+                  ),
+                ),
+              ],
+            ),
+          if (!_retail) ..._customerSection(),
+          if (!_retail && kinds.length > 1)
+            OmniSegmented(
+              labels: [for (final k in kinds) k.$2],
+              index: kinds.indexWhere((k) => k.$1 == kind),
+              onChanged: (i) => setState(() => _kind = kinds[i].$1),
+            ),
+          if (!_retail && kind == SellKind.hold)
+            OmniGroupSection(
+              children: [
+                OmniGroupRow(
+                  key: const ValueKey('inv-sell-deposit'),
+                  title: 'Cọc',
+                  value: InvUi.vnd(_deposit),
+                  onTap: _editDeposit,
+                ),
+                if (holdExtras && _deposit > 0)
+                  OmniGroupRow(
+                    key: const ValueKey('inv-sell-paid-at'),
+                    title: 'Ngày nhận cọc',
+                    value: InventoryFormat.dmy(
+                      InventoryFormat.isoDay(_paidAt ?? _today),
+                    ),
+                    onTap: _pickPaidAt,
+                  ),
+                if (holdExtras && _deposit > 0 && perms.pay)
+                  OmniGroupRow(
+                    key: const ValueKey('inv-sell-account'),
+                    title: 'Nguồn tiền',
+                    value: accountName ?? 'Chọn',
+                    onTap: () => _pickAccount(accounts),
+                  ),
+                if (holdExtras)
+                  OmniGroupRow(
+                    key: const ValueKey('inv-sell-expires'),
+                    title: 'Hạn giữ',
+                    value: _expires == null
+                        ? 'Chọn'
+                        : InventoryFormat.dmy(
+                            InventoryFormat.isoDay(_expires!),
+                          ),
+                    onTap: _pickExpires,
+                  ),
+              ],
+            ),
+          OmniGroupSection(
+            children: [
+              OmniGroupRow(
+                key: const ValueKey('inv-sell-total'),
+                title: units.isNotEmpty && items.isEmpty
+                    ? 'Tổng ${units.length} cây'
+                    : 'Tổng',
+                trailing: InvValue(InvUi.vnd(total)),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 

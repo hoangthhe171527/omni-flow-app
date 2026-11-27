@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -20,6 +22,7 @@ Future<bool> openRecordPaymentSheet(
 }) async {
   final ok = await showOmniSheet<bool>(
     context: context,
+    guardInput: true,
     builder: (_) => RecordPaymentSheet(
       orderId: orderId,
       orderCode: orderCode,
@@ -53,6 +56,33 @@ class _RecordPaymentSheetState extends ConsumerState<RecordPaymentSheet> {
   bool _saving = false;
 
   int get _full => widget.remaining.round();
+
+  // ---- Nháp (D16): sheet dài — tiền ----
+  late final String _initial;
+
+  @override
+  void initState() {
+    super.initState();
+    _initial = jsonEncode(_draft());
+  }
+
+  bool _dirty() => jsonEncode(_draft()) != _initial;
+
+  Map<String, Object?> _draft() => {
+    'amount': _amount,
+    'method': _method.wire,
+    'paidAt': _paidAt.toIso8601String(),
+    'note': _note,
+  };
+
+  void _restore(Map<String, Object?> d) => setState(() {
+    _amount = (d['amount'] as num?)?.round() ?? _amount;
+    _method =
+        PaymentMethod.values.where((m) => m.wire == d['method']).firstOrNull ??
+        _method;
+    _paidAt = DateTime.tryParse('${d['paidAt']}') ?? _paidAt;
+    _note = d['note'] as String? ?? '';
+  });
 
   Future<void> _editAmount() async {
     final v = await showMoneyKeypad(
@@ -118,104 +148,116 @@ class _RecordPaymentSheetState extends ConsumerState<RecordPaymentSheet> {
         _paidAt.day == today.day;
     final over = _amount > _full && _full > 0;
 
-    return OmniSheetBody(
-      header: OmniSheetHeader(
-        title: 'Ghi thu',
-        subtitle: widget.orderCode,
-        trailing: const OmniSheetCloseButton(key: ValueKey('pay-close')),
-      ),
-      footer: FilledButton(
-        key: const ValueKey('pay-save'),
-        onPressed: _amount <= 0 || over || _saving ? null : _save,
-        // Nút mang số tiền ("<Việc> · <số tiền>").
-        child: Text(
-          _amount > 0 ? 'Ghi thu · ${Formatters.vnd(_amount)}' : 'Ghi thu',
+    return OmniSheetGuard(
+      draftKind: 'inventory.record_payment',
+      draftScope: widget.orderId,
+      isDirty: _dirty,
+      toDraft: _draft,
+      onRestore: _restore,
+      summary: () => [
+        Formatters.vnd(_amount),
+        _method.label,
+        if (_note.isNotEmpty) _note,
+      ].join(' · '),
+      child: OmniSheetBody(
+        header: OmniSheetHeader(
+          title: 'Ghi thu',
+          subtitle: widget.orderCode,
+          closeButton: const OmniSheetCloseButton(key: ValueKey('pay-close')),
         ),
-      ),
-      children: [
-        Semantics(
-          button: true,
-          label: 'Số tiền thu ${Formatters.vnd(_amount)}, chạm để sửa',
-          excludeSemantics: true,
-          child: InkWell(
-            key: const ValueKey('pay-amount'),
-            borderRadius: BorderRadius.circular(16),
-            onTap: _editAmount,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              child: Column(
-                children: [
-                  Text(
-                    Formatters.vnd(_amount),
-                    textAlign: TextAlign.center,
-                    style: OmniType.moneyHero.copyWith(
-                      color: over
-                          ? OmniColors.dangerTextOf(context)
-                          : scheme.onSurface,
+        footer: FilledButton(
+          key: const ValueKey('pay-save'),
+          onPressed: _amount <= 0 || over || _saving ? null : _save,
+          // Nút mang số tiền ("<Việc> · <số tiền>").
+          child: Text(
+            _amount > 0 ? 'Ghi thu · ${Formatters.vnd(_amount)}' : 'Ghi thu',
+          ),
+        ),
+        children: [
+          Semantics(
+            button: true,
+            label: 'Số tiền thu ${Formatters.vnd(_amount)}, chạm để sửa',
+            excludeSemantics: true,
+            child: InkWell(
+              key: const ValueKey('pay-amount'),
+              borderRadius: BorderRadius.circular(16),
+              onTap: _editAmount,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Column(
+                  children: [
+                    Text(
+                      Formatters.vnd(_amount),
+                      textAlign: TextAlign.center,
+                      style: OmniType.moneyHero.copyWith(
+                        color: over
+                            ? OmniColors.dangerTextOf(context)
+                            : scheme.onSurface,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    over
-                        ? 'Nhiều hơn số còn phải thu'
-                        : 'còn phải thu ${Formatters.vnd(_full)}',
-                    textAlign: TextAlign.center,
-                    style: OmniType.caption.copyWith(
-                      color: over
-                          ? OmniColors.dangerTextOf(context)
-                          : scheme.onSurfaceVariant,
+                    const SizedBox(height: 2),
+                    Text(
+                      over
+                          ? 'Nhiều hơn số còn phải thu'
+                          : 'còn phải thu ${Formatters.vnd(_full)}',
+                      textAlign: TextAlign.center,
+                      style: OmniType.caption.copyWith(
+                        color: over
+                            ? OmniColors.dangerTextOf(context)
+                            : scheme.onSurfaceVariant,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-        if (_full > 0 && _amount != _full)
-          Center(
-            child: OmniChoicePill(
-              key: const ValueKey('pay-full'),
-              label: 'Thu đủ',
-              selected: false,
-              onTap: () => setState(() => _amount = _full),
-            ),
-          ),
-        // Bốn hình thức: "Chuyển khoản" không vừa một ô của thanh chia 4 —
-        // hàng nút chọn tự xuống dòng, không cắt chữ.
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          alignment: WrapAlignment.center,
-          children: [
-            for (final m in PaymentMethod.values)
-              OmniChoicePill(
-                key: ValueKey('pay-method-${m.wire}'),
-                label: m.label,
-                selected: m == _method,
-                onTap: () => setState(() => _method = m),
+          if (_full > 0 && _amount != _full)
+            Center(
+              child: OmniChoicePill(
+                key: const ValueKey('pay-full'),
+                label: 'Thu đủ',
+                selected: false,
+                onTap: () => setState(() => _amount = _full),
               ),
-          ],
-        ),
-        OmniGroupSection(
-          children: [
-            OmniGroupRow(
-              key: const ValueKey('pay-date'),
-              title: 'Ngày thu',
-              value: isToday
-                  ? 'Hôm nay, ${Formatters.dayMonth(_paidAt)}'
-                  : Formatters.date(_paidAt),
-              onTap: _pickDate,
             ),
-            OmniGroupRow(
-              key: const ValueKey('pay-note'),
-              title: 'Ghi chú',
-              subtitle: _note.isEmpty ? null : _note,
-              value: _note.isEmpty ? 'Thêm' : null,
-              onTap: _editNote,
-            ),
-          ],
-        ),
-      ],
+          // Bốn hình thức: "Chuyển khoản" không vừa một ô của thanh chia 4 —
+          // hàng nút chọn tự xuống dòng, không cắt chữ.
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.center,
+            children: [
+              for (final m in PaymentMethod.values)
+                OmniChoicePill(
+                  key: ValueKey('pay-method-${m.wire}'),
+                  label: m.label,
+                  selected: m == _method,
+                  onTap: () => setState(() => _method = m),
+                ),
+            ],
+          ),
+          OmniGroupSection(
+            children: [
+              OmniGroupRow(
+                key: const ValueKey('pay-date'),
+                title: 'Ngày thu',
+                value: isToday
+                    ? 'Hôm nay, ${Formatters.dayMonth(_paidAt)}'
+                    : Formatters.date(_paidAt),
+                onTap: _pickDate,
+              ),
+              OmniGroupRow(
+                key: const ValueKey('pay-note'),
+                title: 'Ghi chú',
+                subtitle: _note.isEmpty ? null : _note,
+                value: _note.isEmpty ? 'Thêm' : null,
+                onTap: _editNote,
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

@@ -43,6 +43,7 @@ Future<AddTaskChoice?> showAddTaskSheet(
   required String sectionName,
 }) => showOmniSheet<AddTaskChoice>(
   context: context,
+  guardInput: true,
   builder: (_) => _AddTaskSheet(sectionName: sectionName),
 );
 
@@ -232,24 +233,38 @@ class _AddTaskSheetState extends ConsumerState<_AddTaskSheet> {
       );
     }
 
-    return OmniSheetBody(
-      header: OmniSheetHeader(
-        title: 'Thêm việc',
-        subtitle: 'vào ${widget.sectionName}',
-        trailing: OmniSheetCloseButton(
-          onPressed: () => Navigator.of(context).maybePop(),
+    // Sheet ngắn (D16): một ô tên. Cây đã chọn là lựa chọn, không phải chữ
+    // gõ — không tính bẩn, không vào nháp.
+    return OmniSheetGuard(
+      draftKind: 'plans.task.add',
+      draftScope: widget.sectionName,
+      length: OmniSheetLength.short,
+      listenable: _title,
+      isDirty: () => _title.text.trim().isNotEmpty,
+      toDraft: () => {'title': _title.text},
+      onRestore: (d) => setState(() {
+        _title.text = d['title'] as String? ?? '';
+        ref.read(addTaskModeProvider.notifier).state = 0;
+      }),
+      summary: () => _title.text.trim(),
+      discardPrompt: 'Bỏ việc đang nhập?',
+      child: OmniSheetBody(
+        header: OmniSheetHeader(
+          title: 'Thêm việc',
+          subtitle: 'vào ${widget.sectionName}',
         ),
+        footer: footer,
+        children: [
+          if (canPick)
+            OmniSegmented(
+              labels: const ['Gõ tên', 'Chọn đàn'],
+              index: mode,
+              onChanged: (i) =>
+                  ref.read(addTaskModeProvider.notifier).state = i,
+            ),
+          ...children,
+        ],
       ),
-      footer: footer,
-      children: [
-        if (canPick)
-          OmniSegmented(
-            labels: const ['Gõ tên', 'Chọn đàn'],
-            index: mode,
-            onChanged: (i) => ref.read(addTaskModeProvider.notifier).state = i,
-          ),
-        ...children,
-      ],
     );
   }
 }

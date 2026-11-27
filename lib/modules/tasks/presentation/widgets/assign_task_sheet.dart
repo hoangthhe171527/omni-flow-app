@@ -104,12 +104,8 @@ class _AssignTaskSheetState extends ConsumerState<_AssignTaskSheet> {
         header: OmniSheetHeader(
           title: widget.title,
           subtitle: _picked.isEmpty ? null : '${_picked.length} đã chọn',
-          trailing: OmniGlassCircle(
-            child: IconButton(
-              tooltip: 'Đóng chọn người làm',
-              onPressed: () => Navigator.of(context).pop(),
-              icon: const Icon(LucideIcons.x),
-            ),
+          closeButton: OmniSheetCloseButton(
+            onPressed: () => Navigator.of(context).pop(),
           ),
         ),
         footer: FilledButton(
