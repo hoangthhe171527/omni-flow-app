@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/network/api_envelope.dart';
 import '../../../security/session/session_controller.dart';
 import '../../plans/application/plans_providers.dart';
 import '../../tasks/application/tasks_providers.dart';
@@ -594,28 +595,134 @@ void bumpOrders(WidgetRef ref) =>
 
 typedef OrderListQuery = ({OrderListFilter filter, String q});
 
-/// Danh sách đơn (bản mẫu NWUQNP). "Cần thu" = còn phải thu > 0, chưa huỷ —
-/// lọc trên 100 đơn mới nhất vì API chỉ lọc một trạng thái thu mỗi lần.
-final ordersListProvider = FutureProvider.autoDispose
-    .family<List<OrderRow>, OrderListQuery>((ref, f) async {
-      ref.watch(orderRevisionProvider);
-      ref.watch(inventoryRevisionProvider);
-      final q = f.q.trim();
-      final rows = await ref
-          .watch(inventoryApiProvider)
-          .listOrders(
-            search: q.isEmpty ? null : q,
-            status: f.filter == OrderListFilter.processing
-                ? 'processing'
-                : null,
-          );
-      return f.filter == OrderListFilter.due
-          ? [
-              for (final o in rows)
-                if (o.remaining > 0) o,
-            ]
-          : rows;
-    });
+/// Các đơn đã tải của một tab, theo trang server.
+@immutable
+class OrdersListState {
+  const OrdersListState({
+    required this.rows,
+    required this.page,
+    required this.hasMore,
+    this.loadingMore = false,
+    this.loadFailed = false,
+  });
+
+  /// Đơn đã lọc theo tab ("Cần thu" chỉ giữ đơn còn phải thu).
+  final List<OrderRow> rows;
+
+  /// Trang server cuối cùng đã tải.
+  final int page;
+
+  /// Server còn trang sau.
+  final bool hasMore;
+  final bool loadingMore;
+
+  /// Lượt tải thêm vừa hỏng: dừng tự tải, chờ người dùng bấm thử lại (không
+  /// thì ô "đang tải" cuối danh sách tự gọi lại mãi khi mạng hỏng).
+  final bool loadFailed;
+}
+
+/// Danh sách đơn (bản mẫu NWUQNP), phân trang 50 đơn, tải thêm khi cuộn tới
+/// cuối (sửa 27/11/2026 — trước chỉ có 100 đơn mới nhất).
+///
+/// "Cần thu" = còn phải thu > 0, chưa huỷ. API chỉ lọc MỘT trạng thái thu mỗi
+/// lần nên lọc ở app; một trang có thể không có đơn nào còn nợ, nên mỗi lượt
+/// lấy tiếp trang tới khi có thêm [_dueFill] đơn hoặc hết (tối đa
+/// [_maxPagesPerStep] trang một lượt).
+class OrdersListController
+    extends AutoDisposeFamilyAsyncNotifier<OrdersListState, OrderListQuery> {
+  static const pageSize = 50;
+  static const _dueFill = 20;
+  static const _maxPagesPerStep = 6;
+  int _generation = 0;
+
+  bool get _due => arg.filter == OrderListFilter.due;
+
+  Future<Paged<OrderRow>> _fetch(int page) {
+    final q = arg.q.trim();
+    return ref
+        .read(inventoryApiProvider)
+        .listOrders(
+          search: q.isEmpty ? null : q,
+          status: arg.filter == OrderListFilter.processing
+              ? 'processing'
+              : null,
+          page: page,
+          perPage: pageSize,
+        );
+  }
+
+  /// Tải từ trang [from]; [seen] chặn đơn lặp khi đơn mới chen vào làm dịch
+  /// trang giữa hai lượt.
+  Future<({List<OrderRow> rows, int page, bool hasMore})> _step(
+    int from,
+    Set<String> seen,
+  ) async {
+    final rows = <OrderRow>[];
+    var page = from;
+    var more = true;
+    for (var i = 0; i < _maxPagesPerStep; i++) {
+      page = from + i;
+      final res = await _fetch(page);
+      for (final o in res.items) {
+        if (_due && o.remaining <= 0) continue;
+        if (seen.add(o.id)) rows.add(o);
+      }
+      more = res.hasMore && res.items.isNotEmpty;
+      if (!more || !_due || rows.length >= _dueFill) break;
+    }
+    return (rows: rows, page: page, hasMore: more);
+  }
+
+  @override
+  Future<OrdersListState> build(OrderListQuery arg) async {
+    ref.watch(orderRevisionProvider);
+    ref.watch(inventoryRevisionProvider);
+    // Lượt tải thêm đang bay của bản trước bị bỏ (xem loadMore).
+    _generation++;
+    final r = await _step(1, <String>{});
+    return OrdersListState(rows: r.rows, page: r.page, hasMore: r.hasMore);
+  }
+
+  Future<void> loadMore() async {
+    final cur = state.valueOrNull;
+    if (cur == null || cur.loadingMore || !cur.hasMore) return;
+    final gen = _generation;
+    state = AsyncData(
+      OrdersListState(
+        rows: cur.rows,
+        page: cur.page,
+        hasMore: cur.hasMore,
+        loadingMore: true,
+      ),
+    );
+    try {
+      final r = await _step(cur.page + 1, {for (final o in cur.rows) o.id});
+      if (gen != _generation) return;
+      state = AsyncData(
+        OrdersListState(
+          rows: [...cur.rows, ...r.rows],
+          page: r.page,
+          hasMore: r.hasMore,
+        ),
+      );
+    } catch (_) {
+      if (gen != _generation) return;
+      state = AsyncData(
+        OrdersListState(
+          rows: cur.rows,
+          page: cur.page,
+          hasMore: cur.hasMore,
+          loadFailed: true,
+        ),
+      );
+    }
+  }
+}
+
+final ordersListProvider = AsyncNotifierProvider.autoDispose
+    .family<OrdersListController, OrdersListState, OrderListQuery>(
+      OrdersListController.new,
+    );
 
 final ordersDueProvider = FutureProvider.autoDispose<OrdersDue>((ref) async {
   ref.watch(orderRevisionProvider);
