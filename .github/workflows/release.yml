@@ -115,15 +115,32 @@ jobs:
           keyPassword=$KEY_PASSWORD
           EOF
 
+      - name: Chọn chế độ symbol
+        # Obfuscate + tách debug-info làm gọn app và che mã, NHƯNG khi đó stack
+        # trace trên Crashlytics chỉ còn địa chỉ vô nghĩa nếu không tải symbol
+        # lên. Nên chỉ bật khi có secret tải symbol; thiếu thì build như cũ.
+        id: sym
+        env:
+          FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -n "$FIREBASE_SA" ]; then
+            echo "flags=--obfuscate --split-debug-info=build/symbols/android" >> "$GITHUB_OUTPUT"
+            echo "upload=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Thiếu FIREBASE_SERVICE_ACCOUNT_JSON — build KHÔNG obfuscate để Crashlytics vẫn đọc được stack trace. Xem docs/PHAT_HANH.md 2.4."
+            echo "flags=" >> "$GITHUB_OUTPUT"
+            echo "upload=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - run: flutter pub get
 
       - name: Đóng gói AAB
         # AAB chứ không APK: Play chỉ nhận AAB cho ứng dụng mới từ 2021.
-        run: flutter build appbundle --release --build-number=${{ inputs.build_number }} --dart-define=DEMO_MODE=${{ inputs.demo }}
+        run: flutter build appbundle --release --build-number=${{ inputs.build_number }} --dart-define=DEMO_MODE=${{ inputs.demo }} ${{ steps.sym.outputs.flags }}
 
       - name: Đóng gói APK
         # Kèm APK cho cả bản thật lẫn bản demo để gửi qua Firebase App Distribution / cài trực tiếp cho tester.
-        run: flutter build apk --release --build-number=${{ inputs.build_number }} --dart-define=DEMO_MODE=${{ inputs.demo }}
+        run: flutter build apk --release --build-number=${{ inputs.build_number }} --dart-define=DEMO_MODE=${{ inputs.demo }} ${{ steps.sym.outputs.flags }}
 
       - name: Xác nhận đã ký bằng khoá thật
         # Gradle cố ý KHÔNG chết khi thiếu khoá — nó lùi về khoá debug để một
@@ -136,6 +153,25 @@ jobs:
             echo "::error::AAB đang ký bằng khoá DEBUG. Play sẽ từ chối."
             exit 1
           fi
+
+      - name: Tải symbol Dart lên Crashlytics
+        if: steps.sym.outputs.upload == 'true'
+        env:
+          FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          printf '%s' "$FIREBASE_SA" > "$RUNNER_TEMP/firebase-sa.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/firebase-sa.json"
+          APP_ID=$(jq -r '.client[] | select(.client_info.android_client_info.package_name=="vn.sunriseieco.viomni") | .client_info.mobilesdk_app_id' android/app/google-services.json | head -1)
+          npx --yes firebase-tools@13 crashlytics:symbols:upload --app="$APP_ID" build/symbols/android
+          rm -f "$RUNNER_TEMP/firebase-sa.json"
+
+      - uses: actions/upload-artifact@v4
+        if: steps.sym.outputs.upload == 'true'
+        with:
+          # Bản sao symbol để `flutter symbolize` tay khi cần.
+          name: viomni-android-symbols-${{ inputs.build_number }}
+          path: build/symbols/android
+          retention-days: 90
 
       - uses: actions/upload-artifact@v4
         with:
@@ -236,6 +272,21 @@ jobs:
           # Firebase/FCM và OAuth đều thuộc project omnicrm-mobile. GID client
           # cùng URL scheme được khai báo trực tiếp trong Info.plist.
 
+      - name: Chọn chế độ symbol
+        # Như bên Android: chỉ obfuscate khi tải được symbol lên Crashlytics.
+        id: sym
+        env:
+          FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -n "$FIREBASE_SA" ]; then
+            echo "flags=--obfuscate --split-debug-info=build/symbols/ios" >> "$GITHUB_OUTPUT"
+            echo "upload=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Thiếu FIREBASE_SERVICE_ACCOUNT_JSON — build KHÔNG obfuscate."
+            echo "flags=" >> "$GITHUB_OUTPUT"
+            echo "upload=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - run: flutter pub get
 
       - name: Đóng gói IPA
@@ -243,7 +294,19 @@ jobs:
           flutter build ipa --release \
             --build-number=${{ inputs.build_number }} \
             --dart-define=DEMO_MODE=${{ inputs.demo }} \
-            --export-options-plist=ios/ExportOptions.plist
+            --export-options-plist=ios/ExportOptions.plist \
+            ${{ steps.sym.outputs.flags }}
+
+      - name: Tải symbol Dart lên Crashlytics
+        if: steps.sym.outputs.upload == 'true'
+        env:
+          FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          printf '%s' "$FIREBASE_SA" > "$RUNNER_TEMP/firebase-sa.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/firebase-sa.json"
+          APP_ID=$(/usr/libexec/PlistBuddy -c 'Print :GOOGLE_APP_ID' ios/Runner/GoogleService-Info.plist)
+          npx --yes firebase-tools@13 crashlytics:symbols:upload --app="$APP_ID" build/symbols/ios
+          rm -f "$RUNNER_TEMP/firebase-sa.json"
 
       - name: Tải lên TestFlight
         env:

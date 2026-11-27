@@ -122,6 +122,7 @@ GitHub repo → Settings → Secrets and variables → Actions:
 | `ANDROID_KEY_PASSWORD` | mật khẩu khoá ở 2.1 |
 | `GOOGLE_SERVICES_JSON` | dán NGUYÊN nội dung tệp ở 2.2 |
 | `ENV_FILE` | nội dung `.env` cho bản phát hành — xem 2.5 |
+| `FIREBASE_SERVICE_ACCOUNT_JSON` | không bắt buộc. Firebase Console → Project settings → Service accounts → Generate new private key; dán nguyên JSON. Có secret này thì bản phát hành (Android + iOS) được `--obfuscate --split-debug-info` và symbol Dart tự tải lên Crashlytics; không có thì build như cũ (không obfuscate) để stack trace vẫn đọc được. |
 
 ### 2.5 `ENV_FILE`
 
