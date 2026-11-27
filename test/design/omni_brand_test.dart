@@ -89,6 +89,75 @@ void main() {
     }
   });
 
+  // Hướng "Quỹ đạo" (duyệt 26/11/2026).
+  testWidgets('quỹ đạo vẽ được mọi kiểu, sáng lẫn tối, không lỗi', (
+    tester,
+  ) async {
+    for (final dark in [false, true]) {
+      for (final orbit in const [
+        OmniOrbit(),
+        OmniOrbit(scale: 0.78, planets: true, anchorLogo: true),
+        OmniOrbit(drawIn: true),
+        OmniOrbit(scale: 0.42, opacity: 0.9),
+        OmniOrbit(showLogo: false, opacity: 0.45, spin: true),
+      ]) {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData(
+              brightness: dark ? Brightness.dark : Brightness.light,
+            ),
+            home: Scaffold(body: Center(child: orbit)),
+          ),
+        );
+        await tester.pump(const Duration(milliseconds: 700));
+        expect(tester.takeException(), isNull);
+        expect(
+          find.byType(OmniBrandMark),
+          orbit.showLogo ? findsOneWidget : findsNothing,
+        );
+      }
+    }
+  });
+
+  testWidgets('quỹ đạo: chạy khi được phép, giảm chuyển động thì đứng yên', (
+    tester,
+  ) async {
+    Widget host({required bool reduced}) => MediaQuery(
+      data: MediaQueryData(disableAnimations: reduced),
+      child: const MaterialApp(
+        home: Scaffold(
+          body: Center(child: OmniOrbit(planets: true, drawIn: true)),
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(host(reduced: false));
+    expect(tester.hasRunningAnimations, isTrue);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpWidget(host(reduced: true));
+    expect(tester.hasRunningAnimations, isFalse);
+    // Khung cuối: logo đủ, không mờ.
+    expect(find.byType(OmniBrandMark), findsOneWidget);
+    expect(
+      find.ancestor(
+        of: find.byType(OmniBrandMark),
+        matching: find.byType(Opacity),
+      ),
+      findsNothing,
+    );
+  });
+
+  testWidgets('màn mở app: khẩu hiệu hiện ở cuối phần dựng hình', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const MaterialApp(home: OmniSplash(progress: 0)));
+    expect(find.text(OmniSplash.tagline), findsNothing);
+    await tester.pumpWidget(const MaterialApp(home: OmniSplash(progress: 1)));
+    expect(find.text(OmniSplash.tagline), findsOneWidget);
+    expect(find.text('V'), findsOneWidget);
+  });
+
   testWidgets('chữ Viomni: "omni" mang màu chính trên nền sáng', (
     tester,
   ) async {

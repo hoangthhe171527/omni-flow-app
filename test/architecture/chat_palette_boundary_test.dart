@@ -19,6 +19,10 @@ void main() {
     const allowed = <String>{
       // Nơi định nghĩa. Nó phải nhắc tên chính nó.
       'lib/design/tokens/omni_colors.dart',
+      // Hành tinh "Z" trên quỹ đạo màn khởi động / xác thực (hướng "Quỹ đạo",
+      // duyệt 26/11/2026) là BIỂU TRƯNG kênh Zalo — như một logo — không phải
+      // màu giao diện. Chỉ một chấm tròn, không tô màn, nút hay chip nào.
+      'lib/design/components/omni_orbit.dart',
     };
 
     const banned = <String>[

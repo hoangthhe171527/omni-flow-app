@@ -27,6 +27,7 @@ class MessageBubble extends StatelessWidget {
     this.groupedWithPrevious = false,
     this.isLastInGroup = true,
     this.isLatestOutbound = false,
+    this.showAvatar = false,
     this.onRetry,
     this.onDiscard,
     this.onReply,
@@ -56,6 +57,11 @@ class MessageBubble extends StatelessWidget {
   /// Tin GỬI mới nhất của hội thoại: chỉ tin này ghi chữ "Đã nhận / Đã xem"
   /// (như Messenger); tin gửi cũ hơn chỉ còn dấu tích.
   final bool isLatestOutbound;
+
+  /// Avatar nhỏ cạnh tin khách — CHỈ nhóm chat (nhiều người nói). Hội thoại
+  /// 1-1 không hiện: chỉ có một người, và tin thiếu tên ra ô "?" (duyệt
+  /// 26/11/2026, kiểu iMessage).
+  final bool showAvatar;
 
   final VoidCallback? onRetry;
   final VoidCallback? onDiscard;
@@ -102,44 +108,29 @@ class MessageBubble extends StatelessWidget {
     final outbound = message.isOutbound;
     final failed = message.status == DeliveryStatus.failed;
 
-    // Measured against Zalo itself rather than from memory: the outgoing bubble
-    // is a MUTED blue-grey, not a saturated blue — a bright bubble is exhausting
-    // to read a long thread on. Corners are evenly rounded on all four, with no
-    // sharp tail, which is what lets a run of messages read as one calm column.
-    final dark = Theme.of(context).brightness == Brightness.dark;
+    // Kiểu iMessage (duyệt 26/11/2026): tin khách nền xám (sáng #EDEFF3, tối
+    // #2C2C2E) chữ mực; tin mình nền xanh đặc `primaryFillOf` chữ trắng ở CẢ
+    // sáng lẫn tối (bản tối cũ ra xám xanh — sai quy tắc "xanh = của mình").
     final bubbleColor = failed
         ? scheme.errorContainer
         : outbound
-        ? OmniColors.chat(
-            context,
-            OmniColors.primary,
-            OmniColors.chatOutboundDark,
-          )
-        : OmniColors.chat(
-            context,
-            OmniColors.chatInbound,
-            OmniColors.chatInboundDark,
-          );
-    // Tin ra sáng là nền primary chữ trắng; dark mode trắng cả hai phía; tin
-    // vào sáng là chữ tối trên nền trắng.
+        ? OmniColors.primaryFillOf(context)
+        : OmniColors.byBrightness(context, _inboundLight, OmniColors.darkMuted);
     final onBubble = failed
         ? scheme.onErrorContainer
-        : dark || outbound
+        : outbound
         ? Colors.white
         : scheme.onSurface;
-    final metaColor = dark
-        ? Colors.white.withValues(alpha: 0.55)
-        : outbound && !failed
-        ? Colors.white.withValues(alpha: 0.9)
-        : OmniColors.chatMeta;
-    // Góc ngoài 16; phía "đuôi" (phải với tin ra, trái với tin vào) chỉ bo 6
-    // khi tin nằm trong một nhóm: đầu nhóm giữ 16 ở trên, cuối nhóm giữ 16 ở
-    // dưới, tin giữa nhóm cả hai góc 6 (thang bo góc, spec phong cách iOS
-    // §3.5).
-    final onPrimaryBubble = outbound && !dark && !failed;
-    final tailTop = Radius.circular(groupedWithPrevious ? 6 : 16);
-    final tailBottom = Radius.circular(isLastInGroup ? 16 : 6);
-    const round = Radius.circular(16);
+    final onPrimaryBubble = outbound && !failed;
+    final metaColor = onPrimaryBubble
+        ? Colors.white.withValues(alpha: 0.85)
+        : scheme.onSurfaceVariant;
+    // Bo 19; góc "đuôi" (dưới-phải tin mình, dưới-trái tin khách) 5 ở tin
+    // cuối cụm, 6 ở tin giữa cụm; góc trên phía đuôi 6 khi nối tin trước
+    // (duyệt 26/11/2026).
+    final tailTop = Radius.circular(groupedWithPrevious ? 6 : 19);
+    final tailBottom = Radius.circular(isLastInGroup ? 5 : 6);
+    const round = Radius.circular(19);
     final bubbleRadius = outbound
         ? BorderRadius.only(
             topLeft: round,
@@ -188,19 +179,30 @@ class MessageBubble extends StatelessWidget {
         ? message.id
         : 'local-${identityHashCode(message)}';
 
+    // Dòng dưới bong bóng: tin mình gửi CUỐI là "Đã xem 09:12" (chữ, không
+    // dấu tích); các tin khác chỉ hiện khi chạm vào: giờ + dấu tích (duyệt
+    // 26/11/2026 — giờ gom về mốc giữa màn).
     Widget messageMeta(Color color) => Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        if (outbound && isLatestOutbound) ...[
+          _DeliveryReceipt(
+            status: message.status,
+            fallbackColor: color,
+            showLabel: true,
+          ),
+          const SizedBox(width: 4),
+        ],
         Text(
           Formatters.time(message.sentAt),
           style: OmniChatType.meta.copyWith(color: color),
         ),
-        if (outbound) ...[
+        if (outbound && !isLatestOutbound) ...[
           const SizedBox(width: 5),
           _DeliveryReceipt(
             status: message.status,
             fallbackColor: color,
-            showLabel: isLatestOutbound,
+            showLabel: false,
           ),
         ],
         if (message.pinned) ...[
@@ -212,10 +214,10 @@ class MessageBubble extends StatelessWidget {
 
     final bubble = Container(
       constraints: BoxConstraints(
-        // 72%: tin dài không lấn sang phía bên kia, hai cột còn khoảng thở.
-        maxWidth: math.min(MediaQuery.sizeOf(context).width * 0.72, 560),
+        // 76% như bản duyệt 26/11/2026: tin dài không lấn sang phía bên kia.
+        maxWidth: math.min(MediaQuery.sizeOf(context).width * 0.76, 560),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
       decoration: BoxDecoration(
         color: bubbleColor,
         // Không bóng: bong bóng là nội dung, không nổi (spec phong cách iOS
@@ -246,7 +248,7 @@ class MessageBubble extends StatelessWidget {
             _MessageText(
               text: message.text,
               color: onBubble,
-              linkColor: onPrimaryBubble ? Colors.white : null,
+              linkColor: onPrimaryBubble ? Colors.white : scheme.primary,
             ),
           if (message.text.isNotEmpty && _urlPattern.hasMatch(message.text))
             MessageLinkPreview(
@@ -276,9 +278,8 @@ class MessageBubble extends StatelessWidget {
       ],
     );
 
-    // Tin vào: avatar 28 ở tin cuối cụm, các tin khác chừa ĐÚNG bề rộng đó
-    // (trước đây avatar 44 mà chỉ chừa 32 nên tin có avatar lệch 12). Tin ra
-    // không có gì: lề danh sách đã đủ.
+    // Nhóm chat: avatar 28 ở tin cuối cụm, các tin khác chừa ĐÚNG bề rộng
+    // đó. Hội thoại 1-1 không có cột avatar ([showAvatar]).
     final avatarGutter = Padding(
       padding: const EdgeInsets.only(right: _avatarGap),
       child: isLastInGroup
@@ -290,13 +291,11 @@ class MessageBubble extends StatelessWidget {
           : const SizedBox(width: _avatarSize),
     );
 
-    // Giờ + tích nằm DƯỚI bong bóng, chỉ ở tin cuối cụm (hoặc tin ghim); tin
-    // khác chạm vào mới hiện. Trước đây mỗi bong bóng một dòng giờ riêng, tin
-    // ngắn cũng cao hai dòng và cả chuỗi dày đặc.
-    final showMetaByDefault = isLastInGroup || message.pinned;
-    final underMetaColor = dark
-        ? Colors.white.withValues(alpha: 0.6)
-        : OmniColors.chatMeta;
+    // Bỏ giờ dưới từng bong bóng (duyệt 26/11/2026): giờ nằm ở mốc giữa màn;
+    // mặc định chỉ tin mình gửi CUỐI hiện "Đã gửi/Đã xem", tin ghim hiện
+    // dấu ghim. Tin khác chạm vào mới hiện giờ.
+    final showMetaByDefault = (outbound && isLatestOutbound) || message.pinned;
+    final underMetaColor = scheme.onSurfaceVariant;
 
     final myReaction = myUserId == null
         ? null
@@ -319,16 +318,15 @@ class MessageBubble extends StatelessWidget {
       onCreateTask: onCreateTask,
       onCreateOpportunity: onCreateOpportunity,
       child: Padding(
-        // 2 trong cụm, 16 khi đổi người: khoảng hở cho mắt biết ai dừng, ai
-        // bắt đầu.
-        padding: EdgeInsets.only(top: groupedWithPrevious ? 2 : 16),
+        // 2 trong cụm, 8 khi đổi người (bản duyệt 26/11/2026).
+        padding: EdgeInsets.only(top: groupedWithPrevious ? 2 : 8),
         child: Row(
           mainAxisAlignment: outbound
               ? MainAxisAlignment.end
               : MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            if (!outbound) avatarGutter,
+            if (!outbound && showAvatar) avatarGutter,
             Flexible(
               child: _TapToRevealMeta(
                 alwaysShow: showMetaByDefault,
@@ -433,6 +431,10 @@ class MessageBubble extends StatelessWidget {
 
 const double _avatarSize = 28;
 const double _avatarGap = 8;
+
+/// Nền tin khách ở chế độ sáng (bản duyệt 26/11/2026, kiểu iMessage). Tối
+/// dùng [OmniColors.darkMuted] #2C2C2E.
+const _inboundLight = Color(0xFFEDEFF3);
 
 /// Giữ trạng thái "đã chạm để xem giờ" của một bong bóng qua các lần danh sách
 /// dựng lại. Khi giờ đã luôn hiện (tin cuối cụm) thì `toggle` là null: chạm
@@ -866,7 +868,8 @@ class _QuotedMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final accent = onPrimary ? Colors.white : OmniColors.chatPrimary;
+    // Vạch trích theo màu chữ của bong bóng, không xanh (duyệt 26/11/2026).
+    final accent = onPrimary ? Colors.white : scheme.onSurfaceVariant;
     final bodyColor = onPrimary
         ? Colors.white.withValues(alpha: 0.85)
         : scheme.onSurfaceVariant;
@@ -1003,11 +1006,9 @@ class _DeliveryReceipt extends StatelessWidget {
   Widget build(BuildContext context) {
     final read = status == DeliveryStatus.read;
     final failed = status == DeliveryStatus.failed;
-    final color = read
-        ? OmniColors.chatPrimary
-        : failed
-        ? Theme.of(context).colorScheme.error
-        : fallbackColor;
+    // "Đã xem" xám như các dòng phụ khác — xanh chỉ cho hành động (duyệt
+    // 26/11/2026).
+    final color = failed ? Theme.of(context).colorScheme.error : fallbackColor;
     final label = switch (status) {
       DeliveryStatus.queued => 'Đang gửi',
       DeliveryStatus.sent => 'Đã gửi',
@@ -1039,9 +1040,9 @@ class _DeliveryReceipt extends StatelessWidget {
           key: ValueKey('delivery-receipt-${status.name}'),
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: OmniIconSize.sm, color: color),
+            // Tin cuối: chỉ chữ "Đã xem" (kiểu iMessage); tin khác: dấu tích.
+            if (!showLabel) Icon(icon, size: OmniIconSize.sm, color: color),
             if (showLabel) ...[
-              const SizedBox(width: 3),
               Text(
                 label,
                 style: OmniChatType.meta.copyWith(

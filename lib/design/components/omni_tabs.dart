@@ -114,7 +114,8 @@ class OmniTabStrip extends StatelessWidget {
                   child: DecoratedBox(
                     key: const Key('omni-tab-thumb'),
                     decoration: BoxDecoration(
-                      color: dark ? const Color(0xFF2E3F5C) : scheme.surface,
+                      // Núm tối #636366 như [OmniSegmented] (rà soát 26/11 mục 5).
+                      color: dark ? const Color(0xFF636366) : scheme.surface,
                       borderRadius: BorderRadius.circular(8),
                       border: contrast
                           ? Border.all(color: scheme.onSurface)

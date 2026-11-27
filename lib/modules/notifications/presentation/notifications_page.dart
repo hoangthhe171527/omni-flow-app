@@ -164,7 +164,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
                     final section = OmniGroupSection(
                       key: ValueKey('notification-group-${group.label}'),
                       title: group.label,
-                      dividerIndent: 54,
+                      dividerIndent: NotificationRow.textInset,
                       children: [
                         for (final item in group.items)
                           NotificationRow(
@@ -263,22 +263,33 @@ class _Rise extends StatelessWidget {
   }
 }
 
-/// Một thông báo trong [OmniGroupSection]. Cả dòng là đích chạm; chấm chưa đọc
-/// tròn 8×8 màu chính ở lề trái, ô icon [OmniIconTile] 28×28 bo 8 một tông.
+/// Một thông báo (duyệt 26/11/2026, rà soát mục 16–17) — dùng chung cho trang
+/// Thông báo và bảng chuông. Chấm ĐỎ chưa đọc ở lề trái ([OmniUnreadDot]); ô
+/// icon 38 bo 11 MÀU THEO LOẠI (đơn/tiền tím, việc xanh, chấm công cam, khác
+/// xám); tiêu đề 15/600 + giờ bên phải; nội dung 13.5 xám tối đa 2 dòng. Đã
+/// đọc: tiêu đề 500 chữ nhạt. Cả dòng là đích chạm.
 class NotificationRow extends StatelessWidget {
   const NotificationRow({
     super.key,
     required this.notification,
     required this.onTap,
+    this.borderRadius,
   });
 
   final AppNotification notification;
   final VoidCallback onTap;
 
+  /// Bo của vệt nhấn (dòng trong bảng chuông bo 16); null = theo thẻ nhóm.
+  final BorderRadius? borderRadius;
+
+  /// Lề trái tới chữ: 16 + ô icon 38 + 12 — `dividerIndent` của nhóm.
+  static const double textInset = 66;
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final unread = notification.isUnread;
+    final (tileFg, tileBg) = _tileColors(context, notification);
 
     return Semantics(
       button: true,
@@ -293,69 +304,93 @@ class NotificationRow extends StatelessWidget {
         type: MaterialType.transparency,
         child: InkWell(
           onTap: onTap,
+          borderRadius: borderRadius,
           child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 52),
+            constraints: const BoxConstraints(minHeight: 58),
             child: Stack(
               children: [
                 if (unread)
-                  Positioned(
-                    left: 3,
-                    top: 20,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: scheme.primary,
-                        shape: BoxShape.circle,
-                      ),
+                  const Positioned(
+                    left: 4,
+                    top: 25,
+                    child: OmniUnreadDot(
+                      size: 8,
+                      ring: false,
+                      excludeSemantics: true,
                     ),
                   ),
                 Padding(
-                  // 14 + 28 (OmniIconTile) + 12 = 54, khớp `dividerIndent: 54`.
-                  padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+                  padding: const EdgeInsets.fromLTRB(16, 10, 14, 10),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      OmniIconTile(
-                        _iconForKind(notification.kind),
-                        color: scheme.primary,
-                        background: scheme.primary.withValues(alpha: .10),
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: tileBg,
+                          borderRadius: BorderRadius.circular(11),
+                        ),
+                        child: Icon(
+                          _iconFor(notification),
+                          size: 20,
+                          color: tileFg,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              notification.title,
-                              style: OmniType.body.copyWith(
-                                fontWeight: unread
-                                    ? FontWeight.w600
-                                    : FontWeight.w400,
-                                color: scheme.onSurface,
-                              ),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    notification.title,
+                                    style: OmniType.body.copyWith(
+                                      height: 1.3,
+                                      fontWeight: unread
+                                          ? FontWeight.w600
+                                          : FontWeight.w500,
+                                      color: unread
+                                          ? scheme.onSurface
+                                          : scheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ),
+                                if (notification.createdAt != null) ...[
+                                  const SizedBox(width: OmniSpacing.sm),
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 2),
+                                    child: Text(
+                                      Formatters.relative(
+                                        notification.createdAt,
+                                      ),
+                                      style: OmniType.micro.copyWith(
+                                        color: scheme.onSurfaceVariant,
+                                        fontFeatures: OmniType.tabular,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
-                            const SizedBox(height: OmniSpacing.xxs),
-                            Text(
-                              notification.body,
-                              style: OmniType.body.copyWith(
-                                color: scheme.onSurfaceVariant,
+                            if (notification.body.isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                notification.body,
+                                style: OmniType.rowBody.copyWith(
+                                  height: 1.35,
+                                  color: scheme.onSurfaceVariant,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                            ],
                           ],
                         ),
                       ),
-                      if (notification.createdAt != null) ...[
-                        const SizedBox(width: OmniSpacing.sm),
-                        Text(
-                          Formatters.relative(notification.createdAt),
-                          style: OmniType.micro.copyWith(
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
                     ],
                   ),
                 ),
@@ -366,6 +401,53 @@ class NotificationRow extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Loại chấm công / tăng ca của Nhân sự (`notification_type` nguyên văn).
+const _attendanceWires = {
+  'ATTENDANCE_REMIND_IN',
+  'ATTENDANCE_REMIND_OUT',
+  'ATTENDANCE_MISSING',
+  'OT_UNREGISTERED',
+};
+
+/// Sắc ô icon theo loại (duyệt 26/11/2026): đơn / tiền tím, việc xanh, chấm
+/// công cam; null = xám (loại khác, tin nhắn, đơn từ…).
+OmniHue? notificationHue(AppNotification n) {
+  final wire = (n.wireType ?? n.kind.wire).toUpperCase();
+  if (_attendanceWires.contains(wire)) return OmniHue.orange;
+  if (wire == 'PAYSLIP_PUBLISHED' ||
+      wire.contains('ORDER') ||
+      wire.contains('PAYMENT') ||
+      wire.contains('INVOICE') ||
+      wire.contains('EXPENSE')) {
+    return OmniHue.violet;
+  }
+  if (n.kind.isTask) return OmniHue.blue;
+  return null;
+}
+
+/// (chữ, nền) của ô icon.
+(Color, Color) _tileColors(BuildContext context, AppNotification n) {
+  final theme = Theme.of(context);
+  final hue = notificationHue(n);
+  if (hue == null) {
+    return (
+      theme.colorScheme.onSurfaceVariant,
+      theme.brightness == Brightness.dark
+          ? OmniColors.darkMuted
+          : OmniColors.muted,
+    );
+  }
+  final tone = OmniFeatureTones.of(context, hue);
+  return (tone.foreground, tone.background);
+}
+
+IconData _iconFor(AppNotification n) {
+  final wire = (n.wireType ?? '').toUpperCase();
+  if (_attendanceWires.contains(wire)) return LucideIcons.clock;
+  if (wire == 'PAYSLIP_PUBLISHED') return LucideIcons.wallet;
+  return _iconForKind(n.kind);
 }
 
 IconData _iconForKind(NotificationKind kind) => switch (kind) {

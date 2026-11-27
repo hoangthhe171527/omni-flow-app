@@ -421,7 +421,8 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
             label: lot.status.label,
             tone: switch (lot.status) {
               LotStatus.received => OmniTone.success,
-              LotStatus.inTransit => OmniTone.info,
+              // Đang về: thông tin, không phải hành động → xám (duyệt 26/11/2026).
+              LotStatus.inTransit => OmniTone.neutral,
               LotStatus.ordered => OmniTone.neutral,
             },
           ),

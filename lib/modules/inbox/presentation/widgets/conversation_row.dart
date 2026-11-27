@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -12,15 +11,15 @@ import '../../../../design/platform/omni_motion_scope.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../domain/conversation.dart';
 
-/// Một dòng hội thoại trong hộp thư, theo `InboxPeek.dc.html`.
+/// Một dòng hội thoại trong hộp thư (duyệt 26/11/2026, rà soát mục 9):
 ///
-///   ● [avatar] Tên  OA · Trung Nguyên ........ giờ
-///              tin cuối ................  ●  [HT]
+///   ● [avatar] Tên ............................ giờ
+///              [OA] tin cuối ..................  [HT]
 ///
-/// Chấm nhãn 7px ở mép trái là nhãn đầu tiên của hội thoại (màu không đứng một
-/// mình: chấm có `Semantics('Nhãn: …')`). Kênh không còn là huy hiệu trên avatar
-/// mà là chữ đậm tô màu kênh ở dòng nguồn. Bấm giữ 450ms mở xem trước
-/// ([onPeek]); trong lúc giữ dòng co nhẹ để báo "sắp mở".
+/// Chưa đọc = MỘT chấm đỏ đầu dòng + tên và dòng xem trước đậm. Kênh là nhãn
+/// xám ở đầu dòng xem trước. Bỏ chấm nhãn xám, chấm đỏ giữa câu và vòng "+"
+/// nét đứt — gắn nhãn / gán người nằm ở menu nhấn giữ. Bấm giữ 450ms mở xem
+/// trước ([onPeek]); trong lúc giữ dòng co nhẹ để báo "sắp mở".
 class ConversationRow extends StatefulWidget {
   const ConversationRow({
     super.key,
@@ -72,7 +71,6 @@ class _ConversationRowState extends State<ConversationRow> {
     final conversation = widget.conversation;
     final scheme = Theme.of(context).colorScheme;
     final unread = conversation.isUnread;
-    final tag = conversation.tags.isEmpty ? null : conversation.tags.first;
     final motion = OmniMotion.enabled(context);
 
     return Material(
@@ -113,15 +111,12 @@ class _ConversationRowState extends State<ConversationRow> {
             child: Stack(
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 11, 14, 11),
+                  padding: const EdgeInsets.fromLTRB(20, 11, 14, 11),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       if (widget.selectionMode && !widget.selected) ...[
-                        Icon(
-                          LucideIcons.circle,
-                          color: scheme.outline,
-                        ),
+                        Icon(LucideIcons.circle, color: scheme.outline),
                         const SizedBox(width: OmniSpacing.md),
                       ] else if (widget.selectionMode) ...[
                         // Giữ lề của dòng chưa chọn để avatar không nhảy.
@@ -144,27 +139,13 @@ class _ConversationRowState extends State<ConversationRow> {
                     ],
                   ),
                 ),
-                if (tag != null)
-                  Positioned(
+                // Chưa đọc: một chấm đỏ ở mép trái, ngang giữa dòng.
+                if (unread && !widget.selectionMode)
+                  const Positioned(
                     left: 6,
                     top: 0,
                     bottom: 0,
-                    child: Center(
-                      child: Semantics(
-                        label: 'Nhãn: $tag',
-                        // Nút riêng: không để InkWell của dòng nuốt nhãn vào
-                        // nhãn gộp của cả hàng.
-                        container: true,
-                        child: Container(
-                          width: 7,
-                          height: 7,
-                          decoration: BoxDecoration(
-                            color: OmniLabelColors.of(tag),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ),
-                    ),
+                    child: Center(child: OmniUnreadDot(size: 8, ring: false)),
                   ),
               ],
             ),
@@ -188,31 +169,37 @@ class _ConversationRowState extends State<ConversationRow> {
       OmniColors.mutedForeground,
       scheme.onSurfaceVariant,
     );
-    final stampColor = conversation.urgent && unread
-        ? OmniColors.warningTextOf(context)
-        : muted;
+    // Khẩn / quá hạn trả lời: giờ đổi sang đỏ "cần chú ý" thay cho chấm đỏ
+    // giữa câu (duyệt 26/11/2026).
+    final attention = conversation.urgent || overdue;
+    final stampColor = attention ? OmniColors.attentionOf(context) : muted;
+    final stamp = Text(
+      Formatters.relative(conversation.lastMessageAt),
+      style: OmniType.micro.copyWith(
+        color: stampColor,
+        fontWeight: attention ? FontWeight.w600 : FontWeight.w500,
+        fontFeatures: OmniType.tabular,
+      ),
+    );
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        LayoutBuilder(
-          builder: (context, box) => Row(
+        Builder(
+          builder: (context) => Row(
             children: [
-              ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: box.maxWidth * .52),
+              Expanded(
                 child: Text(
                   conversation.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: OmniType.listTitle.copyWith(
-                    color: unread ? ink : muted,
-                    fontWeight: unread ? FontWeight.w600 : FontWeight.w500,
+                    color: ink,
+                    fontWeight: unread ? FontWeight.w700 : FontWeight.w500,
                   ),
                 ),
               ),
-              const SizedBox(width: 6),
-              Expanded(child: _SourceLine(conversation: conversation)),
               const SizedBox(width: 6),
               if (conversation.isMuted) ...[
                 Semantics(
@@ -220,46 +207,28 @@ class _ConversationRowState extends State<ConversationRow> {
                   // Nút riêng: InkWell của dòng không nuốt vào nhãn gộp.
                   container: true,
                   excludeSemantics: true,
-                  child: Icon(
-                    LucideIcons.bellOff,
-                    size: 14,
-                    color: muted,
-                  ),
+                  child: Icon(LucideIcons.bellOff, size: 14, color: muted),
                 ),
                 const SizedBox(width: 4),
               ],
-              Text(
-                Formatters.relative(conversation.lastMessageAt),
-                style: OmniType.micro.copyWith(
-                  color: stampColor,
-                  fontWeight: FontWeight.w600,
-                  fontFeatures: OmniType.tabular,
-                ),
-              ),
+              if (attention)
+                Tooltip(
+                  message: conversation.urgent
+                      ? 'Khẩn'
+                      : 'Quá hạn trả lời '
+                            '${Formatters.duration(conversation.waiting!)}',
+                  child: stamp,
+                )
+              else
+                stamp,
             ],
           ),
         ),
         const SizedBox(height: 4),
         Row(
           children: [
-            if (conversation.urgent || overdue) ...[
-              Tooltip(
-                message: conversation.urgent
-                    ? 'Khẩn'
-                    : 'Quá hạn trả lời ${Formatters.duration(conversation.waiting!)}',
-                child: Container(
-                  width: 7,
-                  height: 7,
-                  margin: const EdgeInsets.only(right: 6),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: conversation.urgent
-                        ? OmniColors.destructive
-                        : OmniColors.sla,
-                  ),
-                ),
-              ),
-            ],
+            _ChannelTag(conversation: conversation),
+            const SizedBox(width: 6),
             Expanded(
               child: Text(
                 conversation.lastMessage.isEmpty
@@ -269,13 +238,16 @@ class _ConversationRowState extends State<ConversationRow> {
                 overflow: TextOverflow.ellipsis,
                 style: OmniType.chip.copyWith(
                   color: unread ? ink : muted,
-                  fontWeight: unread ? FontWeight.w500 : FontWeight.w400,
+                  fontWeight: unread ? FontWeight.w600 : FontWeight.w400,
                 ),
               ),
             ),
-            if (unread) ...[const SizedBox(width: 8), const OmniUnreadDot()],
-            const SizedBox(width: 8),
-            _AssigneeBox(conversation: conversation),
+            // Chỉ hiện người phụ trách khi ĐÃ gán; chưa gán không vẽ gì (bỏ
+            // vòng "+" nét đứt — gán ở menu nhấn giữ).
+            if (_AssigneeBox.hasAssignee(conversation)) ...[
+              const SizedBox(width: 8),
+              _AssigneeBox(conversation: conversation),
+            ],
           ],
         ),
       ],
@@ -283,49 +255,49 @@ class _ConversationRowState extends State<ConversationRow> {
   }
 }
 
-/// "**OA** · Trung Nguyên": loại nguồn đậm màu kênh, rồi tên tài khoản.
-class _SourceLine extends StatelessWidget {
-  const _SourceLine({required this.conversation});
+/// Nhãn kênh xám (duyệt 26/11/2026, rà soát mục 8): một kiểu cho mọi kênh —
+/// nền `surfaceContainerHighest`, chữ `onSurfaceVariant` w600, bo 5. Kênh là
+/// thông tin, không phải trạng thái, nên không tô màu theo kênh. Tên tài
+/// khoản kênh ("Trung Nguyên") nằm ở dòng nguồn đầu màn hội thoại.
+class _ChannelTag extends StatelessWidget {
+  const _ChannelTag({required this.conversation});
 
   final Conversation conversation;
 
   @override
   Widget build(BuildContext context) {
-    final meta = conversation.channel.meta;
+    final scheme = Theme.of(context).colorScheme;
     final account = conversation.sourceAccount;
-    final muted = OmniColors.byBrightness(
-      context,
-      OmniColors.mutedForeground,
-      Theme.of(context).colorScheme.onSurfaceVariant,
-    );
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          conversation.channel.sourceKind,
+    final kind = conversation.channel.sourceKind;
+    return Semantics(
+      label: account == null ? 'Kênh $kind' : 'Kênh $kind $account',
+      // Nút riêng: InkWell của dòng không nuốt vào nhãn gộp.
+      container: true,
+      excludeSemantics: true,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(5),
+        ),
+        child: Text(
+          kind,
           maxLines: 1,
+          // 12 là sàn cỡ chữ của app (OmniType.micro) — bản duyệt ghi 11.
           style: OmniType.micro.copyWith(
             fontWeight: FontWeight.w600,
-            color: meta.textColorOf(Theme.of(context).brightness),
+            color: scheme.onSurfaceVariant,
+            height: 1.3,
           ),
         ),
-        if (account != null)
-          Flexible(
-            child: Text(
-              ' · $account',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: OmniType.micro.copyWith(color: muted),
-            ),
-          ),
-      ],
+      ),
     );
   }
 }
 
 /// Ô tròn 22 của người phụ trách (inbox-assignee-uiux.html, phương án B):
-/// chữ tắt trên nền nhạt theo từng người; chưa gán là vòng nét đứt có dấu +.
+/// chữ tắt trên nền nhạt theo từng người. Chưa gán thì dòng không vẽ ô nào
+/// (bỏ vòng nét đứt "+", duyệt 26/11/2026).
 class _AssigneeBox extends StatelessWidget {
   const _AssigneeBox({required this.conversation});
 
@@ -333,32 +305,16 @@ class _AssigneeBox extends StatelessWidget {
 
   static const double _size = 22;
 
+  static bool hasAssignee(Conversation c) {
+    final name = c.assigneeName;
+    return !c.isUnassigned && name != null && name.trim().isNotEmpty;
+  }
+
   @override
   Widget build(BuildContext context) {
     final name = conversation.assigneeName;
-    final hasName =
-        !conversation.isUnassigned && name != null && name.trim().isNotEmpty;
-    final scheme = Theme.of(context).colorScheme;
-
-    if (!hasName) {
-      return Semantics(
-        label: 'Chưa gán',
-        excludeSemantics: true,
-        child: CustomPaint(
-          key: const Key('assignee-unassigned'),
-          painter: _DashedRingPainter(
-            color: OmniColors.controlBorderOf(context),
-          ),
-          child: SizedBox.square(
-            dimension: _size,
-            child: Icon(
-              LucideIcons.plus,
-              size: 13,
-              color: scheme.onSurfaceVariant,
-            ),
-          ),
-        ),
-      );
+    if (name == null || !hasAssignee(conversation)) {
+      return const SizedBox.shrink();
     }
 
     final dark = Theme.of(context).brightness == Brightness.dark;
@@ -392,31 +348,6 @@ class _AssigneeBox extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Vòng tròn nét đứt 1.5 của ô "chưa gán".
-class _DashedRingPainter extends CustomPainter {
-  const _DashedRingPainter({required this.color});
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const dashes = 12;
-    const sweep = 2 * math.pi / dashes;
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5
-      ..strokeCap = StrokeCap.round;
-    final rect = (Offset.zero & size).deflate(0.75);
-    for (var i = 0; i < dashes; i++) {
-      canvas.drawArc(rect, i * sweep, sweep * 0.55, false, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DashedRingPainter old) => old.color != color;
 }
 
 /// Avatar 38 bo 6, không huy hiệu kênh (kênh đã nằm ở dòng nguồn).

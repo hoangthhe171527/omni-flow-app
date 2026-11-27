@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../design/components/components.dart';
-import '../../../../design/tokens/tokens.dart';
+import '../../../../security/permissions/access_scope.dart';
 import '../../application/customers_providers.dart';
 
 /// Hàng tìm của danh sách khách: ô tìm, nút lọc (huy hiệu đếm) và các nút riêng
@@ -90,81 +89,24 @@ class _FilterButton extends StatelessWidget {
   final int count;
   final VoidCallback onTap;
 
+  // Nút lọc chung của ô tìm (rà soát 26/11 mục 6): xám khi chưa lọc; đang
+  // lọc thì thành viên mực/trắng kèm số — không còn icon xanh + huy hiệu đỏ.
   @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    // Icon phẳng, vùng chạm 44. Trạng thái mở được thể hiện bằng màu thay vì
-    // dựng thêm một ô vuông quanh hành động.
-    return Semantics(
-      button: true,
-      label: 'Bộ lọc',
-      expanded: open,
-      excludeSemantics: true,
-      onTap: onTap,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: SizedBox.square(
-          dimension: 44,
-          child: Material(
-            color: Colors.transparent,
-            child: InkResponse(
-              onTap: onTap,
-              radius: 22,
-              containedInkWell: true,
-              highlightShape: BoxShape.circle,
-              child: Stack(
-                alignment: Alignment.center,
-                clipBehavior: Clip.none,
-                children: [
-                  Icon(
-                    LucideIcons.slidersHorizontal,
-                    size: OmniIconSize.md,
-                    color: open ? scheme.primary : scheme.onSurface,
-                  ),
-                  if (count > 0)
-                    Positioned(
-                      right: 2,
-                      top: 2,
-                      child: IgnorePointer(
-                        child: Container(
-                          key: const Key('customer-filter-count'),
-                          constraints: const BoxConstraints(minWidth: 16),
-                          height: 16,
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: OmniColors.destructive,
-                            borderRadius: BorderRadius.circular(999),
-                            border: Border.all(
-                              color: scheme.surface,
-                              width: 1.5,
-                            ),
-                          ),
-                          child: Text(
-                            '$count',
-                            style: OmniType.micro.copyWith(
-                              color: Colors.white,
-                              height: 1,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => OmniSearchFilterButton(
+    onPressed: onTap,
+    activeFilters: count,
+    open: open,
+    semanticsLabel: 'Bộ lọc',
+    countKey: const Key('customer-filter-count'),
+  );
 }
 
 /// Mở bộ lọc tại đúng nút đã chạm, cùng ngôn ngữ tương tác với menu avatar.
-/// Loại dữ liệu và tiêu chí lọc nằm chung một nơi nhưng được chia section để
-/// không lẫn hai cấp quyết định.
+///
+/// Bảng lọc thống nhất (duyệt 26/11/2026, rà soát mục 7): đầu "Lọc" + "Đặt
+/// lại", thanh chọn "Khách hàng / Cơ hội" ([OmniSegmented]) ngay dưới, rồi
+/// nhóm "HIỂN THỊ" với các chip viên mực đặc — bỏ danh sách dấu ✓ xanh. Đóng
+/// bằng chạm ra ngoài.
 Future<void> showCustomerFilterMenu({
   required BuildContext context,
   required Rect anchor,
@@ -182,11 +124,10 @@ Future<void> showCustomerFilterMenu({
     mainAxisSize: MainAxisSize.min,
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      _FilterMenuHeader(onClose: () => Navigator.of(menuContext).pop()),
-      if (segmentLabels.length > 1) ...[
-        const _MenuSectionLabel(label: 'Loại dữ liệu'),
+      _FilterMenuHeader(segment: segment),
+      if (segmentLabels.length > 1)
         Padding(
-          padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
           child: OmniSegmented(
             labels: segmentLabels,
             index: segment,
@@ -197,71 +138,48 @@ Future<void> showCustomerFilterMenu({
             },
           ),
         ),
-      ],
-      const _MenuSectionLabel(label: 'Hiển thị'),
+      const OmniFilterGroupLabel(
+        title: 'Hiển thị',
+        padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
+      ),
       filterContent,
       const SizedBox(height: 8),
     ],
   ),
 );
 
-class _FilterMenuHeader extends StatelessWidget {
-  const _FilterMenuHeader({required this.onClose});
+/// Đầu bảng: "Lọc" + "Đặt lại". Đoạn Khách: đặt lại về mặc định của phạm vi
+/// (`own` → "Của tôi", còn lại "Tất cả"); đoạn Cơ hội có bộ lọc riêng ở dải
+/// giai đoạn nên nút mờ.
+class _FilterMenuHeader extends ConsumerWidget {
+  const _FilterMenuHeader({required this.segment});
 
-  final VoidCallback onClose;
+  final int segment;
 
   @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      constraints: const BoxConstraints(minHeight: 60),
-      padding: const EdgeInsets.only(left: 16, right: 8, top: 8, bottom: 4),
-      child: Row(
-        children: [
-          Icon(
-            LucideIcons.slidersHorizontal,
-            size: OmniIconSize.md,
-            color: scheme.onSurface,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Bộ lọc',
-              style: OmniType.bodyStrong.copyWith(color: scheme.onSurface),
-            ),
-          ),
-          // Nút đóng của menu (icon trơn, spec phong cách iOS §3.1).
-          OmniGlassCircle(
-            child: IconButton(
-              tooltip: 'Đóng bộ lọc',
-              onPressed: onClose,
-              icon: const Icon(LucideIcons.x),
-            ),
-          ),
-        ],
-      ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scope = ref.watch(customerAccessProvider).readScope;
+    final count = ref.watch(
+      customerFilterProvider.select((f) => f.activeCountFor(scope)),
+    );
+    final canReset = segment == 0 && count > 0;
+    return OmniFilterHeader(
+      resetKey: const Key('customer-filter-reset'),
+      onReset: canReset
+          ? () => ref
+                .read(customerFilterProvider.notifier)
+                .setQuick(
+                  scope == AccessScope.own
+                      ? CustomerQuickFilter.mine
+                      : CustomerQuickFilter.all,
+                )
+          : null,
     );
   }
 }
 
-class _MenuSectionLabel extends StatelessWidget {
-  const _MenuSectionLabel({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-    child: Text(
-      label,
-      style: OmniType.overline.copyWith(
-        color: Theme.of(context).colorScheme.onSurfaceVariant,
-      ),
-    ),
-  );
-}
-
-/// Nội dung lọc riêng của danh sách khách, đặt trong popover chung của tab.
+/// Nội dung lọc riêng của danh sách khách, đặt trong popover chung của tab:
+/// các chip viên mực đặc (chọn một).
 class CustomerFilterMenuContent extends ConsumerWidget {
   const CustomerFilterMenuContent({super.key});
 
@@ -271,82 +189,18 @@ class CustomerFilterMenuContent extends ConsumerWidget {
     final controller = ref.read(customerFilterProvider.notifier);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Wrap(
+        spacing: 8,
         children: [
           for (final quick in CustomerQuickFilter.values)
-            _FilterMenuRow(
+            OmniFilterPill(
+              key: ValueKey('customer-filter-quick-${quick.name}'),
               label: quick.label,
               selected: filter.quick == quick,
-              onTap: () {
-                HapticFeedback.selectionClick();
-                controller.setQuick(quick);
-              },
+              onTap: () => controller.setQuick(quick),
             ),
         ],
-      ),
-    );
-  }
-}
-
-/// Dòng "Hiển thị" (chọn một): chọn = ✓ xanh cuối dòng, không tô cả dòng,
-/// không vòng radio (spec phong cách iOS §3.4).
-class _FilterMenuRow extends StatelessWidget {
-  const _FilterMenuRow({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Semantics(
-      button: true,
-      selected: selected,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 2),
-        child: Material(
-          type: MaterialType.transparency,
-          child: InkWell(
-            onTap: onTap,
-            customBorder: RoundedRectangleBorder(
-              borderRadius: OmniRadius.mdAll,
-            ),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 44),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        label,
-                        style: OmniType.body.copyWith(
-                          color: scheme.onSurface,
-                          fontWeight: selected
-                              ? FontWeight.w600
-                              : FontWeight.w400,
-                        ),
-                      ),
-                    ),
-                    if (selected)
-                      Icon(
-                        LucideIcons.check,
-                        size: OmniIconSize.md,
-                        color: scheme.primary,
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }

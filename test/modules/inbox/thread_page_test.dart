@@ -7,7 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/core/config/app_config.dart';
 import 'package:omni_app/core/domain/channel.dart';
 import 'package:omni_app/core/error/app_exception.dart';
@@ -109,7 +108,7 @@ void main() {
   Future<void> typeAndSend(WidgetTester tester, String text) async {
     await tester.enterText(find.byType(TextField), text);
     await tester.pump();
-    await tester.tap(find.byIcon(LucideIcons.send));
+    await tester.tap(find.byTooltip('Gửi'));
     await tester.pump();
   }
 
@@ -631,9 +630,15 @@ void main() {
 
     expect(find.byTooltip('Ghi âm'), findsNothing);
     expect(find.byTooltip('Thêm'), findsOneWidget);
-    expect(find.byTooltip('Chụp ảnh'), findsOneWidget);
-    expect(find.byTooltip('Ảnh'), findsOneWidget);
     expect(find.byType(TextField), findsOneWidget);
+    // Duyệt 26/11/2026: Ảnh, Máy ảnh nằm trong menu ⊕; không còn 👍.
+    expect(find.byTooltip('Gửi like'), findsNothing);
+    await tester.tap(find.byTooltip('Thêm'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ảnh'), findsOneWidget);
+    expect(find.text('Máy ảnh'), findsOneWidget);
+    await tester.tapAt(const Offset(8, 8));
+    await tester.pumpAndSettle();
     await closeThread(tester);
   });
 

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
@@ -11,10 +12,12 @@ import '../application/login_controller.dart';
 import '../auth_module.dart';
 import 'widgets/auth_widgets.dart';
 
-/// Màn đăng nhập (artifact "Màn xác thực" duyệt 26/11): logo trần 56 neo cho
-/// màn mở app bay về, tiêu đề "Đăng nhập Viomni", Google lên đầu, rồi hai ô
-/// rời có nhãn ("Quên mật khẩu?" cùng hàng nhãn mật khẩu), nút chính xanh đặc; chân màn
-/// là "Chưa có tài khoản? Đăng ký" và Chính sách bảo mật.
+/// Màn đăng nhập — hướng "Quỹ đạo" (duyệt 26/11/2026): đầu màn là quỹ đạo có
+/// các hành tinh kênh chạy quanh chữ V (logo neo cho màn mở app bay về), tiêu
+/// đề lớn căn trái "Chào mừng trở lại" + dòng phụ, email + mật khẩu GỘP trong
+/// một nhóm kiểu iOS, "Quên mật khẩu?" căn phải dưới nhóm, nút Đăng nhập có
+/// vệt sáng (co thành vòng xoay khi gửi), "hoặc", Google thứ yếu; chân màn là
+/// "Chưa có tài khoản? Đăng ký" và Chính sách bảo mật.
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
 
@@ -147,61 +150,65 @@ class _LoginPageState extends ConsumerState<LoginPage>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const AuthBrandHeader(
-                anchorBrand: true,
-                title: 'Đăng nhập Viomni',
+              const AuthOrbitHeader(anchorBrand: true),
+              const SizedBox(height: 12),
+              const AuthHeroTitle(
+                title: 'Chào mừng\ntrở lại',
+                subtitle: 'Đăng nhập vào không gian làm việc của bạn',
               ),
-              const SizedBox(height: 28),
-              AuthGoogleButton(
-                label: 'Tiếp tục với Google',
-                onPressed: state.submitting ? null : _submitGoogle,
-                busy: state.submittingMethod == LoginMethod.google,
-              ),
-              const AuthDivider(),
-              AuthField(
-                controller: _email,
-                focusNode: _emailFocus,
-                label: 'Email',
-                hint: 'ten@congty.vn',
-                shake: _shake,
-                serverError: state.errorFor('email'),
-                keyboardType: TextInputType.emailAddress,
-                textInputAction: TextInputAction.next,
-                autofillHints: const [
-                  AutofillHints.username,
-                  AutofillHints.email,
+              const SizedBox(height: 24),
+              AuthFieldGroup(
+                fields: [
+                  AuthGroupField(
+                    controller: _email,
+                    focusNode: _emailFocus,
+                    label: 'Email',
+                    hint: 'Email làm việc',
+                    icon: LucideIcons.mail,
+                    shake: _shake,
+                    serverError: state.errorFor('email'),
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
+                    autofillHints: const [
+                      AutofillHints.username,
+                      AutofillHints.email,
+                    ],
+                    validator: (value) {
+                      final text = value?.trim() ?? '';
+                      if (text.isEmpty) return 'Vui lòng nhập email';
+                      if (!text.contains('@')) return 'Email chưa hợp lệ';
+                      return null;
+                    },
+                  ),
+                  AuthGroupField(
+                    controller: _password,
+                    focusNode: _passwordFocus,
+                    label: 'Mật khẩu',
+                    hint: 'Mật khẩu',
+                    icon: LucideIcons.lock,
+                    shake: _shake,
+                    serverError: state.errorFor('password'),
+                    obscure: _obscure,
+                    textInputAction: TextInputAction.done,
+                    autofillHints: const [AutofillHints.password],
+                    onSubmitted: (_) => _submit(),
+                    validator: (value) =>
+                        (value ?? '').isEmpty ? 'Vui lòng nhập mật khẩu' : null,
+                    suffix: AuthPasswordToggle(
+                      obscure: _obscure,
+                      onToggle: () => setState(() => _obscure = !_obscure),
+                    ),
+                  ),
                 ],
-                validator: (value) {
-                  final text = value?.trim() ?? '';
-                  if (text.isEmpty) return 'Vui lòng nhập email';
-                  if (!text.contains('@')) return 'Email chưa hợp lệ';
-                  return null;
-                },
               ),
-              const SizedBox(height: 10),
-              AuthField(
-                controller: _password,
-                focusNode: _passwordFocus,
-                label: 'Mật khẩu',
-                hint: 'Nhập mật khẩu',
-                shake: _shake,
-                serverError: state.errorFor('password'),
-                obscure: _obscure,
-                textInputAction: TextInputAction.done,
-                autofillHints: const [AutofillHints.password],
-                onSubmitted: (_) => _submit(),
-                validator: (value) =>
-                    (value ?? '').isEmpty ? 'Vui lòng nhập mật khẩu' : null,
-                labelTrailing: AuthLabelLink(
+              Align(
+                alignment: Alignment.centerRight,
+                child: AuthLabelLink(
                   label: 'Quên mật khẩu?',
                   onTap: _openForgot,
                 ),
-                suffix: AuthPasswordToggle(
-                  obscure: _obscure,
-                  onToggle: () => setState(() => _obscure = !_obscure),
-                ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 8),
               if (generalError != null) ...[
                 AuthErrorBox(
                   message: generalError,
@@ -217,6 +224,12 @@ class _LoginPageState extends ConsumerState<LoginPage>
                 label: 'Đăng nhập',
                 onPressed: state.submitting ? null : _submit,
                 busy: state.submittingMethod == LoginMethod.password,
+              ),
+              const AuthDivider(),
+              AuthGoogleButton(
+                label: 'Tiếp tục với Google',
+                onPressed: state.submitting ? null : _submitGoogle,
+                busy: state.submittingMethod == LoginMethod.google,
               ),
             ],
           ),

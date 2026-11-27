@@ -43,7 +43,8 @@ class OmniSegmented extends StatelessWidget {
   }
 
   /// Núm ở chế độ tối: sáng hơn mặt thẻ một bậc để vẫn thấy "nổi".
-  static const Color _darkThumb = Color(0xFF2E3F5C);
+  /// Núm tối #636366 như iOS (rà soát mục 5) — không còn xanh xám.
+  static const Color _darkThumb = Color(0xFF636366);
 
   @override
   Widget build(BuildContext context) {
@@ -179,7 +180,7 @@ class OmniSegmented extends StatelessWidget {
                                               fontWeight: FontWeight.w600,
                                               fontFeatures: OmniType.tabular,
                                               color: i == sel
-                                                  ? scheme.primary
+                                                  ? scheme.onSurface
                                                   : scheme.onSurfaceVariant,
                                             ),
                                           ),

@@ -67,10 +67,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
       StatefulShellRoute.indexedStack(
-        pageBuilder: (context, state, navigationShell) => _appLaunchPage(
-          state,
-          AppShell(navigationShell: navigationShell),
-        ),
+        pageBuilder: (context, state, navigationShell) =>
+            _appLaunchPage(state, AppShell(navigationShell: navigationShell)),
         branches: [
           for (final entry in branchEntries)
             StatefulShellBranch(

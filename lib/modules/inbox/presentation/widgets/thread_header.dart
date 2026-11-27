@@ -9,10 +9,11 @@ import '../../../../design/tokens/tokens.dart';
 import '../../domain/conversation.dart';
 import '../../inbox_routes.dart';
 
-/// Header gọn của hội thoại: ‹, avatar 30, tên + dòng nguồn, nút Thông tin.
+/// Đầu màn hội thoại kiểu iMessage (duyệt 26/11/2026): phẳng, nền đặc, vạch
+/// mảnh dưới. Trái ‹ (màu chính), giữa avatar 32 + tên 14/600 + dòng nguồn
+/// 11.5 xám (chạm mở Thông tin khách), phải ⓘ. Không còn viên kính bọc tên.
 ///
-/// Nền kính (`rgba(245,247,250,.82)` blur 20). Khi [searchMode] bật, một thanh
-/// tìm kiếm 48px hiện dưới hàng tên.
+/// Khi [searchMode] bật, một thanh tìm kiếm 48px hiện dưới hàng tên.
 class ThreadHeader extends StatelessWidget implements PreferredSizeWidget {
   const ThreadHeader({
     super.key,
@@ -29,8 +30,8 @@ class ThreadHeader extends StatelessWidget implements PreferredSizeWidget {
     required this.onCloseSearch,
   });
 
-  /// Đệm trên 4 + hàng kính 44 + đệm 8.
-  static const rowHeight = 56.0;
+  /// Đệm trên 4 + khối giữa 72 (avatar 32 + tên + nguồn) + đệm dưới 4.
+  static const rowHeight = 80.0;
   static const searchBarHeight = 48.0;
 
   final Conversation? conversation;
@@ -51,127 +52,144 @@ class ThreadHeader extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Kiểu nút kính rời (viomni-apple-uiux.html "Hội thoại"): không dải nền;
-    // quay lại và ⓘ là viên kính tròn, danh tính khách là một viên kính dạng
-    // viên thuốc ở giữa. Nội dung dưới thanh nhoè dần (OmniScrollEdge).
-    return SafeArea(
-      bottom: false,
-      child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+    final scheme = Theme.of(context).colorScheme;
+    // Chiều cao đầu màn cố định (PreferredSize): chữ phóng to quá 1.15 sẽ
+    // tràn khối giữa, nên kẹp ở đây — tên đầy đủ vẫn ở trang Thông tin.
+    return MediaQuery.withClampedTextScaling(
+      maxScaleFactor: 1.15,
+      // Material đặc (không kính) để gợn chạm của khối tên vẽ được lên nền.
+      child: Material(
+        color: scheme.surface,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(color: scheme.outlineVariant, width: 0.5),
+            ),
+          ),
+          child: SafeArea(
+            bottom: false,
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                SizedBox(height: 44, child: _buildRow(context)),
-                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: SizedBox(
+                    height: rowHeight - 8,
+                    child: _buildRow(context),
+                  ),
+                ),
                 if (searchMode)
-                  SizedBox(
-                    height: searchBarHeight - 8,
-                    child: OmniGlass(
-                      radius: 20,
-                      child: _buildSearchBar(context),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                    child: SizedBox(
+                      height: searchBarHeight - 8,
+                      // Ô tìm nền xám đặc như ô tìm iOS — kính chỉ ở thanh tab.
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: scheme.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: _buildSearchBar(context),
+                      ),
                     ),
                   ),
-                if (searchMode) const SizedBox(height: 8),
               ],
             ),
           ),
-        );
+        ),
+      ),
+    );
   }
 
   Widget _buildRow(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final muted = OmniColors.byBrightness(
-      context,
-      OmniColors.mutedForeground,
-      scheme.onSurfaceVariant,
-    );
     final c = conversation;
 
     return Row(
       children: [
-        OmniTopBarAction(
-          icon: isApple(context)
-              ? LucideIcons.chevronLeft
-              : LucideIcons.arrowLeft,
-          tooltip: 'Quay lại',
-          onPressed: () {
-            final nav = Navigator.of(context);
-            if (nav.canPop()) {
-              nav.maybePop();
-            } else {
-              GoRouter.maybeOf(context)?.go(InboxRoutes.listPath);
-            }
-          },
+        SizedBox(
+          width: 44,
+          child: OmniTopBarAction(
+            icon: isApple(context)
+                ? LucideIcons.chevronLeft
+                : LucideIcons.arrowLeft,
+            tooltip: 'Quay lại',
+            // ‹ màu chính như iOS (duyệt 26/11/2026).
+            color: scheme.primary,
+            onPressed: () {
+              final nav = Navigator.of(context);
+              if (nav.canPop()) {
+                nav.maybePop();
+              } else {
+                GoRouter.maybeOf(context)?.go(InboxRoutes.listPath);
+              }
+            },
+          ),
         ),
-        const SizedBox(width: 8),
-        if (c != null)
-          Expanded(
-            child: OmniGlass(
-              radius: 22,
-              child: InkWell(
-                customBorder: const StadiumBorder(),
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  onInfo();
-                },
-                child: SizedBox(
-                  height: 44,
-                  child: Row(
-                    children: [
-                      const SizedBox(width: 6),
-                      c.isGroup
-                          ? OmniGroupAvatar(
-                              names: c.groupMembers
-                                  .map((m) => m.name ?? '?')
-                                  .toList(),
-                              size: 32,
-                            )
-                          : OmniAvatar(
-                              name: c.title,
-                              imageUrl: c.customerAvatar,
-                              size: 32,
-                            ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              c.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: OmniType.bodyStrong.copyWith(
-                                fontWeight: FontWeight.w600,
-                                height: 1.2,
-                                color: scheme.onSurface,
+        Expanded(
+          child: c == null
+              ? const SizedBox.shrink()
+              : Semantics(
+                  button: true,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      onInfo();
+                    },
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        c.isGroup
+                            ? OmniGroupAvatar(
+                                names: c.groupMembers
+                                    .map((m) => m.name ?? '?')
+                                    .toList(),
+                                size: 32,
+                              )
+                            : OmniAvatar(
+                                name: c.title,
+                                imageUrl: c.customerAvatar,
+                                size: 32,
                               ),
-                            ),
-                            Text(
-                              _sourceLine(c),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: OmniType.micro.copyWith(
-                                height: 1.2,
-                                color: muted,
-                              ),
-                            ),
-                          ],
+                        const SizedBox(height: 2),
+                        Text(
+                          c.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          // Tên 14/600 (bodySm 14 + w600).
+                          style: OmniType.bodySm.copyWith(
+                            fontWeight: FontWeight.w600,
+                            height: 1.2,
+                            color: scheme.onSurface,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                    ],
+                        const SizedBox(height: 1),
+                        Text(
+                          _sourceLine(c),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          // Dòng nguồn 11.5 xám (OmniChatType.meta).
+                          style: OmniChatType.meta.copyWith(
+                            height: 1.2,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ),
-          )
-        else
-          const Spacer(),
-        const SizedBox(width: 8),
-        OmniTopBarAction(
-          icon: LucideIcons.info,
-          tooltip: 'Thông tin khách',
-          onPressed: onInfo,
+        ),
+        SizedBox(
+          width: 44,
+          child: OmniTopBarAction(
+            icon: LucideIcons.info,
+            tooltip: 'Thông tin khách',
+            color: scheme.primary,
+            onPressed: onInfo,
+          ),
         ),
       ],
     );

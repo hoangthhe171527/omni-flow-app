@@ -8,6 +8,7 @@ import 'package:omni_app/core/domain/channel.dart';
 import 'package:omni_app/core/network/api_client.dart';
 import 'package:omni_app/core/network/api_envelope.dart';
 import 'package:omni_app/core/realtime/realtime_client.dart';
+import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/design/tokens/tokens.dart';
 import 'package:omni_app/modules/inbox/application/inbox_providers.dart';
@@ -146,10 +147,21 @@ void main() {
     await tester.tap(find.bySemanticsLabel('Bộ lọc'));
     await tester.pump();
 
-    expect(find.text('Lọc hội thoại'), findsOneWidget);
-    expect(find.text('Hiển thị'), findsOneWidget);
-    expect(find.text('Kênh'), findsOneWidget);
-    expect(find.text('Tình trạng'), findsOneWidget);
+    // Bảng lọc thống nhất (duyệt 26/11/2026): đầu "Lọc" + "Đặt lại", nhãn
+    // nhóm chữ HOA, chip viên mực đặc; không còn nút ✕.
+    final menu = find.byKey(const Key('inbox-filter-menu'));
+    Finder inMenu(String text) =>
+        find.descendant(of: menu, matching: find.text(text));
+    expect(inMenu('Lọc'), findsOneWidget);
+    expect(inMenu('Đặt lại'), findsOneWidget);
+    expect(find.byTooltip('Đóng bộ lọc'), findsNothing);
+    expect(inMenu('HIỂN THỊ'), findsOneWidget);
+    expect(inMenu('KÊNH'), findsOneWidget);
+    expect(inMenu('TÌNH TRẠNG'), findsOneWidget);
+    expect(
+      find.descendant(of: menu, matching: find.byType(OmniFilterPill)),
+      findsWidgets,
+    );
 
     for (final name in ['all', 'unread', 'mine', 'unassigned']) {
       final choice = find.byKey(ValueKey('inbox-filter-quick-$name'));
@@ -177,7 +189,10 @@ void main() {
     await tester.tap(find.bySemanticsLabel('Bộ lọc'));
     await tester.pump();
     final clear = find.byKey(const Key('inbox-filter-clear'));
-    expect(clear, findsNothing, reason: 'chưa bật bộ lọc nào');
+    TextButton clearButton() => tester.widget<TextButton>(clear);
+    // "Đặt lại" luôn ở đầu bảng, mờ khi chưa bật bộ lọc nào.
+    expect(clear, findsOneWidget);
+    expect(clearButton().onPressed, isNull, reason: 'chưa bật bộ lọc nào');
 
     final container = containerOf(tester);
     container.read(inboxFilterProvider.notifier)
@@ -195,7 +210,7 @@ void main() {
     expect(filter.activeCount, 0);
     expect(filter, const InboxFilter(search: 'lan'), reason: 'giữ ô tìm');
     expect(find.byKey(const Key('inbox-filter-count')), findsNothing);
-    expect(clear, findsNothing);
+    expect(clearButton().onPressed, isNull);
 
     await closePage(tester);
     semantics.dispose();
@@ -326,10 +341,24 @@ void main() {
 
     final colors = surfaceColors(tester);
     expect(colors, isNotEmpty);
+    // Duyệt 26/11/2026 "viên mực đặc": ở chế độ tối chip ĐANG CHỌN là viên
+    // trắng chữ đen — đúng một chip (Khẩn). Ngoài nó không mặt nào trắng tinh.
+    // Quy tắc màu: mực/trắng = đang chọn. Ở tối, mặt trắng chỉ được nằm trong
+    // chip đang chọn và nút lọc đang bật — không lọt vào nền menu / hàng tìm.
+    bool white(Color c) => c.toARGB32() == 0xFFFFFFFF;
+    final allowed =
+        surfaceColors(
+          tester,
+          within: find.byType(OmniFilterPill),
+        ).where(white).length +
+        surfaceColors(
+          tester,
+          within: find.byType(OmniSearchFilterButton),
+        ).where(white).length;
     expect(
-      colors.where((c) => c.toARGB32() == 0xFFFFFFFF),
-      isEmpty,
-      reason: 'nền/viền trắng tinh lọt vào giao diện tối',
+      colors.where(white).length,
+      allowed,
+      reason: 'nền/viền trắng lọt vào giao diện tối',
     );
     expect(colors, isNot(contains(OmniColors.border)));
     expect(colors, isNot(contains(OmniColors.muted)));
@@ -360,9 +389,13 @@ void main() {
     final semantics = tester.ensureSemantics();
     await openBarMenu(tester, OmniTheme.light(TargetPlatform.android));
     final colors = surfaceColors(tester);
-    // Liquid: chip kính (chọn = trắng mờ) thay nền xanh nhạt / viền primary.
-    expect(colors, contains(Colors.white));
-    expect(colors, contains(OmniColors.destructive));
+    // Viên mực đặc (duyệt 26/11/2026): chip chọn nền mực, chưa chọn nền xám
+    // nhạt; không còn nền xanh nhạt / viền primary.
+    final scheme = OmniTheme.light(TargetPlatform.android).colorScheme;
+    expect(colors, contains(scheme.onSurface));
+    expect(colors, contains(scheme.surfaceContainerHighest));
+    // Nút lọc đang bật: viên mực kèm số (không còn huy hiệu đỏ).
+    expect(find.byKey(const Key('inbox-filter-count')), findsOneWidget);
     expect(colors, isNot(contains(OmniColors.accent)));
     expect(colors, isNot(contains(const Color(0x1F0B1A33))));
     final field = tester.widget<TextField>(find.byType(TextField));

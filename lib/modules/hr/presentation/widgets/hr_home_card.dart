@@ -237,7 +237,9 @@ class _WorkshopCardState extends ConsumerState<_WorkshopCard> {
                             OmniColors.darkAccentForeground,
                           ),
                           elevation: 0,
-                          textStyle: OmniType.bodyStrong.copyWith(fontSize: 14),
+                          textStyle: OmniType.bodySm.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                         child: Text('Nhắc $notIn'),
                       ),

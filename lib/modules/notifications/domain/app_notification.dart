@@ -126,5 +126,8 @@ class AppNotification {
     readAt: readAt ?? DateTime.now(),
     entityType: entityType,
     entityId: entityId,
+    // Giữ loại nguyên văn: mất nó thì dòng Nhân sự đã đọc mất màu theo loại
+    // và không còn mở đúng màn (duyệt 26/11/2026).
+    wireType: wireType,
   );
 }

@@ -150,6 +150,22 @@ abstract final class OmniType {
   /// giờ trên thẻ, nhãn điều hướng — và tiếng Việt xếp dấu cả trên lẫn dưới
   /// thân chữ: ở 11px, "Hằng" và "Hắng" đọc như nhau ở khoảng cách một cánh
   /// tay ngoài xưởng. `type_scale_test.dart` giữ sàn này.
+  /// Nhãn mục thanh tab (11, dưới icon 26) — hướng iOS chuẩn 26/11/2026.
+  static const TextStyle tabLabel = TextStyle(
+    fontFamily: family,
+    fontSize: 11,
+    fontWeight: FontWeight.w500,
+    height: 1.2,
+  );
+
+  /// Nội dung dòng thông báo / dòng hai tầng (13.5) — bảng thông báo 26/11.
+  static const TextStyle rowBody = TextStyle(
+    fontFamily: family,
+    fontSize: 13.5,
+    fontWeight: FontWeight.w400,
+    height: 1.35,
+  );
+
   static const TextStyle micro = TextStyle(
     fontFamily: family,
     fontSize: 12,

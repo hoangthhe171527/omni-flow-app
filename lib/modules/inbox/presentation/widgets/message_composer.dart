@@ -16,12 +16,13 @@ import '../../domain/pending_attachment.dart';
 import 'composer_snack_bar.dart';
 import 'voice_record_bar.dart';
 
-/// Thanh nhập kiểu Messenger (`Thread.dc.html`): một hàng gồm cụm công cụ
-/// (`+`, chụp ảnh, ảnh), ô nhập bo tròn có mặt cười, và nút cuối.
+/// Ô soạn kiểu iOS (duyệt 26/11/2026): nút ⊕ tròn xám bên trái, ô nhập bo 19
+/// viền mảnh có mặt cười NẰM TRONG ô, và nút cuối.
 ///
-/// Nút cuối là 👍 khi ô trống (gửi đúng một tin 👍) và đổi thành nút Gửi ngay
-/// khi có chữ hoặc ảnh. Khi gõ, cụm công cụ thu về 0 và để lại `›` để bung lại.
-/// `+` mở menu nổi tại chỗ, chỉ chứa những việc máy chủ thật sự hỗ trợ.
+/// ⊕ mở menu nổi tại chỗ gộp Ảnh, Máy ảnh, Tệp, Mẫu trả lời, Tạo việc — chỉ
+/// những mục kênh và quyền cho phép. Nút cuối: ô trống = mic (ghi âm, khi kênh
+/// nhận tin thoại); có chữ hoặc ảnh = nút ↑ tròn xanh. Bỏ nút 👍 và cụm icon
+/// xanh + `›` bung công cụ.
 ///
 /// Không có chế độ ghi chú nội bộ: gửi nhầm ghi chú cho khách là lỗi không thu
 /// hồi được, nên composer này chỉ có một việc là trả lời khách.
@@ -101,14 +102,12 @@ class MessageComposer extends StatefulWidget {
   State<MessageComposer> createState() => _MessageComposerState();
 }
 
-const _likeText = '👍';
 const _toolWidth = 44.0;
 
 class _MessageComposerState extends State<MessageComposer> {
   final _controller = TextEditingController();
   final _focus = FocusNode();
   bool _sending = false;
-  bool _toolsForced = false;
   bool _loadingTemplates = false;
 
   /// Ảnh và tệp đang chờ gửi, theo thứ tự chọn.
@@ -149,17 +148,10 @@ class _MessageComposerState extends State<MessageComposer> {
   bool _voiceWarned = false;
 
   @override
-  void initState() {
-    super.initState();
-    _controller.addListener(_onTextChanged);
-  }
-
-  @override
   void dispose() {
     _dropVoiceTicks();
     // Rời trang khi đang ghi (hoặc còn bản ghi chưa gửi): dừng và xoá tệp.
     if (_voiceActive) unawaited(widget.voiceRecorder?.cancel());
-    _controller.removeListener(_onTextChanged);
     _controller.dispose();
     _focus.dispose();
     super.dispose();
@@ -179,25 +171,11 @@ class _MessageComposerState extends State<MessageComposer> {
     }
   }
 
-  /// Ô trống trở lại thì cụm công cụ về trạng thái thu/bung mặc định.
-  void _onTextChanged() {
-    if (_toolsForced && _controller.text.isEmpty) {
-      setState(() => _toolsForced = false);
-    }
-  }
-
   Future<void> _send() async {
     final text = _controller.text.trim();
     if ((text.isEmpty && _pendingImages.isEmpty) || _sending) return;
     HapticFeedback.lightImpact();
     await _dispatch(text, fromField: true);
-  }
-
-  /// Ô trống và không ảnh: gửi 👍 như Messenger.
-  Future<void> _sendLike() async {
-    if (_sending) return;
-    HapticFeedback.lightImpact();
-    await _dispatch(_likeText);
   }
 
   Future<void> _dispatch(String text, {bool fromField = false}) async {
@@ -208,7 +186,6 @@ class _MessageComposerState extends State<MessageComposer> {
       setState(() {
         if (fromField) _controller.clear();
         _pendingImages.clear();
-        _toolsForced = false;
       });
     } catch (_) {
       // The upload error is shown by the thread. Keep the caption and tray so
@@ -484,303 +461,269 @@ class _MessageComposerState extends State<MessageComposer> {
     _insert(picked);
   }
 
-  bool get _hasExtraTools =>
-      _showFiles || widget.onCreateTask != null || widget.loadTemplates != null;
+  /// Menu ⊕ có ít nhất một mục.
+  bool get _hasMenuItems =>
+      _showImages ||
+      _showFiles ||
+      widget.onCreateTask != null ||
+      widget.loadTemplates != null;
 
-  Future<void> _openExtraTools(Rect anchor) => showOmniAnchoredMenu<void>(
+  /// Menu ⊕ (duyệt 26/11/2026): Ảnh, Máy ảnh, Tệp, Mẫu trả lời, Tạo việc —
+  /// chỉ mục kênh/quyền cho phép. Đủ 10 tệp: mục tệp vẫn hiện nhưng khoá,
+  /// ghi rõ "Đủ 10".
+  Future<void> _openAddMenu(Rect anchor) => showOmniAnchoredMenu<void>(
     context: context,
     anchor: anchor,
     width: 248,
     menuKey: const Key('composer-tools-menu'),
     semanticsLabel: 'Thêm vào tin nhắn',
-    builder: (menuContext) => Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (_showFiles)
-          OmniAnchoredMenuItem(
-            icon: LucideIcons.paperclip,
-            label: 'Tệp',
-            trailing: _full
-                ? Text(
-                    'Đủ ${InboxApi.maxAttachmentsPerMessage}',
-                    style: OmniType.micro.copyWith(
-                      color: Theme.of(menuContext).colorScheme.onSurfaceVariant,
-                    ),
-                  )
-                : null,
-            onTap: _full || _sending
-                ? null
-                : () {
-                    Navigator.of(menuContext).pop();
-                    unawaited(_pickFiles());
-                  },
-          ),
-        if (widget.onCreateTask != null)
-          OmniAnchoredMenuItem(
-            icon: LucideIcons.circleCheckBig,
-            label: 'Tạo việc',
-            onTap: () {
-              Navigator.of(menuContext).pop();
-              widget.onCreateTask!();
-            },
-          ),
-        if (widget.loadTemplates != null)
-          OmniAnchoredMenuItem(
-            icon: LucideIcons.zap,
-            label: 'Mẫu trả lời',
-            onTap: () {
-              Navigator.of(menuContext).pop();
-              unawaited(_openTemplates());
-            },
-          ),
-      ],
-    ),
+    builder: (menuContext) {
+      final locked = _full || _sending;
+      Widget? fullNote() => _full
+          ? Text(
+              'Đủ ${InboxApi.maxAttachmentsPerMessage}',
+              style: OmniType.micro.copyWith(
+                color: Theme.of(menuContext).colorScheme.onSurfaceVariant,
+              ),
+            )
+          : null;
+      VoidCallback run(VoidCallback action) => () {
+        Navigator.of(menuContext).pop();
+        action();
+      };
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_showImages)
+            OmniAnchoredMenuItem(
+              icon: LucideIcons.image,
+              label: 'Ảnh',
+              trailing: fullNote(),
+              onTap: locked ? null : run(() => unawaited(_pickImages())),
+            ),
+          if (_showImages && widget.onTakePhoto != null)
+            OmniAnchoredMenuItem(
+              icon: LucideIcons.camera,
+              label: 'Máy ảnh',
+              trailing: fullNote(),
+              onTap: locked ? null : run(() => unawaited(_takePhoto())),
+            ),
+          if (_showFiles)
+            OmniAnchoredMenuItem(
+              icon: LucideIcons.paperclip,
+              label: 'Tệp',
+              trailing: fullNote(),
+              onTap: locked ? null : run(() => unawaited(_pickFiles())),
+            ),
+          if (widget.loadTemplates != null)
+            OmniAnchoredMenuItem(
+              icon: LucideIcons.zap,
+              label: 'Mẫu trả lời',
+              onTap: run(() => unawaited(_openTemplates())),
+            ),
+          if (widget.onCreateTask != null)
+            OmniAnchoredMenuItem(
+              icon: LucideIcons.circleCheckBig,
+              label: 'Tạo việc',
+              onTap: run(widget.onCreateTask!),
+            ),
+        ],
+      );
+    },
   );
-
-  List<Widget> _tools() => [
-    Builder(
-      builder: (buttonContext) => _ComposerIcon(
-        icon: LucideIcons.circlePlus,
-        tooltip: 'Thêm',
-        onTap: widget.enabled && _hasExtraTools
-            ? () {
-                final box = buttonContext.findRenderObject() as RenderBox?;
-                if (box == null || !box.hasSize) return;
-                unawaited(
-                  _openExtraTools(box.localToGlobal(Offset.zero) & box.size),
-                );
-              }
-            : null,
-      ),
-    ),
-    // Đủ 10 tệp: nút vẫn hiện nhưng khoá, nói rõ vì sao.
-    if (_showImages && widget.onTakePhoto != null)
-      _ComposerIcon(
-        icon: LucideIcons.camera,
-        tooltip: _full ? _fullLabel : 'Chụp ảnh',
-        onTap: widget.enabled && !_sending && !_full ? _takePhoto : null,
-      ),
-    if (_showImages)
-      _ComposerIcon(
-        icon: LucideIcons.image,
-        tooltip: _full ? _fullLabel : 'Ảnh',
-        onTap: widget.enabled && !_sending && !_full ? _pickImages : null,
-      ),
-    if (_showVoice)
-      _ComposerIcon(
-        icon: LucideIcons.mic,
-        tooltip: 'Ghi âm',
-        onTap: widget.enabled && !_sending ? _startVoice : null,
-      ),
-  ];
-
-  int get _toolCount =>
-      1 +
-      (_showImages && widget.onTakePhoto != null ? 1 : 0) +
-      (_showImages ? 1 : 0) +
-      (_showVoice ? 1 : 0);
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final motion = OmniMotion.of(context);
-    final duration = motion.enabled ? OmniDuration.slow : Duration.zero;
-    final toolsWidth = _toolWidth * _toolCount;
-    // Liền khối với khung soạn: ô chữ không nền riêng.
-    const fieldFill = Colors.transparent;
-    const border = OutlineInputBorder(
-      borderRadius: BorderRadius.all(Radius.circular(10)),
-      borderSide: BorderSide.none,
+    final highContrast = MediaQuery.highContrastOf(context);
+    // Ô nhập bo 19 viền mảnh (bản duyệt: mực 14% / trắng 10%).
+    final fieldBorder = OutlineInputBorder(
+      borderRadius: const BorderRadius.all(Radius.circular(19)),
+      borderSide: BorderSide(
+        color: highContrast
+            ? scheme.outline
+            : OmniColors.byBrightness(
+                context,
+                OmniColors.ink.withValues(alpha: .14),
+                Colors.white.withValues(alpha: .10),
+              ),
+      ),
     );
 
     // Lớp vẽ riêng: gõ phím, nháy con trỏ, đổi nút gửi — chỉ composer raster
     // lại, danh sách tin nhắn và nền phía trên nó thì không.
     //
-    // Ô soạn tin là nội dung: nền đặc, không kính/vệt sáng/bóng (spec phong
-    // cách iOS §3.1). Dáng viên thuốc (bo 27 = tròn hẳn khi một dòng).
-    final highContrast = MediaQuery.highContrastOf(context);
+    // Thanh soạn phẳng sát đáy, nền đặc + vạch mảnh trên (kiểu iMessage, duyệt
+    // 26/11/2026) — không còn viên thuốc nổi.
     return RepaintBoundary(
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
-          child: DecoratedBox(
-            key: const ValueKey('composer-glass'),
-            decoration: BoxDecoration(
-              color: scheme.surface,
-              borderRadius: BorderRadius.circular(27),
-              border: highContrast ? Border.all(color: scheme.outline) : null,
+      child: DecoratedBox(
+        key: const ValueKey('composer-glass'),
+        decoration: BoxDecoration(
+          color: scheme.surface,
+          border: Border(
+            top: BorderSide(
+              color: highContrast ? scheme.outline : scheme.outlineVariant,
+              width: highContrast ? 1 : 0.5,
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(27),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (widget.replyTo != null)
-                    _ReplyPreview(
-                      message: widget.replyTo!,
-                      onClose: widget.onCancelReply,
-                    ),
-                  if (_pendingImages.isNotEmpty)
-                    _ImageTray(
-                      images: _pendingImages,
-                      onRemove: (image) =>
-                          setState(() => _pendingImages.remove(image)),
-                    ),
-                  if (widget.errorText != null)
-                    _ComposerError(text: widget.errorText!),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    // Đang ghi âm: thanh ghi thay cả hàng — các nút khác khoá.
-                    child: _voiceActive
-                        ? VoiceRecordBar(
-                            elapsed: _voiceElapsed,
-                            stopped: _voiceStopped && !_sending,
-                            onCancel: _sending ? null : _cancelVoice,
-                            sendButton: _SendButton(
-                              sending: _sending,
-                              tooltip: 'Gửi ghi âm',
-                              onTap: widget.enabled ? _sendVoice : null,
+          ),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (widget.replyTo != null)
+                _ReplyPreview(
+                  message: widget.replyTo!,
+                  onClose: widget.onCancelReply,
+                ),
+              if (_pendingImages.isNotEmpty)
+                _ImageTray(
+                  images: _pendingImages,
+                  onRemove: (image) =>
+                      setState(() => _pendingImages.remove(image)),
+                ),
+              if (widget.errorText != null)
+                _ComposerError(text: widget.errorText!),
+              Padding(
+                padding: const EdgeInsets.all(4),
+                // Đang ghi âm: thanh ghi thay cả hàng — các nút khác khoá.
+                child: _voiceActive
+                    ? VoiceRecordBar(
+                        elapsed: _voiceElapsed,
+                        stopped: _voiceStopped && !_sending,
+                        onCancel: _sending ? null : _cancelVoice,
+                        sendButton: _SendButton(
+                          sending: _sending,
+                          tooltip: 'Gửi ghi âm',
+                          onTap: widget.enabled ? _sendVoice : null,
+                        ),
+                      )
+                    : Row(
+                        // Ô nhiều dòng: nút ⊕ và nút cuối nằm ở đáy như iOS.
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Builder(
+                            builder: (buttonContext) => _AddButton(
+                              onTap: widget.enabled && _hasMenuItems
+                                  ? () {
+                                      final box =
+                                          buttonContext.findRenderObject()
+                                              as RenderBox?;
+                                      if (box == null || !box.hasSize) return;
+                                      unawaited(
+                                        _openAddMenu(
+                                          box.localToGlobal(Offset.zero) &
+                                              box.size,
+                                        ),
+                                      );
+                                    }
+                                  : null,
                             ),
-                          )
-                        : Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              // Chỉ cụm công cụ và cụm nút cuối nghe controller. Trước đây
-                              // cả composer `setState` theo từng ký tự — dựng lại ô nhập
-                              // và khay ảnh cho một phím gõ.
-                              ValueListenableBuilder<TextEditingValue>(
-                                valueListenable: _controller,
-                                builder: (context, value, _) {
-                                  final typing = value.text.isNotEmpty;
-                                  final collapsed = typing && !_toolsForced;
-                                  return Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      ExcludeFocus(
-                                        excluding: collapsed,
-                                        child: ExcludeSemantics(
-                                          excluding: collapsed,
-                                          child: IgnorePointer(
-                                            ignoring: collapsed,
-                                            child: AnimatedContainer(
-                                              duration: duration,
-                                              curve: OmniCurves.standard,
-                                              width: collapsed ? 0 : toolsWidth,
-                                              height: _toolWidth,
-                                              child: ClipRect(
-                                                child: OverflowBox(
-                                                  alignment:
-                                                      Alignment.centerLeft,
-                                                  minWidth: 0,
-                                                  maxWidth: toolsWidth,
-                                                  child: Row(
-                                                    children: _tools(),
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      if (collapsed)
-                                        _ComposerIcon(
-                                          icon: LucideIcons.chevronRight,
-                                          tooltip: 'Hiện công cụ',
-                                          onTap: () => setState(
-                                            () => _toolsForced = true,
-                                          ),
-                                        ),
-                                    ],
-                                  );
-                                },
-                              ),
-                              Expanded(
-                                child: ConstrainedBox(
-                                  constraints: const BoxConstraints(
-                                    minHeight: 44,
-                                    maxHeight: 120,
+                          ),
+                          Expanded(
+                            child: Padding(
+                              // Ô 38 giữa hàng nút 44: lề 3 trên/dưới.
+                              padding: const EdgeInsets.symmetric(vertical: 3),
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  minHeight: 38,
+                                  maxHeight: 120,
+                                ),
+                                child: TextField(
+                                  controller: _controller,
+                                  focusNode: _focus,
+                                  enabled: widget.enabled,
+                                  minLines: 1,
+                                  maxLines: null,
+                                  textCapitalization:
+                                      TextCapitalization.sentences,
+                                  style: OmniType.input.copyWith(
+                                    color: scheme.onSurface,
                                   ),
-                                  child: TextField(
-                                    controller: _controller,
-                                    focusNode: _focus,
-                                    enabled: widget.enabled,
-                                    minLines: 1,
-                                    maxLines: null,
-                                    textCapitalization:
-                                        TextCapitalization.sentences,
-                                    style: OmniType.input.copyWith(
-                                      color: scheme.onSurface,
+                                  decoration: InputDecoration(
+                                    hintText: 'Nhắn tin',
+                                    hintStyle: OmniType.input.copyWith(
+                                      color: scheme.onSurfaceVariant,
                                     ),
-                                    decoration: InputDecoration(
-                                      hintText: 'Nhắn tin…',
-                                      hintStyle: OmniType.input.copyWith(
+                                    isDense: true,
+                                    filled: true,
+                                    fillColor: scheme.surface,
+                                    border: fieldBorder,
+                                    enabledBorder: fieldBorder,
+                                    focusedBorder: fieldBorder,
+                                    disabledBorder: fieldBorder,
+                                    contentPadding: const EdgeInsets.fromLTRB(
+                                      14,
+                                      8,
+                                      2,
+                                      8,
+                                    ),
+                                    // Mặt cười NẰM TRONG ô, bên phải.
+                                    suffixIconConstraints: const BoxConstraints(
+                                      minWidth: 44,
+                                      minHeight: 36,
+                                    ),
+                                    suffixIcon: IconButton(
+                                      onPressed: widget.enabled
+                                          ? _openEmoji
+                                          : null,
+                                      tooltip: 'Biểu tượng cảm xúc',
+                                      padding: EdgeInsets.zero,
+                                      style: IconButton.styleFrom(
+                                        fixedSize: const Size(44, 36),
+                                        minimumSize: const Size(44, 36),
+                                        tapTargetSize:
+                                            MaterialTapTargetSize.shrinkWrap,
+                                      ),
+                                      icon: Icon(
+                                        LucideIcons.smile,
+                                        size: 22,
                                         color: scheme.onSurfaceVariant,
                                       ),
-                                      isDense: true,
-                                      filled: true,
-                                      fillColor: fieldFill,
-                                      border: border,
-                                      enabledBorder: border,
-                                      focusedBorder: border,
-                                      disabledBorder: border,
-                                      contentPadding: const EdgeInsets.fromLTRB(
-                                        14,
-                                        8,
-                                        4,
-                                        8,
-                                      ),
-                                      suffixIconConstraints:
-                                          const BoxConstraints(
-                                            minWidth: 44,
-                                            minHeight: 44,
-                                          ),
-                                      suffixIcon: IconButton(
-                                        onPressed: widget.enabled
-                                            ? _openEmoji
-                                            : null,
-                                        tooltip: 'Biểu tượng cảm xúc',
-                                        padding: EdgeInsets.zero,
-                                        style: IconButton.styleFrom(
-                                          fixedSize: const Size(44, 44),
-                                          minimumSize: const Size(44, 44),
-                                          tapTargetSize:
-                                              MaterialTapTargetSize.shrinkWrap,
-                                        ),
-                                        icon: Icon(
-                                          LucideIcons.smile,
-                                          size: OmniIconSize.xl,
-                                          color: scheme.onSurfaceVariant,
-                                        ),
-                                      ),
                                     ),
-                                    onSubmitted: (_) => _send(),
                                   ),
+                                  onSubmitted: (_) => _send(),
                                 ),
                               ),
-                              ValueListenableBuilder<TextEditingValue>(
-                                valueListenable: _controller,
-                                builder: (context, value, _) {
-                                  final canSend =
-                                      value.text.trim().isNotEmpty ||
-                                      _pendingImages.isNotEmpty;
-                                  if (canSend || _sending) {
-                                    return _SendButton(
-                                      sending: _sending,
-                                      onTap: widget.enabled ? _send : null,
-                                    );
-                                  }
-                                  return _LikeButton(
-                                    onTap: widget.enabled ? _sendLike : null,
-                                  );
-                                },
-                              ),
-                            ],
+                            ),
                           ),
-                  ),
-                ],
+                          // Chỉ nút cuối nghe controller: một phím gõ không
+                          // dựng lại ô nhập và khay ảnh.
+                          ValueListenableBuilder<TextEditingValue>(
+                            valueListenable: _controller,
+                            builder: (context, value, _) {
+                              final canSend =
+                                  value.text.trim().isNotEmpty ||
+                                  _pendingImages.isNotEmpty;
+                              if (canSend || _sending) {
+                                return _SendButton(
+                                  sending: _sending,
+                                  onTap: widget.enabled ? _send : null,
+                                );
+                              }
+                              // Ô trống: mic khi kênh nhận tin thoại; không
+                              // thì nút ↑ mờ giữ chỗ để ô nhập không co giãn
+                              // khi gõ (đã bỏ 👍).
+                              if (_showVoice) {
+                                return _ComposerIcon(
+                                  icon: LucideIcons.mic,
+                                  tooltip: 'Ghi âm',
+                                  onTap: widget.enabled && !_sending
+                                      ? _startVoice
+                                      : null,
+                                );
+                              }
+                              return const _SendButton(
+                                sending: false,
+                                onTap: null,
+                              );
+                            },
+                          ),
+                        ],
+                      ),
               ),
-            ),
+            ],
           ),
         ),
       ),
@@ -918,9 +861,10 @@ class _ComposerIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // Icon phụ (mic) màu xám — xanh chỉ cho nút gửi (duyệt 26/11/2026).
     final color = onTap == null
         ? theme.disabledColor
-        : theme.colorScheme.primary;
+        : theme.colorScheme.onSurfaceVariant;
     return IconButton(
       onPressed: onTap,
       tooltip: tooltip,
@@ -1027,8 +971,6 @@ class _ImageTray extends StatelessWidget {
   }
 }
 
-const _fullLabel = 'Đã đủ ${InboxApi.maxAttachmentsPerMessage} tệp';
-
 /// Tệp (không phải ảnh) trong khay chờ: ô 56 có đuôi, tên một dòng, nút ✕ 44.
 class _FileTile extends StatelessWidget {
   const _FileTile({required this.file, required this.onRemove});
@@ -1066,10 +1008,7 @@ class _FileTile extends StatelessWidget {
               borderRadius: OmniRadius.smAll,
             ),
             child: ext.isEmpty
-                ? Icon(
-                    LucideIcons.file,
-                    color: scheme.onSurfaceVariant,
-                  )
+                ? Icon(LucideIcons.file, color: scheme.onSurfaceVariant)
                 : Text(
                     ext,
                     maxLines: 1,
@@ -1228,23 +1167,48 @@ _ChannelWarning? _channelWarning(
   return null;
 }
 
-class _LikeButton extends StatelessWidget {
-  const _LikeButton({required this.onTap});
+/// Nút ⊕ tròn 34 nền xám nhạt (vùng chạm 44) mở menu thêm vào tin (duyệt
+/// 26/11/2026).
+class _AddButton extends StatelessWidget {
+  const _AddButton({required this.onTap});
 
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final enabled = onTap != null;
     return IconButton(
       onPressed: onTap,
-      tooltip: 'Gửi like',
+      tooltip: 'Thêm',
       padding: EdgeInsets.zero,
       style: IconButton.styleFrom(
-        fixedSize: const Size(44, 44),
-        minimumSize: const Size(44, 44),
+        fixedSize: const Size(_toolWidth, _toolWidth),
+        minimumSize: const Size(_toolWidth, _toolWidth),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        // Giảm chuyển động: bỏ cả gợn mực lẫn lớp sáng khi chạm.
+        splashFactory: OmniMotion.enabled(context)
+            ? null
+            : NoSplash.splashFactory,
+        overlayColor: OmniMotion.enabled(context) ? null : Colors.transparent,
       ),
-      icon: const Text(_likeText, style: OmniChatType.emoji),
+      icon: Container(
+        width: 34,
+        height: 34,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: scheme.onSurfaceVariant.withValues(alpha: dark ? .16 : .12),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          LucideIcons.plus,
+          size: 20,
+          color: enabled
+              ? scheme.onSurfaceVariant
+              : scheme.onSurfaceVariant.withValues(alpha: .45),
+        ),
+      ),
     );
   }
 }
@@ -1262,9 +1226,10 @@ class _SendButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final fill = OmniColors.primaryFillOf(context);
     final enabled = !sending && onTap != null;
-    // Hộp chạm 44x44, nút vẽ 34 (giữ kích thước biểu tượng của thiết kế).
+    // Hộp chạm 44x44, nút vẽ tròn 32 nền xanh đặc, mũi tên ↑ trắng ở cả sáng
+    // lẫn tối (duyệt 26/11/2026).
     return Tooltip(
       message: tooltip,
       child: Semantics(
@@ -1278,30 +1243,28 @@ class _SendButton extends StatelessWidget {
             height: 44,
             child: Center(
               child: Container(
-                width: 34,
-                height: 34,
+                width: 32,
+                height: 32,
                 decoration: BoxDecoration(
-                  color: enabled
-                      ? scheme.primary
-                      : scheme.primary.withValues(alpha: 0.5),
+                  color: enabled ? fill : fill.withValues(alpha: 0.5),
                   shape: BoxShape.circle,
                 ),
                 alignment: Alignment.center,
                 child: sending
-                    ? SizedBox(
+                    ? const SizedBox(
                         width: 16,
                         height: 16,
                         child: CircularProgressIndicator.adaptive(
                           strokeWidth: 2,
                           valueColor: AlwaysStoppedAnimation<Color>(
-                            scheme.onPrimary,
+                            Colors.white,
                           ),
                         ),
                       )
-                    : Icon(
-                        LucideIcons.send,
-                        size: OmniIconSize.md,
-                        color: scheme.onPrimary,
+                    : const Icon(
+                        LucideIcons.arrowUp,
+                        size: 18,
+                        color: Colors.white,
                       ),
               ),
             ),

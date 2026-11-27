@@ -35,9 +35,12 @@ abstract final class OmniTheme {
     onSurface: OmniColors.darkForeground,
     onSurfaceMuted: OmniColors.darkMutedForeground,
     primary: OmniColors.darkPrimary,
-    // Chữ TỐI trên nút chính. Nền tối buộc [primary] phải sáng, và trắng trên
-    // #2EE0D5 chỉ đạt khoảng 1.6:1 — đây là chỗ hai chế độ buộc phải khác nhau.
     onPrimary: OmniColors.darkPrimaryForeground,
+    // Nút chính tối: xanh đặc #2F6FE0 chữ trắng (rà soát mục 11) — không còn
+    // khối xanh pastel chữ đen. [primary] sáng hơn chỉ cho chữ/icon xanh.
+    fill: OmniColors.darkPrimaryFill,
+    onFill: Colors.white,
+    switchOn: OmniColors.darkSwitchOn,
     accent: OmniColors.darkAccent,
     onAccent: OmniColors.darkAccentForeground,
   );
@@ -75,6 +78,9 @@ abstract final class OmniTheme {
     required Color onPrimary,
     required Color accent,
     required Color onAccent,
+    Color? fill,
+    Color? onFill,
+    Color switchOn = OmniColors.switchOn,
   }) {
     final scheme = ColorScheme(
       brightness: brightness,
@@ -150,14 +156,24 @@ abstract final class OmniTheme {
         ),
       ),
       dividerTheme: DividerThemeData(color: border, thickness: 1, space: 1),
+      // Công tắc kiểu iOS (rà soát mục 14): bật = xanh lá hệ thống, núm trắng,
+      // không viền; tắt = rãnh xám.
+      switchTheme: SwitchThemeData(
+        thumbColor: const WidgetStatePropertyAll(Colors.white),
+        trackColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected) ? switchOn : surfaceMuted,
+        ),
+        trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
+        thumbIcon: const WidgetStatePropertyAll(null),
+      ),
       // Nút hành động chính dùng nền đặc màu chủ đạo + chữ onPrimary để
       // CTA (Tạo, Lưu, Xác nhận, Hoàn tất) nổi bật rõ ràng; nút phụ
       // (Outlined) dùng nền nhẹ + viền mảnh trung tính.
       filledButtonTheme: FilledButtonThemeData(
         style: _solidPrimaryButtonStyle(
           brightness,
-          primary: primary,
-          onPrimary: onPrimary,
+          primary: fill ?? primary,
+          onPrimary: onFill ?? onPrimary,
           onSurface: onSurface,
         ),
       ),

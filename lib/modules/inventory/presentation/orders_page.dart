@@ -248,7 +248,8 @@ class _OrderRowTile extends StatelessWidget {
         ? ('Đã huỷ', OmniTone.neutral)
         : switch (o.payStatus) {
             OrderPayStatus.unpaid => (o.payStatus.label, OmniTone.warning),
-            OrderPayStatus.partial => (o.payStatus.label, OmniTone.info),
+            // Còn tiền phải thu → vàng như "Chưa thu" (duyệt 26/11/2026).
+            OrderPayStatus.partial => (o.payStatus.label, OmniTone.warning),
             OrderPayStatus.paid => (o.payStatus.label, OmniTone.success),
           };
 

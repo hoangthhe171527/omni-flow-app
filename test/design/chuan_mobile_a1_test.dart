@@ -98,7 +98,7 @@ void main() {
   });
 
   group('showOmniFilterSheet', () {
-    testWidgets('số kết quả sống, Xoá hết, áp trả lựa chọn', (t) async {
+    testWidgets('số kết quả sống, Đặt lại, áp trả lựa chọn', (t) async {
       OmniFilterSelection? result;
       await pump(
         t,
@@ -169,36 +169,39 @@ void main() {
       expect(omniFilterCount(result!), 3);
     });
 
-    testWidgets('Xoá hết bỏ mọi lựa chọn', (t) async {
-      await pump(
-        t,
-        Builder(
-          builder: (context) => TextButton(
-            onPressed: () => showOmniFilterSheet(
-              context: context,
-              initial: const {
-                's': {'x'},
-              },
-              groups: const [
-                OmniFilterGroup(
-                  id: 's',
-                  title: 'S',
-                  options: [OmniFilterOption('x', 'X')],
-                ),
-              ],
-              countResults: (s) => s.isEmpty ? 10 : 2,
+    testWidgets(
+      'Đặt lại bỏ mọi lựa chọn (đầu bảng lọc thống nhất 26/11/2026)',
+      (t) async {
+        await pump(
+          t,
+          Builder(
+            builder: (context) => TextButton(
+              onPressed: () => showOmniFilterSheet(
+                context: context,
+                initial: const {
+                  's': {'x'},
+                },
+                groups: const [
+                  OmniFilterGroup(
+                    id: 's',
+                    title: 'S',
+                    options: [OmniFilterOption('x', 'X')],
+                  ),
+                ],
+                countResults: (s) => s.isEmpty ? 10 : 2,
+              ),
+              child: const Text('mở'),
             ),
-            child: const Text('mở'),
           ),
-        ),
-      );
-      await t.tap(find.text('mở'));
-      await t.pumpAndSettle();
-      expect(find.text('Xem 2 kết quả'), findsOneWidget);
-      await t.tap(find.text('Xoá hết'));
-      await t.pump();
-      expect(find.text('Xem 10 kết quả'), findsOneWidget);
-    });
+        );
+        await t.tap(find.text('mở'));
+        await t.pumpAndSettle();
+        expect(find.text('Xem 2 kết quả'), findsOneWidget);
+        await t.tap(find.text('Đặt lại'));
+        await t.pump();
+        expect(find.text('Xem 10 kết quả'), findsOneWidget);
+      },
+    );
   });
 
   group('OmniEmptyState', () {

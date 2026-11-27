@@ -321,11 +321,7 @@ class _BarPreview extends StatelessWidget {
                   slot(icon: tabs[i].icon, label: tabs[i].label, active: i == 0)
                 else
                   slot(),
-              slot(
-                icon: LucideIcons.layoutGrid,
-                label: 'Tất cả',
-                fixed: true,
-              ),
+              slot(icon: LucideIcons.layoutGrid, label: 'Tất cả', fixed: true),
             ],
           ),
         ),

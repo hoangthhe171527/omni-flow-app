@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
@@ -13,6 +14,7 @@ import '../tokens/tokens.dart';
 import 'brand_anchor.dart';
 import 'omni_app_bar.dart';
 import 'omni_brand.dart';
+import 'omni_inputs.dart';
 
 /// Chỗ cắm cho phần của [OmniTopBar] thuộc về `modules/`: số thông báo chưa đọc
 /// và nơi nút chuông dẫn tới. Cùng lý do với [OmniAccountSlot] — `design/` chỉ
@@ -147,6 +149,16 @@ class _OmniTopBarState extends State<OmniTopBar> {
   bool _focused = false;
   bool _hasQuery = false;
 
+  /// Thanh này đang bật [OmniSearchRecede] (focus mà chưa gõ).
+  bool _receding = false;
+
+  void _syncRecede() {
+    final on = _focused && !_hasQuery;
+    if (on == _receding) return;
+    _receding = on;
+    OmniSearchRecede._active.value = on;
+  }
+
   /// Nội dung đã cuộn vào dưới thanh → thanh hiện nền kính phẳng (chuẩn iOS,
   /// gói Viomni: "thanh trên khi đã cuộn"). Đầu trang: trong suốt.
   ScrollNotificationObserverState? _scrollObserver;
@@ -192,6 +204,12 @@ class _OmniTopBarState extends State<OmniTopBar> {
   void dispose() {
     _scrollObserver?.removeListener(_onScroll);
     _detach();
+    if (_receding) {
+      // Thân màn đang lùi: trả về sau khung hình (không báo listener giữa lúc
+      // cây đang tháo).
+      _receding = false;
+      Future.microtask(() => OmniSearchRecede._active.value = false);
+    }
     if (_focused) {
       // Rời màn khi đang tìm: trả thanh tab về (sau khung hình, không sửa
       // provider giữa lúc cây đang tháo).
@@ -211,7 +229,10 @@ class _OmniTopBarState extends State<OmniTopBar> {
 
   void _onText() {
     final has = (_field?.textEditingValue.text ?? '').isNotEmpty;
-    if (has != _hasQuery && mounted) setState(() => _hasQuery = has);
+    if (has != _hasQuery && mounted) {
+      setState(() => _hasQuery = has);
+      _syncRecede();
+    }
   }
 
   void _onFocus(bool focused) {
@@ -227,6 +248,7 @@ class _OmniTopBarState extends State<OmniTopBar> {
       _portal.hide();
     }
     setState(() => _focused = focused);
+    _syncRecede();
     _searchMode()?.state = focused;
   }
 
@@ -444,19 +466,10 @@ class _OmniTopBarState extends State<OmniTopBar> {
               canRequestFocus: false,
               skipTraversal: true,
               onFocusChange: _onFocus,
-              // Ô tìm nền xám đặc bo 10 (spec §3.4) — không còn viên kính.
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: scheme.onSurface.withValues(
-                    alpha: Theme.of(context).brightness == Brightness.dark
-                        ? .12
-                        : .06,
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                  border: MediaQuery.highContrastOf(context)
-                      ? Border.all(color: scheme.outline)
-                      : null,
-                ),
+              // Ô tìm nền xám đặc bo 10 (spec §3.4) — khung "Biến hình"
+              // (duyệt 26/11/2026): vầng sáng xanh khi focus, viền cầu vồng
+              // khi đang gõ.
+              child: OmniSearchFrame(
                 child: SizedBox(
                   height: bottom.preferredSize.height,
                   child: bottom,
@@ -537,7 +550,7 @@ class _TopBarBackdrop extends StatelessWidget {
     final fill = solid
         ? scheme.surface
         : dark
-        ? const Color(0xFF132033).withValues(alpha: 0.92)
+        ? const Color(0xFF1C1C1E).withValues(alpha: 0.92)
         : Colors.white.withValues(alpha: 0.92);
     final edge = solid
         ? scheme.outline
@@ -614,14 +627,47 @@ class _SearchVeil extends StatelessWidget {
               button: true,
               label: 'Thoát tìm kiếm',
               child: ClipRect(
-                // Phủ màu nền, không nhoè (bớt kính mờ 26/11/2026).
+                // Phủ màu nền, không nhoè (bớt kính mờ 26/11/2026); tối hơn
+                // để thân màn lùi ra sau (kiểu "Biến hình", duyệt 26/11/2026).
                 child: ColoredBox(
-                  color: solid ? base : base.withValues(alpha: 0.45),
+                  color: solid ? base : base.withValues(alpha: 0.6),
                 ),
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Thân màn "lùi" khi ô tìm của [OmniTopBar] đang focus mà chưa gõ (kiểu
+/// "Biến hình", duyệt 26/11/2026): co về 94% quanh mép trên, lớp phủ của thanh
+/// trên làm tối — chiều sâu, không nhoè. Gõ chữ là thân trở lại 100% để thấy
+/// kết quả lọc. Giảm chuyển động: không co.
+///
+/// Thân màn là anh em của thanh trên trong Scaffold, nên màn nào muốn hiệu ứng
+/// thì bọc thân bằng widget này.
+class OmniSearchRecede extends StatelessWidget {
+  const OmniSearchRecede({super.key, required this.child});
+
+  final Widget child;
+
+  /// Bật bởi thanh trên đang ở chế độ tìm (chỉ một ô có focus tại một lúc).
+  static final ValueNotifier<bool> _active = ValueNotifier<bool>(false);
+
+  @override
+  Widget build(BuildContext context) {
+    final motion = OmniMotion.enabled(context);
+    return ValueListenableBuilder<bool>(
+      valueListenable: _active,
+      child: child,
+      builder: (context, on, child) => AnimatedScale(
+        scale: on && motion ? 0.94 : 1,
+        alignment: Alignment.topCenter,
+        duration: motion ? const Duration(milliseconds: 450) : Duration.zero,
+        curve: const Cubic(0.2, 0.9, 0.3, 1),
+        child: child,
       ),
     );
   }
@@ -701,14 +747,43 @@ class _BellButton extends StatefulWidget {
   State<_BellButton> createState() => _BellButtonState();
 }
 
-class _BellButtonState extends State<_BellButton> {
+class _BellButtonState extends State<_BellButton>
+    with SingleTickerProviderStateMixin {
   final _buttonKey = GlobalKey(debugLabel: 'OmniTopBarBell');
+
+  /// Lắc chuông một nhịp ~700ms khi mở bảng thông báo (duyệt 26/11/2026).
+  late final AnimationController _ring = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 700),
+  );
+
+  @override
+  void dispose() {
+    _ring.dispose();
+    super.dispose();
+  }
 
   void _open() {
     final box = _buttonKey.currentContext?.findRenderObject() as RenderBox?;
     if (box == null || !box.hasSize) return;
+    if (OmniMotion.enabled(context)) _ring.forward(from: 0);
     final origin = box.localToGlobal(Offset.zero);
     widget.onTap?.call(origin & box.size);
+  }
+
+  /// Góc lắc (radian) theo nhịp `@keyframes ring` của bản duyệt:
+  /// 0 → 16° → -14° → 10° → -6° → 3° → 0.
+  static double _ringAngle(double t) {
+    const stops = [0.0, 0.15, 0.30, 0.45, 0.60, 0.75, 1.0];
+    const degs = [0.0, 16.0, -14.0, 10.0, -6.0, 3.0, 0.0];
+    for (var i = 1; i < stops.length; i++) {
+      if (t <= stops[i]) {
+        final k = (t - stops[i - 1]) / (stops[i] - stops[i - 1]);
+        final d = degs[i - 1] + (degs[i] - degs[i - 1]) * k;
+        return d * math.pi / 180;
+      }
+    }
+    return 0;
   }
 
   @override
@@ -739,10 +814,19 @@ class _BellButtonState extends State<_BellButton> {
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  Icon(
-                    LucideIcons.bell,
-                    size: OmniIconSize.md,
-                    color: scheme.onSurface,
+                  AnimatedBuilder(
+                    animation: _ring,
+                    builder: (context, child) => Transform.rotate(
+                      // Xoay quanh móc chuông (mép trên), như chuông thật.
+                      alignment: Alignment.topCenter,
+                      angle: _ringAngle(_ring.value),
+                      child: child,
+                    ),
+                    child: Icon(
+                      LucideIcons.bell,
+                      size: OmniIconSize.md,
+                      color: scheme.onSurface,
+                    ),
                   ),
                   if (widget.unread > 0)
                     Positioned(

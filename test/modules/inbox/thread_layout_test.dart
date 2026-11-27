@@ -8,6 +8,7 @@ import 'package:omni_app/core/domain/channel.dart';
 import 'package:omni_app/core/network/api_client.dart';
 import 'package:omni_app/core/network/api_envelope.dart';
 import 'package:omni_app/core/realtime/realtime_client.dart';
+import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/customers/application/customers_providers.dart';
 import 'package:omni_app/modules/customers/domain/customer.dart';
@@ -175,7 +176,7 @@ void main() {
   });
 
   testWidgets(
-    'bong bóng 16/6 (phong cách iOS §3.5): đầu, giữa và cuối nhóm tin ra',
+    'bong bóng 19/6/5 (duyệt 26/11/2026): đầu, giữa và cuối nhóm tin ra',
     (tester) async {
       api.history = [
         _serverMessage('m1', 'AAA', from: 'agent'),
@@ -197,13 +198,52 @@ void main() {
       }
 
       // Danh sách vẽ ngược nhưng nhóm tính theo thời gian: m1 đầu nhóm.
-      expect(radius('AAA').topRight.x, 16);
+      expect(radius('AAA').topRight.x, 19);
       expect(radius('AAA').bottomRight.x, 6);
       expect(radius('BBB').topRight.x, 6);
       expect(radius('BBB').bottomRight.x, 6);
       expect(radius('CCC').topRight.x, 6);
-      expect(radius('CCC').bottomRight.x, 16);
-      expect(radius('CCC').topLeft.x, 16);
+      // Góc đuôi của tin cuối cụm: 5.
+      expect(radius('CCC').bottomRight.x, 5);
+      expect(radius('CCC').topLeft.x, 19);
+      await closeThread(tester);
+    },
+  );
+
+  testWidgets(
+    'iMessage (duyệt 26/11/2026): tin mình nền xanh đặc chữ trắng, tin khách '
+    'nền xám; 1-1 không có avatar nhỏ bên tin khách',
+    (tester) async {
+      api.history = [
+        _serverMessage('m1', 'Khách hỏi'),
+        _serverMessage('m2', 'Mình đáp', from: 'agent'),
+      ];
+      await openThread(tester);
+
+      BoxDecoration box(String text) =>
+          tester
+                  .widget<DecoratedBox>(
+                    find
+                        .ancestor(
+                          of: find.text(text),
+                          matching: find.byType(DecoratedBox),
+                        )
+                        .first,
+                  )
+                  .decoration
+              as BoxDecoration;
+
+      final scheme = OmniTheme.light(TargetPlatform.android).colorScheme;
+      expect(box('Mình đáp').color, scheme.primary);
+      expect(box('Khách hỏi').color, const Color(0xFFEDEFF3));
+      // Khối giới thiệu có avatar 64 của khách; cột tin thì không có avatar.
+      expect(
+        find.descendant(
+          of: find.byType(MessageBubble),
+          matching: find.byType(OmniAvatar),
+        ),
+        findsNothing,
+      );
       await closeThread(tester);
     },
   );

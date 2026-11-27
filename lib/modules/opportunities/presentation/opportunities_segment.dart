@@ -443,6 +443,12 @@ class _SearchField extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) => OmniSearchField(
     key: const Key('opportunity-search-flat'),
     hint: 'Tìm cơ hội, khách hàng',
+    // Gợi ý quay như máy đánh số (kiểu "Biến hình", duyệt 26/11/2026).
+    hints: const [
+      'Tìm cơ hội, khách hàng',
+      'Tìm tên cơ hội…',
+      'Tìm tên khách hàng…',
+    ],
     flat: true,
     dense: true,
     debounce: const Duration(milliseconds: 300),
@@ -462,75 +468,16 @@ class _FilterButton extends StatelessWidget {
   final int count;
   final VoidCallback onTap;
 
+  /// Nút lọc chung của ô tìm (duyệt 26/11/2026, rà soát mục 6): xám khi chưa
+  /// lọc; đang lọc = viên mực/trắng đặc kèm số bộ lọc. Vùng chạm 44.
   @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    // Icon phẳng, vùng chạm 44.
-    return Semantics(
-      button: true,
-      label: 'Bộ lọc',
-      expanded: open,
-      excludeSemantics: true,
-      onTap: onTap,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: SizedBox.square(
-          dimension: 44,
-          child: Material(
-            color: Colors.transparent,
-            child: InkResponse(
-              onTap: onTap,
-              radius: 22,
-              containedInkWell: true,
-              highlightShape: BoxShape.circle,
-              child: Stack(
-                alignment: Alignment.center,
-                clipBehavior: Clip.none,
-                children: [
-                  Icon(
-                    LucideIcons.slidersHorizontal,
-                    size: OmniIconSize.md,
-                    color: open ? scheme.primary : scheme.onSurface,
-                  ),
-                  if (count > 0)
-                    Positioned(
-                      right: 2,
-                      top: 2,
-                      child: IgnorePointer(
-                        child: Container(
-                          key: const Key('opportunity-filter-count'),
-                          constraints: const BoxConstraints(minWidth: 16),
-                          height: 16,
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: OmniColors.destructive,
-                            borderRadius: BorderRadius.circular(999),
-                            border: Border.all(
-                              color: scheme.surface,
-                              width: 1.5,
-                            ),
-                          ),
-                          child: Text(
-                            '$count',
-                            style: OmniType.micro.copyWith(
-                              color: Colors.white,
-                              height: 1,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => OmniSearchFilterButton(
+    onPressed: onTap,
+    activeFilters: count,
+    open: open,
+    semanticsLabel: 'Bộ lọc',
+    countKey: const Key('opportunity-filter-count'),
+  );
 }
 
 /// Mở bộ lọc Cơ hội tại đúng nút đã chạm. Dùng chung cho màn độc lập và đoạn

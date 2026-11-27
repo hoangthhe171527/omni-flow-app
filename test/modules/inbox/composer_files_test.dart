@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/inbox/domain/outbound_capabilities.dart';
 import 'package:omni_app/modules/inbox/domain/pending_attachment.dart';
@@ -127,8 +128,16 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  /// Ảnh nằm trong menu ⊕ (duyệt 26/11/2026), không còn nút riêng.
+  Future<void> pickImages(WidgetTester tester) async {
+    await tester.tap(find.byTooltip('Thêm'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ảnh'));
+    await tester.pumpAndSettle();
+  }
+
   Future<void> sendNow(WidgetTester tester) async {
-    await tester.tap(find.byIcon(LucideIcons.send));
+    await tester.tap(find.byTooltip('Gửi'));
     await tester.pumpAndSettle();
   }
 
@@ -140,8 +149,13 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  IconButton toolButton(WidgetTester tester, IconData icon) =>
-      tester.widget<IconButton>(find.widgetWithIcon(IconButton, icon));
+  OmniAnchoredMenuItem menuItem(WidgetTester tester, String label) =>
+      tester.widget<OmniAnchoredMenuItem>(
+        find.ancestor(
+          of: find.text(label),
+          matching: find.byType(OmniAnchoredMenuItem),
+        ),
+      );
 
   group('mục Tệp trong khay', () {
     testWidgets('kênh native + onPickFiles → có "Tệp", không "Báo giá"', (
@@ -179,7 +193,7 @@ void main() {
       expect(find.text('Tệp'), findsNothing);
     });
 
-    testWidgets('image: none → không nút ảnh, không chụp ảnh', (tester) async {
+    testWidgets('image: none → menu ⊕ không có Ảnh, Máy ảnh', (tester) async {
       await tester.pumpWidget(
         host(
           capabilities: OutboundCapabilities.fromJson(const {
@@ -192,9 +206,12 @@ void main() {
           }),
         ),
       );
-      expect(find.byTooltip('Ảnh'), findsNothing);
-      expect(find.byTooltip('Chụp ảnh'), findsNothing);
       expect(find.byTooltip('Thêm'), findsOneWidget);
+      await tester.tap(find.byTooltip('Thêm'));
+      await tester.pumpAndSettle();
+      expect(find.text('Ảnh'), findsNothing);
+      expect(find.text('Máy ảnh'), findsNothing);
+      expect(find.text('Tệp'), findsOneWidget);
     });
   });
 
@@ -223,8 +240,7 @@ void main() {
     nextImages = [for (var i = 0; i < 9; i++) image('a$i.jpg')];
     nextFiles = [file('1.pdf', mb), file('2.pdf', mb), file('3.pdf', mb)];
     await tester.pumpWidget(host(capabilities: native));
-    await tester.tap(find.byTooltip('Ảnh'));
-    await tester.pumpAndSettle();
+    await pickImages(tester);
     expect(imageAsks, [10]);
 
     await pickFiles(tester);
@@ -233,13 +249,15 @@ void main() {
     expect(find.text('1.pdf'), findsOneWidget);
     expect(find.text('2.pdf'), findsNothing);
 
-    expect(toolButton(tester, LucideIcons.image).onPressed, isNull);
-    expect(toolButton(tester, LucideIcons.camera).onPressed, isNull);
-    expect(find.byTooltip('Đã đủ 10 tệp'), findsNWidgets(2));
     await clearSnack(tester);
 
+    // Đủ 10: Ảnh, Máy ảnh, Tệp trong menu ⊕ vẫn hiện nhưng khoá, ghi "Đủ 10".
     await tester.tap(find.byTooltip('Thêm'));
     await tester.pumpAndSettle();
+    expect(menuItem(tester, 'Ảnh').onTap, isNull);
+    expect(menuItem(tester, 'Máy ảnh').onTap, isNull);
+    expect(menuItem(tester, 'Tệp').onTap, isNull);
+    expect(find.text('Đủ 10'), findsNWidgets(3));
     await tester.tap(find.text('Tệp'));
     await tester.pumpAndSettle();
     expect(fileAsks, [1], reason: 'mục Tệp bị khoá khi đã đủ 10');
@@ -250,8 +268,7 @@ void main() {
   ) async {
     nextImages = [for (var i = 0; i < 11; i++) image('a$i.jpg')];
     await tester.pumpWidget(host(capabilities: native));
-    await tester.tap(find.byTooltip('Ảnh'));
-    await tester.pumpAndSettle();
+    await pickImages(tester);
     expect(find.text('Mỗi tin tối đa 10 tệp — đã bỏ 1 tệp.'), findsOneWidget);
 
     final snack = tester.getRect(
@@ -276,8 +293,7 @@ void main() {
   ) async {
     nextImages = [for (var i = 0; i < 11; i++) image('a$i.jpg')];
     await tester.pumpWidget(host(capabilities: native));
-    await tester.tap(find.byTooltip('Ảnh'));
-    await tester.pumpAndSettle();
+    await pickImages(tester);
     expect(find.text('Mỗi tin tối đa 10 tệp — đã bỏ 1 tệp.'), findsOneWidget);
     await clearSnack(tester);
 
@@ -348,8 +364,7 @@ void main() {
     ) async {
       nextImages = [image('vui.gif')];
       await tester.pumpWidget(host(capabilities: zaloOa));
-      await tester.tap(find.byTooltip('Ảnh'));
-      await tester.pumpAndSettle();
+      await pickImages(tester);
       expect(find.textContaining('JPG, JPEG, PNG'), findsOneWidget);
       expect(
         find.textContaining('sẽ gửi dưới dạng đường link'),
@@ -364,8 +379,7 @@ void main() {
     testWidgets('ảnh JPG nhỏ → không hỏi', (tester) async {
       nextImages = [image('a.jpg', size: 300 * 1024)];
       await tester.pumpWidget(host(capabilities: zaloOa));
-      await tester.tap(find.byTooltip('Ảnh'));
-      await tester.pumpAndSettle();
+      await pickImages(tester);
       expect(find.byType(AlertDialog), findsNothing);
     });
 
@@ -374,8 +388,7 @@ void main() {
     ) async {
       nextImages = [image('to.png', size: 3 * mb)];
       await tester.pumpWidget(host(capabilities: zaloOa));
-      await tester.tap(find.byTooltip('Ảnh'));
-      await tester.pumpAndSettle();
+      await pickImages(tester);
       expect(find.byType(AlertDialog), findsNothing);
       expect(find.byIcon(LucideIcons.x), findsOneWidget);
     });
@@ -383,8 +396,7 @@ void main() {
     testWidgets('ảnh WebP → hỏi (ngoài native_extensions)', (tester) async {
       nextImages = [image('a.webp')];
       await tester.pumpWidget(host(capabilities: zaloOa));
-      await tester.tap(find.byTooltip('Ảnh'));
-      await tester.pumpAndSettle();
+      await pickImages(tester);
       expect(
         find.textContaining('sẽ gửi dưới dạng đường link'),
         findsOneWidget,
@@ -427,8 +439,7 @@ void main() {
       });
       nextImages = [image('dong.gif')];
       await tester.pumpWidget(host(capabilities: strict));
-      await tester.tap(find.byTooltip('Ảnh'));
-      await tester.pumpAndSettle();
+      await pickImages(tester);
       expect(find.textContaining('không nhận'), findsOneWidget);
       await tester.tap(find.text('Huỷ'));
       await tester.pumpAndSettle();

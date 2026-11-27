@@ -43,17 +43,45 @@ void main() {
     ),
   );
 
-  testWidgets('dòng nguồn OA · Trung Nguyên, chấm nhãn, người phụ trách', (
+  // Duyệt 26/11/2026 (rà soát mục 8, 9): kênh là nhãn xám đầu dòng xem
+  // trước; chưa đọc = MỘT chấm đỏ đầu dòng; không còn chấm nhãn.
+  testWidgets('nhãn kênh xám OA, một chấm đỏ đầu dòng, người phụ trách', (
     tester,
   ) async {
     await pump(tester);
     expect(find.text('OA'), findsOneWidget);
-    expect(find.textContaining('Trung Nguyên'), findsOneWidget);
-    expect(find.bySemanticsLabel('Nhãn: Đặt lịch'), findsOneWidget);
+    expect(find.bySemanticsLabel('Kênh OA Trung Nguyên'), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('^Nhãn:')), findsNothing);
     expect(find.text('HT'), findsOneWidget);
     expect(find.byType(OmniUnreadDot), findsOneWidget);
     expect(find.bySemanticsLabel('Chưa đọc'), findsOneWidget);
     expect(find.text('2'), findsNothing);
+
+    // Chấm đỏ nằm TRƯỚC avatar, không phải giữa câu.
+    final dot = tester.getRect(find.byType(OmniUnreadDot));
+    final avatar = tester.getRect(find.byType(OmniAvatar));
+    expect(dot.right, lessThanOrEqualTo(avatar.left));
+
+    // Nhãn kênh: nền surfaceContainerHighest, chữ onSurfaceVariant.
+    final scheme = OmniTheme.light(TargetPlatform.android).colorScheme;
+    final tag = tester.widget<Container>(
+      find
+          .ancestor(of: find.text('OA'), matching: find.byType(Container))
+          .first,
+    );
+    expect(
+      (tag.decoration! as BoxDecoration).color,
+      scheme.surfaceContainerHighest,
+    );
+    expect(
+      tester.widget<Text>(find.text('OA')).style!.color,
+      scheme.onSurfaceVariant,
+    );
+  });
+
+  testWidgets('đã đọc: không chấm đỏ', (tester) async {
+    await pump(tester, c: lan.copyWith(unread: 0));
+    expect(find.byType(OmniUnreadDot), findsNothing);
   });
 
   testWidgets('ô phụ trách: tròn 22, nền nhạt theo người, không khối mực', (
@@ -122,7 +150,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('không nhãn → không chấm; chưa gán → vòng nét đứt +', (
+  testWidgets('chưa gán → không vẽ ô người phụ trách (bỏ vòng nét đứt +)', (
     tester,
   ) async {
     await pump(
@@ -136,9 +164,9 @@ void main() {
         unread: 0,
       ),
     );
-    expect(find.bySemanticsLabel(RegExp('^Nhãn:')), findsNothing);
-    expect(find.byKey(const Key('assignee-unassigned')), findsOneWidget);
+    expect(find.byKey(const Key('assignee-unassigned')), findsNothing);
     expect(find.byKey(const Key('assignee-chip')), findsNothing);
+    expect(find.byIcon(LucideIcons.plus), findsNothing);
   });
 
   testWidgets(

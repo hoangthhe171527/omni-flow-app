@@ -102,10 +102,13 @@ extension OmniToneColors on OmniTone {
     // omni_colors.dart). Nền TRUNG TÍNH, không phải nền teal nhạt: chữ teal
     // cỡ nhỏ trên #E3F8F6 chỉ sát ngưỡng 4,5:1 (`SPrinciples.dc.html` §6);
     // chữ teal đậm trên xám đạt thoải mái.
+    // "Xong / sẵn sàng" = xanh lá trên nền xanh lá nhạt (quy tắc màu 26/11:
+    // xanh dương chỉ cho hành động). Nhãn luôn kèm chữ nên người mù màu
+    // lục-đỏ vẫn đọc được trạng thái.
     OmniTone.success =>
       dark
-          ? (scheme.primary, OmniColors.darkMuted)
-          : (OmniColors.primaryPressed, OmniColors.muted),
+          ? (OmniColors.successTextDark, const Color(0xFF12301F))
+          : (OmniColors.successText, const Color(0xFFE3F5EC)),
 
     OmniTone.warning =>
       dark

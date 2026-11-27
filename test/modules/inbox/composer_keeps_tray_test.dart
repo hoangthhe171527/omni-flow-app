@@ -44,12 +44,15 @@ void main() {
       ),
     );
 
-    await tester.tap(find.byTooltip('Ảnh'));
-    await tester.pump();
+    // Ảnh nằm trong menu ⊕ (duyệt 26/11/2026).
+    await tester.tap(find.byTooltip('Thêm'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ảnh'));
+    await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'Ảnh đây');
     await tester.pump();
 
-    await tester.tap(find.byIcon(LucideIcons.send));
+    await tester.tap(find.byTooltip('Gửi'));
     await tester.pump();
     await tester.pump();
 
@@ -59,7 +62,7 @@ void main() {
 
     // Thử lại: gửi đủ ảnh, xong thì khay và ô trống.
     fail = false;
-    await tester.tap(find.byIcon(LucideIcons.send));
+    await tester.tap(find.byTooltip('Gửi'));
     await tester.pump();
     await tester.pump();
 

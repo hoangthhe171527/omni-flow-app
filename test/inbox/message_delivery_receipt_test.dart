@@ -4,8 +4,11 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/modules/inbox/domain/message.dart';
 import 'package:omni_app/modules/inbox/presentation/widgets/message_bubble.dart';
 
+/// Duyệt 26/11/2026 (kiểu iMessage): tin mình gửi CUỐI ghi chữ "Đã gửi / Đã
+/// nhận / Đã xem" + giờ, không dấu tích; tin khác không có dòng giờ, chạm vào
+/// bong bóng mới hiện giờ + dấu tích.
 void main() {
-  testWidgets('shows a grey double check when the message is delivered', (
+  testWidgets('tin cuối đã nhận: chữ "Đã nhận", không dấu tích', (
     tester,
   ) async {
     await tester.pumpWidget(_bubble(DeliveryStatus.delivered));
@@ -14,61 +17,57 @@ void main() {
       find.byKey(const ValueKey('delivery-receipt-delivered')),
       findsOneWidget,
     );
-    expect(find.byIcon(LucideIcons.checkCheck), findsOneWidget);
     expect(find.text('Đã nhận'), findsOneWidget);
     expect(find.text('Đã xem'), findsNothing);
+    expect(find.byIcon(LucideIcons.checkCheck), findsNothing);
   });
 
-  testWidgets(
-    'turns the double check blue and says read only for read status',
-    (tester) async {
-      await tester.pumpWidget(_bubble(DeliveryStatus.read));
-
-      expect(
-        find.byKey(const ValueKey('delivery-receipt-read')),
-        findsOneWidget,
-      );
-      expect(find.byIcon(LucideIcons.checkCheck), findsOneWidget);
-      expect(find.text('Đã xem'), findsOneWidget);
-    },
-  );
-
-  testWidgets('keeps a single check before a delivery receipt arrives', (
+  testWidgets('tin cuối đã xem: chữ "Đã xem" màu chữ phụ, không xanh', (
     tester,
   ) async {
+    await tester.pumpWidget(_bubble(DeliveryStatus.read));
+
+    expect(find.byKey(const ValueKey('delivery-receipt-read')), findsOneWidget);
+    final label = tester.widget<Text>(find.text('Đã xem'));
+    final scheme = Theme.of(tester.element(find.text('Đã xem'))).colorScheme;
+    expect(label.style!.color, scheme.onSurfaceVariant);
+  });
+
+  testWidgets('tin cuối chưa có biên nhận: "Đã gửi"', (tester) async {
     await tester.pumpWidget(_bubble(DeliveryStatus.sent));
 
-    expect(find.byIcon(LucideIcons.check), findsOneWidget);
     expect(find.text('Đã gửi'), findsOneWidget);
     expect(find.byIcon(LucideIcons.checkCheck), findsNothing);
   });
 
-  testWidgets('chỉ tin gửi mới nhất ghi chữ trạng thái, tin cũ chỉ còn tích', (
+  testWidgets('tin gửi cũ hơn: không dòng giờ; chạm mới hiện dấu tích', (
     tester,
   ) async {
     await tester.pumpWidget(
       _bubble(DeliveryStatus.delivered, isLatestOutbound: false),
     );
 
+    expect(find.byIcon(LucideIcons.checkCheck), findsNothing);
+    expect(find.text('Đã nhận'), findsNothing);
+    await tester.tap(find.text('Xin chào'));
+    await tester.pump();
     expect(find.byIcon(LucideIcons.checkCheck), findsOneWidget);
     expect(find.text('Đã nhận'), findsNothing);
   });
 
-  testWidgets('tin giữa cụm ẩn giờ, chạm vào bong bóng mới hiện', (
-    tester,
-  ) async {
+  testWidgets('tin đã gửi (một tích) khi chạm vào tin cũ', (tester) async {
     await tester.pumpWidget(
       _bubble(
-        DeliveryStatus.delivered,
+        DeliveryStatus.sent,
         isLatestOutbound: false,
         isLastInGroup: false,
       ),
     );
 
-    expect(find.byIcon(LucideIcons.checkCheck), findsNothing);
+    expect(find.byIcon(LucideIcons.check), findsNothing);
     await tester.tap(find.text('Xin chào'));
     await tester.pump();
-    expect(find.byIcon(LucideIcons.checkCheck), findsOneWidget);
+    expect(find.byIcon(LucideIcons.check), findsOneWidget);
   });
 }
 

@@ -85,17 +85,27 @@ void main() {
     );
   });
 
-  testWidgets('nút gửi vẫn hiện khi có chữ và ẩn khi xoá hết', (tester) async {
+  // Duyệt 26/11/2026: kênh không ghi âm thì ô trống vẫn giữ nút ↑ nhưng mờ
+  // (khoá) — ô nhập không co giãn khi bắt đầu gõ.
+  testWidgets('nút gửi bật khi có chữ và khoá lại khi xoá hết', (tester) async {
+    InkResponse sendInk() => tester.widget<InkResponse>(
+      find.descendant(
+        of: find.byTooltip('Gửi'),
+        matching: find.byType(InkResponse),
+      ),
+    );
+
     await tester.pumpWidget(host());
-    expect(find.byIcon(LucideIcons.send), findsNothing);
-    expect(find.byTooltip('Ảnh'), findsOneWidget);
+    expect(find.byIcon(LucideIcons.arrowUp), findsOneWidget);
+    expect(sendInk().onTap, isNull);
+    expect(find.byTooltip('Thêm'), findsOneWidget);
 
     await type(tester, 'ok');
-    expect(find.byIcon(LucideIcons.send), findsOneWidget);
+    expect(sendInk().onTap, isNotNull);
 
     await tester.enterText(find.byType(TextField), '');
     await tester.pump();
-    expect(find.byIcon(LucideIcons.send), findsNothing);
+    expect(sendInk().onTap, isNull);
   });
 
   testWidgets('composer có RepaintBoundary của riêng nó', (tester) async {

@@ -55,11 +55,11 @@ class ThreadIntro extends ConsumerWidget {
             children: [
               Text(
                 conversation.channel.sourceKind,
+                // Kênh xám như mọi nhãn kênh khác — màu chỉ nói trạng thái
+                // và hành động (duyệt 26/11/2026).
                 style: OmniType.micro.copyWith(
                   fontWeight: FontWeight.w600,
-                  color: conversation.channel.meta.textColorOf(
-                    Theme.of(context).brightness,
-                  ),
+                  color: muted,
                 ),
               ),
               if (account != null)

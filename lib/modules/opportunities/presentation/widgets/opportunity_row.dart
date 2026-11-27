@@ -40,7 +40,14 @@ class OpportunityRow extends ConsumerWidget {
     final rawColor = stageColorOf(stage, scheme);
     // Cung vòng cần 3:1, chữ tên giai đoạn cần 4.5:1 trên nền dòng.
     final arcColor = readableStageColor(rawColor, scheme.surface, minRatio: 3);
-    final textColor = readableStageColor(rawColor, scheme.surface);
+    // Giai đoạn là NHÃN có nền (duyệt 26/11/2026, rà soát mục 10), không còn
+    // chữ màu đứng một mình: đang mở xám, thắng xanh, thua đỏ, huỷ xám — cùng
+    // giọng với màn chi tiết.
+    final stageTone = opportunity.isCancelled
+        ? OmniTone.neutral
+        : opportunity.isClosed
+        ? (opportunity.isWon ? OmniTone.success : OmniTone.danger)
+        : OmniTone.neutral;
     final overdue = opportunity.isOverdue;
     final due = opportunity.expectedCloseAt;
 
@@ -121,11 +128,9 @@ class OpportunityRow extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 2),
-                    Text(
-                      stage?.label ?? opportunity.stageCode,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: OmniType.micro.copyWith(color: textColor),
+                    OmniStatusLabel(
+                      label: stage?.label ?? opportunity.stageCode,
+                      tone: stageTone,
                     ),
                   ],
                 ),

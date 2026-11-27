@@ -372,10 +372,18 @@ class HrClockButton extends StatelessWidget {
             style: OutlinedButton.styleFrom(minimumSize: size),
             child: child,
           )
+        // "Chấm vào/ra" là hành động chính của màn → nút chính xanh ĐẶC chữ
+        // trắng (duyệt 26/11/2026). Ghi đè kiểu của OmniGroupSection (nền
+        // `scheme.primary` — ở chế độ tối là xanh nhạt, trông mờ). Lúc khoá
+        // (đang gửi) vẫn theo theme.
         : FilledButton(
             key: const ValueKey('hr-clock-button'),
             onPressed: busy ? null : onPressed,
-            style: FilledButton.styleFrom(minimumSize: size),
+            style: FilledButton.styleFrom(
+              minimumSize: size,
+              backgroundColor: OmniColors.primaryFillOf(context),
+              foregroundColor: Colors.white,
+            ),
             child: child,
           );
     return Semantics(button: true, label: label, child: button);
